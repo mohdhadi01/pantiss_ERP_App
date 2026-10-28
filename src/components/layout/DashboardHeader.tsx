@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, ViewStyle, StyleProp } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
@@ -60,14 +60,14 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const { theme, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { isMd } = useBreakpoint();
-  const router = useRouter();
+  const navigation = useNavigation();
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (onBack) {
       onBack();
     } else {
-      router.back();
+      navigation.goBack();
     }
   };
 

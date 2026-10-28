@@ -1,0 +1,32 @@
+import React from 'react';
+import { useNavigation } from '@react-navigation/native';
+
+import { ModuleGate } from '../../navigation/guards';
+import { ModuleShell } from '../../components/layout/ModuleShell';
+import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
+import { useHR } from '../../features/hr/HRContext';
+import { RecruitmentView } from '../../features/hr/components/RecruitmentView';
+import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
+
+/** Web /hr/recruitment. */
+export const RecruitmentScreen: React.FC = () => {
+  const navigation = useNavigation<HrStackNav>();
+  const store = useHR();
+
+  return (
+    <ModuleGate moduleId="human-resources" role="hr-manager">
+      <ModuleShell
+        title={hrSectionTitles['recruitment']}
+        subtitle={hrSectionDescriptions['recruitment']}
+        currentRoute="/(hr)/recruitment"
+        notice={store.notice}
+        error={store.error}
+        onDismissNotice={() => store.setNotice('')}
+        onDismissError={() => store.setError('')}
+        onOpenDrawer={() => navigation.getParent<RootDrawerNav>()?.openDrawer()}
+      >
+        <RecruitmentView store={store} />
+      </ModuleShell>
+    </ModuleGate>
+  );
+};

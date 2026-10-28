@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { FinanceStackNav } from '../../../navigation/types';
 import { useTheme } from '../../../hooks/useTheme';
 import { FinanceArea, FinanceProject, formatCurrency } from '../data';
 import { useBooksStore } from '../booksStore';
@@ -38,7 +39,7 @@ const monthChipShort = (key: string) =>
 
 export const MonthlyOverview: React.FC<{ area: FinanceArea }> = ({ area }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<FinanceStackNav>();
   const { entries } = useBooksStore();
   const options = useMemo(() => buildMonthOptions(), []);
   const [month, setMonth] = useState(() => monthKey(new Date()));
@@ -136,7 +137,7 @@ export const MonthlyOverview: React.FC<{ area: FinanceArea }> = ({ area }) => {
             Inflows follow tentative tranche dates, not confirmed receipts. Expenditure includes only entries
             recorded in Books.{monthEntries.length === 0 ? ' No expenditure recorded for this month.' : ''}
           </Text>
-          <SheetLink label="View expenditure books" theme={theme} onPress={() => router.push('/(finance)/books')} />
+          <SheetLink label="View expenditure books" theme={theme} onPress={() => navigation.navigate('Books')} />
         </Card>
 
         <Card padding={18} style={styles.monthlyCard}>
@@ -175,7 +176,7 @@ export const MonthlyOverview: React.FC<{ area: FinanceArea }> = ({ area }) => {
           <SheetLink
             label="Review area invoices"
             theme={theme}
-            onPress={() => router.push('/(finance)/invoices')}
+            onPress={() => navigation.navigate('Invoices')}
           />
         </Card>
       </View>

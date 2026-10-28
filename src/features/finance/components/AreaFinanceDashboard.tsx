@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { FinanceStackNav } from '../../../navigation/types';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { financeAreas, areaTotals, formatCurrency, FinanceProject } from '../data';
@@ -43,7 +44,7 @@ const PROJECT_COLUMNS: Array<DataColumn<FinanceProject>> = [
 
 export const AreaFinanceDashboard: React.FC<{ areaId: string }> = ({ areaId }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<FinanceStackNav>();
   const area = financeAreas.find((item) => item.id === areaId);
   const [ledgerProject, setLedgerProject] = useState<FinanceProject | null>(null);
 
@@ -138,7 +139,7 @@ export const AreaFinanceDashboard: React.FC<{ areaId: string }> = ({ areaId }) =
   return (
     <View style={styles.container}>
       <Pressable
-        onPress={() => router.push('/(finance)/dashboard')}
+        onPress={() => navigation.navigate('FinanceDashboard')}
         accessibilityRole="link"
         style={({ pressed }) => [styles.backLink, { opacity: pressed ? 0.7 : 1 }]}
       >

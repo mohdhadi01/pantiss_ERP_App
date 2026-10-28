@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { HrStackNav } from '../../../navigation/types';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { HRStore } from '../store';
@@ -54,7 +55,7 @@ const emptyForm = (): FormState => ({
 
 export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<HrStackNav>();
   const { data, commit } = store;
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('all');
@@ -245,7 +246,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
                         {center?.name ?? 'Unassigned'}
                       </Text>
                     </View>
-                    <Pressable onPress={() => router.push(`/(hr)/project-assignment?employee=${emp.id}` as never)} hitSlop={4}>
+                    <Pressable onPress={() => navigation.navigate('ProjectAssignment', { employee: emp.id })} hitSlop={4}>
                       <Text style={[styles.assignLink, { color: theme.colors.brandPrimary }]}>Assign project →</Text>
                     </Pressable>
                   </View>

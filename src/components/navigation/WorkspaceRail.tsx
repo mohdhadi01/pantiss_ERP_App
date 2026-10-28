@@ -7,13 +7,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { categories } from '../../data/modules';
 import { CategorySlug } from '../../types/modules';
 import { Icon } from '../ui/Icon';
+import type { PublicStackNav } from '../../navigation/types';
 
 export interface WorkspaceRailProps {
   active: CategorySlug;
@@ -27,7 +28,7 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
   layout = 'vertical',
 }) => {
   const { theme, isDark } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<PublicStackNav>();
 
   const handleSelect = (id: CategorySlug) => {
     if (id === active) return;
@@ -35,7 +36,7 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
     if (onSelect) {
       onSelect(id);
     } else {
-      router.setParams({ categoryId: id });
+      navigation.setParams({ categoryId: id });
     }
   };
 

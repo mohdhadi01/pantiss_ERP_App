@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
@@ -20,6 +20,7 @@ import { Donut } from '../../../components/ui/Donut';
 import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { Card } from '../../../components/ui/Card';
 import { Icon, IconSource } from '../../../components/ui/Icon';
+import type { FinanceStackNav } from '../../../navigation/types';
 
 /** Web compliance checklist (web FinanceDashboard — donut 88% + 6 rows, done/warn icons). */
 const COMPLIANCE_ROWS = [
@@ -39,7 +40,7 @@ const TAX_SHORTCUTS = [
 
 export const FinanceDashboard: React.FC = () => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<FinanceStackNav>();
   const { isMd } = useBreakpoint();
   const { alerts } = useFinanceAlerts();
 
@@ -54,9 +55,9 @@ export const FinanceDashboard: React.FC = () => {
     [],
   );
 
-  const handleNav = (route: string) => {
+  const handleNav = (navigate: () => void) => {
     Haptics.selectionAsync().catch(() => {});
-    router.push(route as never);
+    navigate();
   };
 
   return (
@@ -66,7 +67,7 @@ export const FinanceDashboard: React.FC = () => {
         {TAX_SHORTCUTS.map((item) => (
           <Pressable
             key={item.label}
-            onPress={() => handleNav('/(finance)/taxation')}
+            onPress={() => handleNav(() => navigation.navigate('Taxation'))}
             style={({ pressed }) => [
               styles.taxCard,
               {
@@ -119,7 +120,7 @@ export const FinanceDashboard: React.FC = () => {
         <View style={styles.grid2}>
           {/* Sizing lives on the wrapper: Pressable is a column-flex container,
               so flexBasis on the Card itself would set its height. */}
-          <Pressable onPress={() => handleNav('/(finance)/banking')} style={styles.reserveWrap}>
+          <Pressable onPress={() => handleNav(() => navigation.navigate('Banking'))} style={styles.reserveWrap}>
             <Card padding={18} style={[styles.reserveCard, !isMd && styles.reserveCardMobile]}>
               <View style={[styles.iconTile, { backgroundColor: theme.colors.successSoft }]}>
                 <Icon name="Landmark" size={18} color={theme.colors.financeAccent} strokeWidth={1.8} />
@@ -137,7 +138,7 @@ export const FinanceDashboard: React.FC = () => {
             </Card>
           </Pressable>
 
-          <Pressable onPress={() => handleNav('/(finance)/investments')} style={styles.reserveWrap}>
+          <Pressable onPress={() => handleNav(() => navigation.navigate('Investments'))} style={styles.reserveWrap}>
             <Card padding={18} style={[styles.reserveCard, !isMd && styles.reserveCardMobile]}>
               <View style={[styles.iconTile, { backgroundColor: theme.colors.infoSoft }]}>
                 <Icon name="TrendingUp" size={18} color={theme.colors.info} strokeWidth={1.8} />
@@ -302,7 +303,7 @@ export const FinanceDashboard: React.FC = () => {
               return (
                 <Pressable
                   key={alert.id}
-                  onPress={() => handleNav('/(finance)/alerts')}
+                  onPress={() => handleNav(() => navigation.navigate('Alerts'))}
                   accessibilityRole="button"
                   accessibilityLabel={`Open alert: ${alert.title}`}
                   style={({ pressed }) => [
@@ -350,7 +351,7 @@ export const FinanceDashboard: React.FC = () => {
               );
             })}
           </View>
-          <Pressable onPress={() => handleNav('/(finance)/alerts')} style={styles.viewAll}>
+          <Pressable onPress={() => handleNav(() => navigation.navigate('Alerts'))} style={styles.viewAll}>
             <Text style={[styles.viewAllText, { color: theme.colors.financeAccent }]}>
               View all alerts &amp; notifications
             </Text>
@@ -382,7 +383,7 @@ export const FinanceDashboard: React.FC = () => {
             return (
               <Pressable
                 key={area.id}
-                onPress={() => handleNav(`/(finance)/area/${area.id}`)}
+                onPress={() => handleNav(() => navigation.navigate('AreaDashboard', { areaId: area.id }))}
                 style={[styles.areaWrap, !isMd && styles.areaWrapMobile]}
               >
                 <Card padding={18} style={styles.areaCard}>

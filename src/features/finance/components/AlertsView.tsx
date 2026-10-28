@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { heroGradients } from '../../../theme/gradients';
@@ -35,7 +34,6 @@ const FILTERS: Array<'All' | FinanceAlertCategory> = [
 
 export const AlertsView: React.FC = () => {
   const { theme } = useTheme();
-  const router = useRouter();
   const { alerts, dismiss, markAllRead } = useFinanceAlerts();
   const [filter, setFilter] = useState<'All' | FinanceAlertCategory>('All');
   const [search, setSearch] = useState('');

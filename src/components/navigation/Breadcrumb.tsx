@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { Icon } from '../ui/Icon';
@@ -8,20 +8,18 @@ import { Icon } from '../ui/Icon';
 export interface BreadcrumbProps {
   current: string;
   parentLabel?: string;
-  parentRoute?: string;
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   current,
   parentLabel = 'Workspace',
-  parentRoute = '/',
 }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
 
   const handleParentPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.replace(parentRoute as any);
+    navigation.navigate('Landing');
   };
 
   return (

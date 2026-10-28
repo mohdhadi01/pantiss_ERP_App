@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { FinanceStackNav } from '../../../navigation/types';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
@@ -42,7 +43,7 @@ const STATUS_OPTIONS = [
 export const ProcurementView: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  const router = useRouter();
+  const navigation = useNavigation<FinanceStackNav>();
   const [requisitions, setRequisitions] = useState(initialRequisitions);
   const [tab, setTab] = useState('requests');
   const [step, setStep] = useState(0);
@@ -262,7 +263,7 @@ export const ProcurementView: React.FC = () => {
             </View>
           </HeroGlassCard>
         }
-        actions={[{ label: 'Payments', icon: 'CreditCard', variant: 'white', onPress: () => router.push('/(finance)/payments') }]}
+        actions={[{ label: 'Payments', icon: 'CreditCard', variant: 'white', onPress: () => navigation.navigate('Payments') }]}
       />
 
       <Tabs

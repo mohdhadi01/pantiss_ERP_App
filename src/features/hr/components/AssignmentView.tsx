@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { HRStore } from '../store';
@@ -21,12 +20,13 @@ import { Employee } from '../types';
 
 export interface AssignmentViewProps {
   store: HRStore;
+  /** Deep-linked employee (`/hr/project-assignment?employee={id}`). */
+  employee?: string;
 }
 
-export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
+export const AssignmentView: React.FC<AssignmentViewProps> = ({ store, employee }) => {
   const { theme } = useTheme();
   const { data, commit } = store;
-  const params = useLocalSearchParams<{ employee?: string }>();
 
   const [search, setSearch] = useState('');
   const [targetId, setTargetId] = useState<string | null>(null);
@@ -52,12 +52,12 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
   };
 
   useEffect(() => {
-    if (!deepLinked && params.employee) {
+    if (!deepLinked && employee) {
       setDeepLinked(true);
-      openAssign(String(params.employee));
+      openAssign(String(employee));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.employee, deepLinked]);
+  }, [employee, deepLinked]);
 
   const handleSave = async () => {
     if (!targetId || !target) return;

@@ -4,7 +4,8 @@
  */
 import React, { useState } from 'react';
 import { Text, View, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { HrStackNav } from '../../../navigation/types';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { HRStore } from '../store';
@@ -294,12 +295,12 @@ export const AppraisalForm: React.FC<{
 /** Appraisal-mode register footnote with the KBI shortcut (web PerformanceViews.tsx:27). */
 export const AppraisalFootnote: React.FC = () => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<HrStackNav>();
   return (
     <Text style={[styles.footnote, { color: theme.colors.textSubtle }]}>
       Employees without a saved assessment need a{' '}
       <Text
-        onPress={() => router.push('/(hr)/kbi-metrics' as never)}
+        onPress={() => navigation.navigate('KbiMetrics')}
         style={[styles.footnoteLink, { color: theme.colors.brandPrimary }]}
       >
         KBI assessment

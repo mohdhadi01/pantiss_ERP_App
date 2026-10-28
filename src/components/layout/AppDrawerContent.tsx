@@ -7,23 +7,86 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import { Icon, IconSource } from '../ui/Icon';
-import { NavItem } from '../../types/navigation';
+import {
+  financeNavItems,
+} from '../../features/finance/constants';
+import { hrNavItems } from '../../features/hr/constants';
+import type { NavItem } from '../../types/navigation';
+import type { DrawerSection } from '../../navigation/types';
 
-export interface AppDrawerContentProps {
-  /** Sidebar brand subtitle — division name (web "Human Resources" / "Finance Division"). */
-  subtitle: string;
-  items: NavItem[];
-  currentRoute: string;
-  onNavigate: (route: string) => void;
-  /** Active item text/icon color (emerald for Finance, brand blue for HR). */
-  accentColor?: string;
-  /** Active pill background (web `bg-emerald-500/10` / `bg-[var(--brand-soft)]`). */
-  activeBg?: string;
+/** Sidebar item id for each Finance stack screen (Dashboard stays active on area pages). */
+const FINANCE_ID_BY_SCREEN: Record<string, string> = {
+  FinanceDashboard: 'dashboard',
+  AreaDashboard: 'dashboard',
+  Budget: 'budget',
+  Books: 'books',
+  Banking: 'banking',
+  VendorManagement: 'vendor-management',
+  Procurement: 'procurement',
+  FinanceSalary: 'salary',
+  Reimbursement: 'reimbursement',
+  Payments: 'payments',
+  Taxation: 'taxation',
+  AuditTrails: 'audit-trails',
+  Projects: 'projects',
+  Invoices: 'invoices',
+  Investments: 'investments',
+  Alerts: 'alerts',
+};
+
+/** Sidebar item id for each HR stack screen. */
+const HR_ID_BY_SCREEN: Record<string, string> = {
+  HrDashboard: 'dashboard',
+  Recruitment: 'recruitment',
+  EmployeeOnboarding: 'employee-onboarding',
+  ProjectAssignment: 'project-assignment',
+  JobDesignations: 'job-designations',
+  HrSalary: 'salary',
+  Attendance: 'attendance',
+  LeaveManagement: 'leave-management',
+  KbiMetrics: 'kbi-metrics',
+  Appraisals: 'appraisals',
+};
+
+/** Sidebar item id → Finance stack screen name. */
+const FINANCE_SCREEN_BY_ID: Record<string, string> = {
+  dashboard: 'FinanceDashboard',
+  budget: 'Budget',
+  books: 'Books',
+  banking: 'Banking',
+  'vendor-management': 'VendorManagement',
+  procurement: 'Procurement',
+  salary: 'FinanceSalary',
+  reimbursement: 'Reimbursement',
+  payments: 'Payments',
+  taxation: 'Taxation',
+  'audit-trails': 'AuditTrails',
+  projects: 'Projects',
+  invoices: 'Invoices',
+};
+
+/** Sidebar item id → HR stack screen name. */
+const HR_SCREEN_BY_ID: Record<string, string> = {
+  dashboard: 'HrDashboard',
+  recruitment: 'Recruitment',
+  'employee-onboarding': 'EmployeeOnboarding',
+  'project-assignment': 'ProjectAssignment',
+  'job-designations': 'JobDesignations',
+  salary: 'HrSalary',
+  attendance: 'Attendance',
+  'leave-management': 'LeaveManagement',
+  'kbi-metrics': 'KbiMetrics',
+  appraisals: 'Appraisals',
+};
+
+export interface AppDrawerContentProps extends DrawerContentComponentProps {
+  /** Which module's menu to render ('none' = public workspace). */
+  section: DrawerSection;
   /** Collapsed 80px rail — icons only (web collapse toggle). */
   collapsed?: boolean;
   /** Web sidebar edge chevron — collapse/expand the permanent sidebar. */
@@ -31,42 +94,79 @@ export interface AppDrawerContentProps {
   onClose?: () => void;
 }
 
+const itemsForSection = (section: DrawerSection): NavItem[] => {
+  if (section === 'finance') return financeNavItems;
+  if (section === 'hr') return hrNavItems;
+  return [];
+};
+
+const subtitleForSection = (section: DrawerSection): string => {
+  if (section === 'finance') return 'Finance Division';
+  if (section === 'hr') return 'Human Resources';
+  return 'Pantiss ERP';
+};
+
+/**
+ * Root drawer content — web sidebar pattern (brand header, "All Workspaces &
+ * Modules" escape, per-module menu from the shared constants, user card and
+ * sign-out). Rendered by the root Drawer navigator via RootNavigator.
+ */
 export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
-  subtitle,
-  items,
-  currentRoute,
-  onNavigate,
-  accentColor,
-  activeBg,
+  section,
   collapsed = false,
   onToggleCollapse,
   onClose,
+  state,
+  navigation,
 }) => {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
-  const router = useRouter();
 
-  const handleSelect = (route: string) => {
+  const items = itemsForSection(section);
+  const subtitle = subtitleForSection(section);
+
+  const activeItemId = React.useMemo(() => {
+    const drawerRoute = state.routes[state.index];
+    const child = drawerRoute?.state as { index: number; routes: readonly { name: string }[] } | undefined;
+    const screenName = child ? child.routes[child.index]?.name : undefined;
+    if (!screenName) return undefined;
+    if (section === 'finance') return FINANCE_ID_BY_SCREEN[screenName];
+    if (section === 'hr') return HR_ID_BY_SCREEN[screenName];
+    return undefined;
+  }, [section, state]);
+
+  const handleSelect = (item: NavItem) => {
     Haptics.selectionAsync().catch(() => {});
-    onNavigate(route);
+    const screen =
+      section === 'finance'
+        ? FINANCE_SCREEN_BY_ID[item.id]
+        : section === 'hr'
+          ? HR_SCREEN_BY_ID[item.id]
+          : undefined;
+    if (!screen) return;
+    if (onClose) onClose();
+    navigation.navigate(section === 'finance' ? 'FinanceStack' : 'HrStack', { screen });
+  };
+
+  const handleGoLanding = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (onClose) onClose();
+    navigation.navigate('PublicStack', { screen: 'Landing' });
   };
 
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     if (onClose) onClose();
     await logout();
-    router.replace('/modules/core-operations');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'PublicStack', params: { screen: 'Landing' } }],
+    });
   };
 
-  const handleGoHome = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (onClose) onClose();
-    router.replace('/');
-  };
-
-  const activeAccent = accentColor ?? theme.colors.brandPrimary;
-  const activeItemBg = activeBg ?? theme.colors.brandSoft;
-  const isFinance = subtitle.toLowerCase().includes('finance');
+  const activeAccent = section === 'hr' ? theme.colors.brandPrimary : theme.colors.financeAccent;
+  const activeItemBg = section === 'hr' ? theme.colors.brandSoft : theme.colors.financeAccentSoft;
+  const isFinance = section === 'finance';
   const workspaceNote = isFinance ? undefined : 'People operations · Demo';
 
   if (collapsed) {
@@ -84,7 +184,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
             <Icon name="ChevronRight" size={15} color={theme.colors.textMuted} />
           </Pressable>
         ) : null}
-        <Pressable onPress={handleGoHome} style={styles.collapsedBrand} accessibilityLabel="Pantiss home">
+        <Pressable onPress={handleGoLanding} style={styles.collapsedBrand} accessibilityLabel="Pantiss home">
           <Image
             source={require('@/assets/images/pantiss-mark.png')}
             style={styles.logo}
@@ -97,11 +197,11 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
           showsVerticalScrollIndicator={false}
         >
           {items.map((item) => {
-            const isActive = currentRoute === item.route;
+            const isActive = activeItemId === item.id;
             return (
               <Pressable
                 key={item.id}
-                onPress={() => handleSelect(item.route)}
+                onPress={() => handleSelect(item)}
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
                 accessibilityState={{ selected: isActive }}
@@ -148,7 +248,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
     >
       {/* Brand header — web h-20 block: mark + "Pantiss ERP" + division */}
       <View style={[styles.brandHeader, { borderBottomColor: theme.colors.border }]}>
-        <Pressable onPress={handleGoHome} style={styles.brandPressable} accessibilityLabel="Pantiss home">
+        <Pressable onPress={handleGoLanding} style={styles.brandPressable} accessibilityLabel="Pantiss home">
           <Image
             source={require('@/assets/images/pantiss-mark.png')}
             style={styles.logo}
@@ -165,11 +265,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
 
       <ScrollView style={styles.itemList} contentContainerStyle={styles.itemListContent} showsVerticalScrollIndicator={false}>
         <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            if (onClose) onClose();
-            router.push('/modules/core-operations');
-          }}
+          onPress={handleGoLanding}
           style={({ pressed }) => [
             styles.backLink,
             { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent' },
@@ -181,16 +277,18 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
           <Text style={[styles.backLinkText, { color: theme.colors.textSubtle }]}>All Workspaces & Modules</Text>
         </Pressable>
 
-        <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>
-          {isFinance ? 'Finance Workspace' : 'WORKSPACE'}
-        </Text>
+        {items.length > 0 ? (
+          <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>
+            {isFinance ? 'Finance Workspace' : 'WORKSPACE'}
+          </Text>
+        ) : null}
 
         {items.map((item) => {
-          const isActive = currentRoute === item.route;
+          const isActive = activeItemId === item.id;
           return (
             <Pressable
               key={item.id}
-              onPress={() => handleSelect(item.route)}
+              onPress={() => handleSelect(item)}
               style={({ pressed }) => [
                 styles.navItem,
                 {

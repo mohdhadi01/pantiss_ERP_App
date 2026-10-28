@@ -5,15 +5,19 @@ Deep-dive companion to `README.md`. The web reference (`../Pantiss_ERP`) and the
 ## 1. Layering
 
 ```
-app/ (routing)        thin screen wrappers only
-  └── components/layout/ModuleShell   shared chrome: sidebar + header + heading + footnote
-        └── features/*/components/*View   module screens
-              ├── components/ui/*          primitives (no feature imports)
-              ├── features/*/data, *Store  data + persistence
-              └── theme/*                  tokens
+index.js → src/App.tsx (providers)         entry, font gate, one-time splash
+  └── navigation/                          explicit React Navigation navigators
+        ├── RootNavigator                  root Drawer (custom content) + linking
+        └── stacks/*                       PublicStack / FinanceStack / HrStack
+              └── screens/*                thin screens: ModuleGate → ModuleShell
+                    └── components/layout/ModuleShell   shared chrome: header + heading + footnote
+                          └── features/*/components/*View   module screens
+                                ├── components/ui/*          primitives (no feature imports)
+                                ├── features/*/data, *Store  data + persistence
+                                └── theme/*                  tokens
 ```
 
-Dependency direction is strictly inward: `theme` ← `components/ui` ← `components/layout` ← `features` ← `app`. Feature modules may import primitives and theme, never each other's internals (the HR seed reads one Finance salary dataset through a single import — the one sanctioned cross-module edge).
+Dependency direction is strictly inward: `theme` ← `components/ui` ← `components/layout` ← `features` ← `screens`/`navigation`. Feature modules may import primitives and theme, never each other's internals (the HR seed reads one Finance salary dataset through a single import — the one sanctioned cross-module edge).
 
 ## 2. Theme system (`src/theme/`)
 
@@ -24,7 +28,7 @@ The web's Tailwind v4 CSS-first config (`globals.css`) is ported 1:1:
 | `:root` / `.dark` CSS variables | `colors.ts` `lightColors` / `darkColors` (exact values incl. alpha stops) |
 | Tailwind gradient utilities | `gradients.ts` named registry (`heroGradients`, `accentGradients`, `avatarGradients`, `barGradients`, `cardGradients`) with `LinearGradient` start/end points |
 | `--shadow-card` / `--shadow-nav` | `shadows.ts` `createShadows(isDark)` (iOS triplet / Android elevation / web boxShadow) |
-| Inter font stack | `typography.ts` + `@expo-google-fonts/inter` loaded in root `_layout` |
+| Inter font stack | `typography.ts` + `@expo-google-fonts/inter` loaded in `src/App.tsx` |
 | `sm/md/lg/xl` variants | `breakpoints.ts` (640/768/1024/1280) via `hooks/useBreakpoint` |
 | radii / spacing utilities | `spacing.ts` (`radii.card 16`, `.panel 22`, `.hero 30`, `.deck 32`; `layout.headerHeight 80`, `sidebarWidth 260/80`) |
 
@@ -50,7 +54,7 @@ The web's Tailwind v4 CSS-first config (`globals.css`) is ported 1:1:
 
 ## 4. Shell (`components/layout/`)
 
-`ModuleShell` renders the web DashboardLayout/FinancePage pattern: collapsible sidebar (260px ↔ 80px, permanent ≥1024px, slide-over drawer below with `rgba(2,6,23,0.55)` scrim), 80px header (module eyebrow, per-section H1, finance search, bell with amber dot, avatar tile), workspace heading with "Demo workspace" pill, and the demo footnote. Per-module theming (active nav pill, accents) is derived from the route group — screens pass no colors.
+`ModuleShell` renders the web DashboardLayout/FinancePage content chrome: 80px header (module eyebrow, per-section H1, finance search, bell with amber dot, avatar tile), workspace heading with "Demo workspace" pill, and the demo footnote. The sidebar itself is the **root Drawer navigator's** — `AppDrawerContent` renders the brand block, "All Workspaces & Modules" escape, the active module's menu (`financeNavItems` / `hrNavItems` from the shared constants) with per-module accent, user card and sign-out; screens trigger it via `onOpenDrawer` (`navigation.getParent()?.openDrawer()`). Per-module theming (accent, eyebrow color) is derived from the `currentRoute` identity string — screens pass no colors.
 
 ## 5. Data & state
 
@@ -61,9 +65,11 @@ The web's Tailwind v4 CSS-first config (`globals.css`) is ported 1:1:
 
 ## 6. Navigation & auth
 
-- expo-router file tree; root Stack (fade, headers hidden) → `(auth)`, `(hr)`, `(finance)` groups.
-- `ModuleGuard` (`components/auth`) wraps each module layout: waits for session restore (`isLoading`), requires `user.moduleId` to match the module (web rule), redirects to `/modules/core-operations` otherwise.
-- One `LoginForm` backs both the module `LoginModal` (bottom sheet) and the full-page `(auth)/login`; module cards validate the account's `moduleId` before navigation, exactly like the web's LoginDialog.
+- **Explicit React Navigation navigators** (expo-router removed): `index.js` → `src/App.tsx` (providers + Inter font gate + one-time splash overlay) → `RootNavigator` = `NavigationContainer(linking)` wrapping a root **Drawer** with three branches — `PublicStack`, `FinanceStack`, `HrStack` (native-stack, fade, headers hidden; HrStack wraps the `HRProvider`).
+- **Drawer behavior** mirrors the web sidebars: `drawerType` permanent ≥1024px (260px, collapsible to an 80px icon rail) / slide below, width `min(300, 0.9·w)`, swipe edge 60, `rgba(2,6,23,0.55)` scrim. `AppDrawerContent` derives the active section from the drawer state (focused branch + focused stack screen) to highlight the right item and accent; sign-out resets to `PublicStack`/Landing. Public screens opt out (`drawerType: 'front'`, no swipe) — they keep the `TopNavigation` chrome.
+- **Linking** (`navigation/linking.ts`) is the explicit web-parity URL map: `/` Landing, `/modules/:categoryId`, `/login`, `/finance/*` and `/hr/*` per-section paths (incl. `/finance/area/:areaId`), `*` → NotFound.
+- **`useModuleGate` / `ModuleGate`** (`navigation/guards.tsx`) wraps each module screen: waits for session restore (loading overlay), requires `user.moduleId` to match the module (plus `role === 'hr-manager'` for HR — the web rule), renders the module `LoginScreen` inline ("Sign in to continue") otherwise. Login success resets the root drawer into the target stack (Finance → FinanceDashboard, HR → HrDashboard, else Landing); module cards on the Modules screen validate the account's `moduleId` before navigation, exactly like the web's LoginDialog.
+- One `LoginForm` backs the module `LoginModal` (bottom sheet), the full-page `LoginScreen` and the gate's inline login.
 
 ## 7. Conventions
 

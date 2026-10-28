@@ -6,7 +6,7 @@ import {
   Pressable,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { avatarGradients } from '../../theme/gradients';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
+import type { PublicStackNav } from '../../navigation/types';
 
 export interface TopNavigationProps {
   canGoBack?: boolean;
@@ -30,14 +31,14 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
 }) => {
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
-  const router = useRouter();
+  const navigation = useNavigation<PublicStackNav>();
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (onBack) {
       onBack();
     } else {
-      router.replace('/');
+      navigation.navigate('Landing');
     }
   };
 
@@ -48,7 +49,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
     } else if (isAuthenticated) {
       logout();
     } else {
-      router.push('/(auth)/login');
+      navigation.navigate('Login');
     }
   };
 
@@ -83,7 +84,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
         )}
 
         <Pressable
-          onPress={() => router.replace('/')}
+          onPress={() => navigation.navigate('Landing')}
           style={styles.brandPressable}
           accessibilityLabel="Pantiss Home"
         >

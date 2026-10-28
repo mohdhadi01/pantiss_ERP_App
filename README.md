@@ -25,7 +25,7 @@ Sign in from any Finance / HR module card, or via the full-page login. The login
 
 ## Modules & screens
 
-**Finance (15 screens)** — Dashboard, Budget, Books, Banking, Vendor Management, Procurement, Salary, Reimbursement, Payments, Taxation, Audit Trails, Projects, Invoices, Investments, Alerts.
+**Finance (16 screens)** — Dashboard, Area Dashboard (`/finance/area/:areaId`), Budget, Books, Banking, Vendor Management, Procurement, Salary, Reimbursement, Payments, Taxation, Audit Trails, Projects, Invoices, Investments, Alerts.
 
 **HR (10 screens)** — Dashboard, Recruitment & Hiring, Employee Onboarding, Project Assignment, Job Designations, Salary Approvals, Attendance, Leave Management, KBI Metrics, Year-end Appraisals.
 
@@ -34,14 +34,22 @@ Plus the public surface: workspace landing, workspace modules grid, sign-in (mod
 ## Architecture
 
 ```
+index.js                  # entry: registerRootComponent(App)
 src/
-├── app/                  # expo-router file tree
-│   ├── _layout.tsx       # providers, Inter font loading, root stack
-│   ├── index.tsx         # workspace landing
-│   ├── modules/[categoryId].tsx
-│   ├── (auth)/login.tsx
-│   ├── (hr)/             # 10 HR screens → ModuleShell + feature views
-│   └── (finance)/        # 15 Finance screens → ModuleShell + feature views
+├── App.tsx               # providers, Inter font gate, one-time splash, <RootNavigator/>
+├── navigation/
+│   ├── RootNavigator.tsx # NavigationContainer(linking) + root Drawer (custom content)
+│   ├── linking.ts        # web-parity URL map (/ , /modules/:categoryId , /finance/* , /hr/*)
+│   ├── types.ts          # typed param lists + navigation prop types
+│   ├── guards.tsx        # useModuleGate hook + <ModuleGate> (per-module auth)
+│   └── stacks/
+│       ├── PublicStack.tsx   # Landing / Modules / Login / NotFound
+│       ├── FinanceStack.tsx  # 16 Finance screens
+│       └── HrStack.tsx       # 10 HR screens (inside HRProvider)
+├── screens/
+│   ├── landing/  modules/  auth/  notFound/
+│   ├── finance/          # 16 thin screens → ModuleGate + ModuleShell + feature views
+│   └── hr/               # 10 thin screens → ModuleGate + ModuleShell + feature views
 ├── theme/                # single source of visual truth
 │   ├── colors.ts         # exact port of web globals.css :root/.dark tokens
 │   ├── gradients.ts      # hero/accent/avatar/bar gradients (exact web stops)
@@ -53,7 +61,8 @@ src/
 │   ├── ui/               # primitives: Card, MetricCard, DataTable, ModalSheet,
 │   │                     # Tabs, TextField, SelectField, StatusChip, Timeline,
 │   │                     # Donut, FunnelBars, AnimatedNumber, EmptyState…
-│   ├── layout/           # ModuleShell (260/80 sidebar + 80px header), headers
+│   ├── layout/           # ModuleShell (header + notices + heading + footnote),
+│   │                     # AppDrawerContent (navigator drawer content), headers
 │   ├── auth/             # LoginForm (shared), LoginModal
 │   ├── cards/  navigation/  animations/
 ├── context/  hooks/      # Theme, Auth, Category providers + useBreakpoint etc.
@@ -64,10 +73,19 @@ src/
 └── utils/                # storage wrapper, currency/date formatting
 ```
 
+### Navigation
+
+Explicit **React Navigation** navigators (no file-based routing):
+
+- **Root `Drawer`** — three branches: `PublicStack`, `FinanceStack`, `HrStack`. Permanent 260/80px collapsible sidebar ≥1024px, slide-in drawer (300px / 90vw) below, swipe edge 60px, `rgba(2,6,23,0.55)` scrim. The drawer content (`AppDrawerContent`) derives the active module from the navigation state and renders the matching `financeNavItems` / `hrNavItems` menu with the module accent.
+- **Stacks** — `@react-navigation/native-stack`, headers hidden, fade transitions; `HrStack` wraps the HR store provider.
+- **Linking** — `src/navigation/linking.ts` mirrors the web URLs: `/`, `/modules/:categoryId`, `/login`, `/finance/*` (dashboard, area/:areaId, budget, books, banking, vendor-management, procurement, salary, reimbursement, payments, taxation, audit-trails, projects, invoices, investments, alerts), `/hr/*` (dashboard, recruitment, employee-onboarding, project-assignment, job-designations, salary, attendance, leave-management, kbi-metrics, appraisals), `*` → 404.
+- **Auth gates** — each module screen wraps in `<ModuleGate moduleId="finance">` / `<ModuleGate moduleId="human-resources" role="hr-manager">`: loading overlay while the session restores, inline module login for unauthorized visitors (the web redirects to the module login), workspace content once authorized.
+
 ### Conventions
 
 - **Tokens only** — screens never hardcode theme colors; module accents come from `theme.colors.financeAccent` (emerald) / `brandPrimary` (HR blue).
-- **Responsive** — `useBreakpoint()` mirrors the web's Tailwind breakpoints; tables render as real tables ≥1024px and stacked cards below; the sidebar is permanent ≥1024px and a drawer below.
+- **Responsive** — `useBreakpoint()` mirrors the web's Tailwind breakpoints; tables render as real tables ≥1024px and stacked cards below; the navigator drawer is permanent ≥1024px and a slide-in drawer below.
 - **Primitives first** — no screen reimplements cards, tabs, inputs, modals or status pills; everything composes `src/components/ui`.
 - **Typed icons** — a static registry (`ui/Icon.tsx`), no runtime namespace lookups.
 - **Stores** — `useBooksStore`, `useSalaryRecords`, `useFinanceAlerts`, HR store persist through the typed AsyncStorage wrapper (`utils/storage.ts`).

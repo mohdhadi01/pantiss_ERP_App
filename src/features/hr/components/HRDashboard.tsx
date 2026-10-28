@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import type { HrStackParamList, HrStackNav } from '../../../navigation/types';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
@@ -24,7 +25,7 @@ export interface HRDashboardProps {
 
 export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const navigation = useNavigation<HrStackNav>();
   const { isMd } = useBreakpoint();
   const { records, error } = useSalaryRecords('hr');
 
@@ -63,31 +64,31 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
   const actions = useMemo(
     () => [
       {
-        route: '/(hr)/salary',
+        route: 'HrSalary',
         title: `${readyHR.length} salaries ready for HR`,
         text: `${formatRupees(readyHRMoney)} awaiting release to Finance`,
       },
       ...(selectedCandidates
         ? [
             {
-              route: '/(hr)/recruitment',
+              route: 'Recruitment',
               title: `${selectedCandidates} candidate(s) selected`,
               text: 'Prepare and release formal offer letters',
             },
           ]
         : []),
       {
-        route: '/(hr)/leave-management',
+        route: 'LeaveManagement',
         title: `${readyLeave} leave requests ready for HR`,
         text: 'Admin clearance received',
       },
       {
-        route: '/(hr)/attendance',
+        route: 'Attendance',
         title: `${exceptionCount} attendance exceptions`,
         text: `Missing punches or photos · ${latestDate}`,
       },
       {
-        route: '/(hr)/project-assignment',
+        route: 'ProjectAssignment',
         title: `${unassigned.length} employees unassigned`,
         text: 'Assign a primary project and centre',
       },
@@ -97,7 +98,7 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
 
   const handleActionPress = (route: string) => {
     Haptics.selectionAsync().catch(() => {});
-    router.push(route as never);
+    navigation.navigate(route as keyof HrStackParamList);
   };
 
   return (
@@ -238,7 +239,7 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
           <Button
             label="Review salaries →"
             variant="primary"
-            onPress={() => handleActionPress('/(hr)/salary')}
+            onPress={() => handleActionPress('HrSalary')}
             style={styles.payButton}
           />
         </LinearGradient>
