@@ -1,318 +1,386 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
+import { heroGradients } from '../../../theme/gradients';
 import {
   financeAreas,
   portfolioTotals,
   areaTotals,
   formatCurrency,
-  FinanceArea,
 } from '../data';
+import { useFinanceAlerts } from '../data/alertsStore';
+import { HeroBanner, HeroGlassCard } from './HeroBanner';
 import { MetricCard } from '../../../components/ui/MetricCard';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
-import { Badge } from '../../../components/ui/Badge';
+import { Donut } from '../../../components/ui/Donut';
+import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
+import { Card } from '../../../components/ui/Card';
 import { Icon } from '../../../components/ui/Icon';
 
-export interface FinanceDashboardProps {
-  areaId?: string;
-}
+/** Web compliance checklist (FinanceDashboard: donut 88% + 6 rows). */
+const COMPLIANCE_ROWS = [
+  { label: 'Bank reconciliation statements', value: 100 },
+  { label: 'Voucher & supporting documents', value: 93 },
+  { label: 'Advance settlement compliance', value: 72 },
+  { label: 'Statutory TDS / GST filings', value: 100 },
+  { label: 'Donor utilisation certificates', value: 61 },
+  { label: 'Audit action-taken reports', value: 88 },
+];
 
-export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ areaId }) => {
+const TAX_SHORTCUTS = [
+  { label: 'GST filing', desc: 'GSTR-1 & 3B compliance' },
+  { label: 'Input tax credit tracking', desc: 'Eligible ITC claims' },
+  { label: 'TDS filing (total)', desc: 'Quarterly deduction desk' },
+];
+
+export const FinanceDashboard: React.FC = () => {
   const { theme } = useTheme();
   const router = useRouter();
+  const { isMd } = useBreakpoint();
+  const { alerts } = useFinanceAlerts();
 
-  const activeArea = areaId ? financeAreas.find((a) => a.id === areaId) : undefined;
-
-  const totals = activeArea ? areaTotals(activeArea) : portfolioTotals;
-  const utilization = totals.approved ? Math.round((totals.spent / totals.approved) * 100) : 0;
-  const releaseRate = totals.approved ? Math.round((totals.released / totals.approved) * 100) : 0;
-
-  const allProjects = activeArea ? activeArea.projects : financeAreas.flatMap((a) => a.projects);
-  const statusCounts = {
-    onTrack: allProjects.filter((p) => p.status === 'On track').length,
-    watch: allProjects.filter((p) => p.status === 'Watch').length,
-    action: allProjects.filter((p) => p.status === 'Action required').length,
-  };
+  const utilization = useMemo(
+    () => (portfolioTotals.approved ? Math.round((portfolioTotals.spent / portfolioTotals.approved) * 100) : 0),
+    [],
+  );
 
   const handleNav = (route: string) => {
     Haptics.selectionAsync().catch(() => {});
-    router.push(route as any);
+    router.push(route as never);
   };
 
   return (
     <View style={styles.container}>
-      {/* Top Tax Filing Quick-Links */}
+      {/* Taxation shortcuts (web: 3 buttons → /finance/taxation) */}
       <View style={styles.taxBar}>
-        {[
-          { label: 'GST Returns', desc: 'GSTR-1 & 3B compliance' },
-          { label: 'TDS Filings', desc: 'Quarterly deduction desk' },
-          { label: 'Input Tax Credit', desc: 'Eligible ITC claims' },
-        ].map((item, idx) => (
+        {TAX_SHORTCUTS.map((item) => (
           <Pressable
-            key={idx}
+            key={item.label}
             onPress={() => handleNav('/(finance)/taxation')}
-            style={[
+            style={({ pressed }) => [
               styles.taxCard,
               {
-                backgroundColor: theme.colors.cardBg,
+                backgroundColor: theme.colors.moduleBg,
                 borderColor: theme.colors.border,
-                ...theme.shadows.sm,
+                opacity: pressed ? 0.85 : 1,
+                ...(theme.shadows.sm as object),
               },
             ]}
           >
             <View style={styles.taxCardTop}>
-              <Text style={[styles.taxLabel, { color: theme.colors.brandPrimary }]}>
+              <Text style={[styles.taxLabel, { color: theme.colors.financeAccent }]} numberOfLines={1}>
                 {item.label}
               </Text>
-              <Icon name="ArrowUpRight" size={13} color={theme.colors.brandPrimary} />
+              <Icon name="ArrowUpRight" size={13} color={theme.colors.financeAccent} />
             </View>
-            <Text style={[styles.taxDesc, { color: theme.colors.textSubtle }]}>
+            <Text style={[styles.taxDesc, { color: theme.colors.textSubtle }]} numberOfLines={1}>
               {item.desc}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Hero Banner with Dark Emerald Gradient */}
-      <LinearGradient
-        colors={['#022c22', '#064e3b', '#047857']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroCard}
-      >
-        <View style={styles.heroTop}>
-          <View style={styles.heroBadge}>
-            <Icon name="CircleDollarSign" size={13} color="#34d399" />
-            <Text style={styles.heroBadgeText}>FINANCE PORTFOLIO CONTROL</Text>
-          </View>
-          <Text style={styles.heroTitle}>Every rupee, from grant to impact.</Text>
-          <Text style={styles.heroSubtitle}>
-            Full visibility into approved donor budgets, fund releases, verified expenditure, and audit compliance across all portfolios.
-          </Text>
-        </View>
-
-        <View style={styles.heroUtilizationBox}>
-          <View style={styles.heroUtilizationRow}>
-            <Text style={styles.utilLabel}>Portfolio Utilization</Text>
-            <Text style={styles.utilValue}>{utilization}%</Text>
-          </View>
-          <View style={styles.utilTrack}>
-            <View style={[styles.utilFill, { width: `${utilization}%` }]} />
-          </View>
-          <View style={styles.utilMetaRow}>
-            <Text style={styles.utilMetaText}>{formatCurrency(totals.spent)} spent</Text>
-            <Text style={styles.utilMetaText}>{formatCurrency(totals.approved)} approved</Text>
-          </View>
-        </View>
-      </LinearGradient>
-
-      {/* Cumulative Financial Reserves Cards */}
-      <View style={styles.reservesGrid}>
-        <Pressable
-          onPress={() => handleNav('/(finance)/banking')}
-          style={[
-            styles.reserveCard,
-            {
-              backgroundColor: theme.colors.cardBg,
-              borderColor: 'rgba(16, 185, 129, 0.25)',
-              ...theme.shadows.card,
-            },
-          ]}
-        >
-          <View style={styles.reserveTop}>
-            <View style={[styles.reserveIconBox, { backgroundColor: theme.colors.emeraldSoft }]}>
-              <Icon name="Landmark" size={18} color={theme.colors.emerald} />
+      {/* Hero — web `from-slate-950 via-emerald-950 to-emerald-700` + glass utilization card */}
+      <HeroBanner
+        gradient={heroGradients.finance}
+        badge={{ icon: 'CircleDollarSign', label: 'Finance portfolio control' }}
+        title="Every rupee, from grant to impact."
+        description="Full visibility into approved donor budgets, fund releases, verified expenditure and audit compliance across all portfolios."
+        right={
+          <HeroGlassCard label="Portfolio utilization">
+            <AnimatedNumber value={utilization} suffix="%" style={styles.glassValue} />
+            <View style={styles.glassTrack}>
+              <View style={[styles.glassFill, { width: `${utilization}%` }]} />
             </View>
-            <Badge label="Banking →" tone="emerald" size="sm" />
-          </View>
-          <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
-          <Text style={[styles.reserveLabel, { color: theme.colors.text }]}>Total Liquid Balance</Text>
-          <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-            Across 4 institutional bank accounts
-          </Text>
-        </Pressable>
+            <Text style={styles.glassMeta}>
+              {formatCurrency(portfolioTotals.spent)} spent{'\n'}{formatCurrency(portfolioTotals.approved)} approved
+            </Text>
+          </HeroGlassCard>
+        }
+      />
 
-        <Pressable
-          onPress={() => handleNav('/(finance)/investments')}
-          style={[
-            styles.reserveCard,
-            {
-              backgroundColor: theme.colors.cardBg,
-              borderColor: 'rgba(59, 130, 246, 0.25)',
-              ...theme.shadows.card,
-            },
-          ]}
-        >
-          <View style={styles.reserveTop}>
-            <View style={[styles.reserveIconBox, { backgroundColor: theme.colors.brandSoft }]}>
-              <Icon name="TrendingUp" size={18} color={theme.colors.brandPrimary} />
+      {/* Treasury & Reserves (web: Total Balance / Investments / Liabilities) */}
+      <View style={styles.section}>
+        <SectionLabel>Treasury &amp; Reserves</SectionLabel>
+        <View style={styles.grid2}>
+          <Pressable onPress={() => handleNav('/(finance)/banking')}>
+            <Card padding={20} style={styles.reserveCard}>
+              <View style={styles.reserveTop}>
+                <View style={[styles.iconTile, { backgroundColor: theme.colors.successSoft }]}>
+                  <Icon name="Landmark" size={18} color={theme.colors.financeAccent} strokeWidth={1.8} />
+                </View>
+                <View style={[styles.linkPill, { backgroundColor: theme.colors.successSoft }]}>
+                  <Text style={[styles.linkPillText, { color: theme.colors.successText }]}>Banking →</Text>
+                </View>
+              </View>
+              <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
+              <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Balance</Text>
+              <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                Across 4 institutional accounts
+              </Text>
+            </Card>
+          </Pressable>
+
+          <Pressable onPress={() => handleNav('/(finance)/investments')}>
+            <Card padding={20} style={styles.reserveCard}>
+              <View style={styles.reserveTop}>
+                <View style={[styles.iconTile, { backgroundColor: theme.colors.infoSoft }]}>
+                  <Icon name="TrendingUp" size={18} color={theme.colors.info} strokeWidth={1.8} />
+                </View>
+                <View style={[styles.linkPill, { backgroundColor: theme.colors.infoSoft }]}>
+                  <Text style={[styles.linkPillText, { color: theme.colors.infoText }]}>Investments →</Text>
+                </View>
+              </View>
+              <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
+              <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Investments</Text>
+              <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                Fixed deposits &amp; liquid funds
+              </Text>
+            </Card>
+          </Pressable>
+
+          <Card padding={20} style={styles.reserveCard}>
+            <View style={styles.reserveTop}>
+              <View style={[styles.iconTile, { backgroundColor: 'rgba(124, 58, 237, 0.1)' }]}>
+                <Icon name="Banknote" size={18} color={theme.colors.violet} strokeWidth={1.8} />
+              </View>
             </View>
-            <Badge label="Investments →" tone="brand" size="sm" />
-          </View>
-          <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
-          <Text style={[styles.reserveLabel, { color: theme.colors.text }]}>Total Investments</Text>
-          <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-            Fixed deposits & liquid mutual funds
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* KPI 6 Grid: Approved, Released, Spent, Committed, Advances, Available */}
-      <View style={styles.metricsGrid}>
-        <MetricCard
-          label="Approved Budget"
-          value={formatCurrency(totals.approved)}
-          subtitle="Donor grants sanctioned"
-          icon="WalletCards"
-          accentColor={theme.colors.brandPrimary}
-        />
-        <MetricCard
-          label="Fund Released"
-          value={formatCurrency(totals.released)}
-          subtitle={`${releaseRate}% release rate`}
-          icon="Banknote"
-          accentColor={theme.colors.emerald}
-        />
-        <MetricCard
-          label="Expenditure"
-          value={formatCurrency(totals.spent)}
-          subtitle={`${utilization}% utilization`}
-          icon="Receipt"
-          accentColor={theme.colors.cyan}
-        />
-        <MetricCard
-          label="Committed"
-          value={formatCurrency(totals.committed)}
-          subtitle="Purchase orders & contracts"
-          icon="Clock"
-          accentColor={theme.colors.amber}
-        />
-        <MetricCard
-          label="Pending Advances"
-          value={formatCurrency(totals.pendingAdvances)}
-          subtitle="Settlement due"
-          icon="AlertTriangle"
-          accentColor={theme.colors.danger}
-        />
-        <MetricCard
-          label="Available Balance"
-          value={formatCurrency(totals.available)}
-          subtitle="Uncommitted reserves"
-          icon="CheckCircle2"
-          accentColor={theme.colors.violet}
-        />
-      </View>
-
-      {/* Portfolio Status Summary */}
-      <View
-        style={[
-          styles.statusCard,
-          {
-            backgroundColor: theme.colors.cardBg,
-            borderColor: theme.colors.border,
-            ...theme.shadows.card,
-          },
-        ]}
-      >
-        <Text style={[styles.statusCardTitle, { color: theme.colors.text }]}>
-          Project Health Status
-        </Text>
-        <View style={styles.statusRow}>
-          <View style={styles.statusBox}>
-            <View style={[styles.statusDot, { backgroundColor: theme.colors.emerald }]} />
-            <Text style={[styles.statusNumber, { color: theme.colors.text }]}>
-              {statusCounts.onTrack}
+            <Text style={[styles.reserveValue, { color: theme.colors.text }]}>
+              {formatCurrency(portfolioTotals.committed)}
             </Text>
-            <Text style={[styles.statusTitle, { color: theme.colors.textSubtle }]}>On Track</Text>
-          </View>
-
-          <View style={styles.statusBox}>
-            <View style={[styles.statusDot, { backgroundColor: theme.colors.warning }]} />
-            <Text style={[styles.statusNumber, { color: theme.colors.text }]}>
-              {statusCounts.watch}
+            <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Liabilities</Text>
+            <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+              Committed POs &amp; contracts
             </Text>
-            <Text style={[styles.statusTitle, { color: theme.colors.textSubtle }]}>Watch</Text>
-          </View>
-
-          <View style={styles.statusBox}>
-            <View style={[styles.statusDot, { backgroundColor: theme.colors.danger }]} />
-            <Text style={[styles.statusNumber, { color: theme.colors.text }]}>
-              {statusCounts.action}
-            </Text>
-            <Text style={[styles.statusTitle, { color: theme.colors.textSubtle }]}>Action Required</Text>
-          </View>
+          </Card>
         </View>
       </View>
 
-      {/* Thematic Area Cards Grid */}
-      {!activeArea && (
-        <View style={styles.areasSection}>
-          <Text style={[styles.areasHeaderTitle, { color: theme.colors.text }]}>
-            Thematic Area Portfolios
-          </Text>
-          <View style={styles.areasList}>
-            {financeAreas.map((area) => {
-              const aTot = areaTotals(area);
-              return (
-                <Pressable
-                  key={area.id}
-                  onPress={() => handleNav(`/(finance)/projects`)}
+      {/* FY performance (web: Sanctions / Received / Expenditure / Corpus) */}
+      <View style={styles.section}>
+        <SectionLabel>FY 2026–27 Performance</SectionLabel>
+        <View style={styles.metricsGrid}>
+          <MetricCard
+            label="Total Sanctions"
+            value={formatCurrency(portfolioTotals.approved)}
+            icon="FileCheck2"
+            accentColor={theme.colors.financeAccent}
+            arrow
+          />
+          <MetricCard
+            label="Total Received"
+            value={formatCurrency(portfolioTotals.released)}
+            icon="WalletCards"
+            accentColor={theme.colors.info}
+            arrow
+          />
+          <MetricCard
+            label="Total Expenditure"
+            value={formatCurrency(portfolioTotals.spent)}
+            valueColor={theme.colors.financeAccent}
+            icon="Receipt"
+            accentColor={theme.colors.warning}
+            arrow
+          />
+          <MetricCard
+            label="Total Corpus"
+            value="₹5.60 Cr"
+            icon="CircleDollarSign"
+            accentColor={theme.colors.teal}
+            arrow
+          />
+        </View>
+      </View>
+
+      {/* Compliance donut + Highlights (web 2-col xl, stacked below) */}
+      <View style={[styles.complianceRow, isMd && styles.complianceRowWide]}>
+        <Card padding={20} style={isMd ? { flex: 1 } : styles.fullWidth}>
+          <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Compliance completeness</Text>
+          <View style={styles.donutRow}>
+            <Donut
+              size={140}
+              thickness={17}
+              segments={[
+                { value: 88, color: '#10b981' },
+                { value: 6, color: '#f59e0b' },
+                { value: 6, color: '#ef4444' },
+              ]}
+              centerContent={
+                <>
+                  <Text style={[styles.donutValue, { color: theme.colors.text }]}>88%</Text>
+                  <Text style={[styles.donutCaption, { color: theme.colors.textSubtle }]}>overall</Text>
+                </>
+              }
+            />
+            <View style={styles.legend}>
+              <LegendDot color="#10b981" label="Compliant" theme={theme} />
+              <LegendDot color="#f59e0b" label="At risk" theme={theme} />
+              <LegendDot color="#ef4444" label="Overdue" theme={theme} />
+            </View>
+          </View>
+          <View style={styles.checklist}>
+            {COMPLIANCE_ROWS.map((row) => (
+              <View key={row.label} style={styles.checkRow}>
+                <Text numberOfLines={1} style={[styles.checkLabel, { color: theme.colors.textMuted }]}>
+                  {row.label}
+                </Text>
+                <View style={styles.checkBarTrack}>
+                  <View
+                    style={[
+                      styles.checkBarFill,
+                      {
+                        width: `${row.value}%`,
+                        backgroundColor:
+                          row.value >= 90 ? '#10b981' : row.value >= 70 ? '#f59e0b' : '#ef4444',
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.checkValue, { color: theme.colors.text }]}>{row.value}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        <Card padding={20} style={isMd ? { flex: 1.4 } : styles.fullWidth}>
+          <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Highlights</Text>
+          <View style={styles.highlights}>
+            {alerts.slice(0, 7).map((alert) => (
+              <View key={alert.id} style={styles.highlightRow}>
+                <View
                   style={[
-                    styles.areaCard,
+                    styles.highlightIcon,
                     {
-                      backgroundColor: theme.colors.cardBg,
-                      borderColor: theme.colors.border,
-                      ...theme.shadows.card,
+                      backgroundColor:
+                        alert.category === 'Action Required'
+                          ? theme.colors.dangerSoft
+                          : alert.category === 'Completed'
+                            ? theme.colors.successSoft
+                            : theme.colors.infoSoft,
                     },
                   ]}
                 >
+                  <Icon
+                    name={
+                      alert.category === 'Action Required'
+                        ? 'AlertTriangle'
+                        : alert.category === 'Completed'
+                          ? 'CheckCircle'
+                          : 'Bell'
+                    }
+                    size={14}
+                    color={
+                      alert.category === 'Action Required'
+                        ? theme.colors.dangerText
+                        : alert.category === 'Completed'
+                          ? theme.colors.successText
+                          : theme.colors.infoText
+                    }
+                  />
+                </View>
+                <View style={styles.highlightBody}>
+                  <Text numberOfLines={1} style={[styles.highlightTitle, { color: theme.colors.text }]}>
+                    {alert.title}
+                  </Text>
+                  <Text numberOfLines={2} style={[styles.highlightDetail, { color: theme.colors.textMuted }]}>
+                    {alert.body}
+                  </Text>
+                </View>
+                <Text style={[styles.highlightTime, { color: theme.colors.textSubtle }]}>{alert.time}</Text>
+              </View>
+            ))}
+          </View>
+          <Pressable onPress={() => handleNav('/(finance)/alerts')} style={styles.viewAll}>
+            <Text style={[styles.viewAllText, { color: theme.colors.financeAccent }]}>
+              View all alerts &amp; notifications
+            </Text>
+            <Icon name="ArrowUpRight" size={13} color={theme.colors.financeAccent} />
+          </Pressable>
+        </Card>
+      </View>
+
+      {/* Thematic financial scorecards (web: 8 area cards with 4 mini-metrics) */}
+      <View style={styles.section}>
+        <SectionLabel>Thematic financial scorecards</SectionLabel>
+        <View style={[styles.grid2, isMd && styles.grid2Columns]}>
+          {financeAreas.map((area) => {
+            const totals = areaTotals(area);
+            return (
+              <Pressable key={area.id} onPress={() => handleNav('/(finance)/projects')}>
+                <Card padding={18} style={styles.areaCard}>
                   <View style={styles.areaTop}>
                     <View style={styles.areaTitleRow}>
-                      <View style={[styles.areaColorDot, { backgroundColor: area.color }]} />
-                      <Text style={[styles.areaNameText, { color: theme.colors.text }]}>
+                      <View style={[styles.areaDot, { backgroundColor: area.color }]} />
+                      <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>
                         {area.name}
                       </Text>
                     </View>
-                    <Badge label={`${area.projects.length} projects`} tone="neutral" size="sm" />
-                  </View>
-
-                  <View style={styles.areaFinRow}>
-                    <Text style={[styles.areaSpentText, { color: theme.colors.emerald, fontWeight: '700' }]}>
-                      {formatCurrency(aTot.spent)}
-                    </Text>
-                    <Text style={[styles.areaTotalText, { color: theme.colors.textSubtle }]}>
-                      of {formatCurrency(aTot.approved)} ({aTot.utilization}%)
+                    <Text style={[styles.areaProjects, { color: theme.colors.textSubtle }]}>
+                      {area.projects.length} projects
                     </Text>
                   </View>
-
-                  <ProgressBar value={aTot.utilization} color={area.color} height={5} />
-
-                  <View style={styles.areaBottomRow}>
-                    <Text style={[styles.areaAvailText, { color: theme.colors.textMuted }]}>
-                      Available: {formatCurrency(aTot.available)}
-                    </Text>
-                    {aTot.atRisk > 0 && (
-                      <Text style={[styles.areaRiskText, { color: theme.colors.danger }]}>
-                        {aTot.atRisk} at risk
-                      </Text>
-                    )}
+                  <View style={styles.areaMetrics}>
+                    <AreaMetric label="Approved" value={formatCurrency(totals.approved)} theme={theme} />
+                    <AreaMetric label="Released" value={formatCurrency(totals.released)} theme={theme} />
+                    <AreaMetric label="Spent" value={formatCurrency(totals.spent)} theme={theme} />
+                    <AreaMetric label="Available" value={formatCurrency(totals.available)} theme={theme} />
                   </View>
-                </Pressable>
-              );
-            })}
-          </View>
+                  <ProgressBar value={totals.utilization} color={area.color} height={6} />
+                  <Text style={[styles.areaUtilized, { color: theme.colors.textMuted }]}>
+                    {totals.utilization}% utilized
+                  </Text>
+                </Card>
+              </Pressable>
+            );
+          })}
         </View>
-      )}
+      </View>
     </View>
   );
 };
 
+const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { theme } = useTheme();
+  return (
+    <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>{children}</Text>
+  );
+};
+
+const LegendDot: React.FC<{ color: string; label: string; theme: ReturnType<typeof useTheme>['theme'] }> = ({
+  color,
+  label,
+  theme,
+}) => (
+  <View style={styles.legendRow}>
+    <View style={[styles.legendDot, { backgroundColor: color }]} />
+    <Text style={[styles.legendText, { color: theme.colors.textMuted }]}>{label}</Text>
+  </View>
+);
+
+const AreaMetric: React.FC<{ label: string; value: string; theme: ReturnType<typeof useTheme>['theme'] }> = ({
+  label,
+  value,
+  theme,
+}) => (
+  <View style={styles.areaMetric}>
+    <Text numberOfLines={1} style={[styles.areaMetricValue, { color: theme.colors.text }]}>
+      {value}
+    </Text>
+    <Text numberOfLines={1} style={[styles.areaMetricLabel, { color: theme.colors.textSubtle }]}>
+      {label}
+    </Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: 18,
+  },
+  fullWidth: {
+    width: '100%',
   },
   taxBar: {
     flexDirection: 'row',
@@ -321,228 +389,273 @@ const styles = StyleSheet.create({
   },
   taxCard: {
     flex: 1,
-    minWidth: 100,
-    borderRadius: 14,
+    minWidth: 150,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: 12,
+    padding: 13,
     gap: 4,
   },
   taxCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 6,
   },
   taxLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   taxDesc: {
-    fontSize: 10,
+    fontSize: 10.5,
   },
-  heroCard: {
-    borderRadius: 24,
-    padding: 20,
-    gap: 18,
+  glassValue: {
+    color: '#6ee7b7',
+    fontSize: 26,
+    fontWeight: '600',
+    letterSpacing: -0.8,
   },
-  heroTop: {
-    gap: 8,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignSelf: 'flex-start',
-  },
-  heroBadgeText: {
-    color: '#34d399',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: -0.5,
-  },
-  heroSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  heroUtilizationBox: {
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    padding: 14,
-    borderRadius: 16,
-    gap: 8,
-  },
-  heroUtilizationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  utilLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  utilValue: {
-    color: '#34d399',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  utilTrack: {
+  glassTrack: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
     borderRadius: 3,
     overflow: 'hidden',
   },
-  utilFill: {
+  glassFill: {
     height: '100%',
-    backgroundColor: '#34d399',
+    backgroundColor: '#6ee7b7',
     borderRadius: 3,
   },
-  utilMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  utilMetaText: {
-    color: 'rgba(255, 255, 255, 0.5)',
+  glassMeta: {
+    color: 'rgba(209, 250, 229, 0.65)',
     fontSize: 10,
+    lineHeight: 14,
   },
-  reservesGrid: {
+  section: {
+    gap: 10,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  grid2: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
+  grid2Columns: {
+    flexWrap: 'nowrap',
+  },
   reserveCard: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 6,
+    flexGrow: 1,
+    flexBasis: 220,
+    gap: 4,
   },
   reserveTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
   },
-  reserveIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  linkPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  linkPillText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
   reserveValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.7,
+    fontVariant: ['tabular-nums'],
   },
   reserveLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   reserveSub: {
-    fontSize: 10,
+    fontSize: 10.5,
+    marginTop: 2,
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  statusCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
+  complianceRow: {
     gap: 12,
   },
-  statusCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  statusRow: {
+  complianceRowWide: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  statusBox: {
-    flex: 1,
+  donutRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 22,
+    marginTop: 16,
+    marginBottom: 18,
   },
-  statusDot: {
+  donutValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: -0.8,
+    fontVariant: ['tabular-nums'],
+  },
+  donutCaption: {
+    fontSize: 10.5,
+  },
+  legend: {
+    gap: 9,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-  statusNumber: {
-    fontSize: 20,
-    fontWeight: '700',
+  legendText: {
+    fontSize: 11.5,
   },
-  statusTitle: {
+  checklist: {
+    gap: 9,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkLabel: {
+    fontSize: 11.5,
+    width: 190,
+    flexShrink: 1,
+  },
+  checkBarTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(128, 144, 168, 0.18)',
+    overflow: 'hidden',
+  },
+  checkBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  checkValue: {
     fontSize: 11,
+    fontWeight: '600',
+    width: 28,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
-  areasSection: {
+  highlights: {
     gap: 12,
+    marginTop: 14,
   },
-  areasHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+  highlightRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
   },
-  areasList: {
-    gap: 12,
+  highlightIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  highlightBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  highlightTitle: {
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  highlightDetail: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  highlightTime: {
+    fontSize: 10,
+  },
+  viewAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128, 144, 168, 0.18)',
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   areaCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
+    flexGrow: 1,
+    flexBasis: 300,
+    gap: 10,
   },
   areaTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   areaTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
-  areaColorDot: {
+  areaDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-  areaNameText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  areaFinRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-  },
-  areaSpentText: {
-    fontSize: 15,
-  },
-  areaTotalText: {
-    fontSize: 11,
-  },
-  areaBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  areaAvailText: {
-    fontSize: 11,
-  },
-  areaRiskText: {
-    fontSize: 11,
+  areaName: {
+    fontSize: 13.5,
     fontWeight: '600',
+    flexShrink: 1,
+  },
+  areaProjects: {
+    fontSize: 10.5,
+  },
+  areaMetrics: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  areaMetric: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  areaMetricValue: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  areaMetricLabel: {
+    fontSize: 9.5,
+  },
+  areaUtilized: {
+    fontSize: 10.5,
   },
 });

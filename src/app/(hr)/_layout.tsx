@@ -1,20 +1,22 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { HRProvider } from '../../features/hr/HRContext';
+import { ModuleGuard } from '../../components/auth/ModuleGuard';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function HRLayout() {
   const { theme } = useTheme();
 
   return (
-    <HRProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.background },
-          animation: 'fade',
-        }}
-      >
+    <ModuleGuard requiredModuleId="human-resources">
+      <HRProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.background },
+            animation: 'fade',
+          }}
+        >
         <Stack.Screen name="dashboard" />
         <Stack.Screen name="recruitment" />
         <Stack.Screen name="employee-onboarding" />
@@ -25,7 +27,8 @@ export default function HRLayout() {
         <Stack.Screen name="leave-management" />
         <Stack.Screen name="kbi-metrics" />
         <Stack.Screen name="appraisals" />
-      </Stack>
-    </HRProvider>
+        </Stack>
+      </HRProvider>
+    </ModuleGuard>
   );
 }

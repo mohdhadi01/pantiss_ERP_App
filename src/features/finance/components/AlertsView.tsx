@@ -1,161 +1,162 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
-import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
-import { Icon } from '../../../components/ui/Icon';
+import { heroGradients } from '../../../theme/gradients';
+import { useFinanceAlerts } from '../data/alertsStore';
+import { FinanceAlertCategory } from '../data/alertsData';
+import { HeroBanner } from './HeroBanner';
+import { Icon, IconSource } from '../../../components/ui/Icon';
+import { EmptyState } from '../../../components/ui/EmptyState';
 
-interface AlertItem {
-  id: string;
-  title: string;
-  detail: string;
-  severity: 'critical' | 'warning' | 'info';
-  timestamp: string;
-  actionRoute: string;
-  actionLabel: string;
-}
+const CATEGORY_META: Record<FinanceAlertCategory, { icon: IconSource; color: string }> = {
+  'Action Required': { icon: 'AlertTriangle', color: '#ef4444' },
+  Compliance: { icon: 'Scale', color: '#f59e0b' },
+  Approvals: { icon: 'CheckCircle2', color: '#3b82f6' },
+  Investments: { icon: 'TrendingUp', color: '#3b82f6' },
+  Budget: { icon: 'WalletCards', color: '#f59e0b' },
+  Salary: { icon: 'Coins', color: '#14b8a6' },
+  Completed: { icon: 'CheckCircle', color: '#10b981' },
+};
 
-const initialAlerts: AlertItem[] = [
-  {
-    id: 'ALT-01',
-    title: 'Statutory TDS Form 26Q Filing Deadline',
-    detail: 'Quarter 2 filing due by 31 October 2026. Review challan ITNS-281 deductions.',
-    severity: 'warning',
-    timestamp: '2 hours ago',
-    actionRoute: '/(finance)/taxation',
-    actionLabel: 'Open Taxation Desk',
-  },
-  {
-    id: 'ALT-02',
-    title: 'Project Budget Cap Alert: PMKVY 4.0 Odisha Skills',
-    detail: 'Expenditure has crossed 88% of sanctioned donor grant. Review commitment buffer.',
-    severity: 'critical',
-    timestamp: 'Yesterday',
-    actionRoute: '/(finance)/budget',
-    actionLabel: 'Review Budget Lines',
-  },
-  {
-    id: 'ALT-03',
-    title: 'Staff Travel Advance Overdue for Settlement',
-    detail: 'Sunita Majhi has outstanding advances > 30 days pending expense receipt submission.',
-    severity: 'warning',
-    timestamp: '2 days ago',
-    actionRoute: '/(finance)/reimbursement',
-    actionLabel: 'Check Reimbursements',
-  },
-  {
-    id: 'ALT-04',
-    title: 'HDFC Corporate Fixed Deposit Matures Next Month',
-    detail: 'FD-02 (₹1.35 Cr principal) matures on 20 November 2026. Instructions needed for auto-renewal.',
-    severity: 'info',
-    timestamp: '3 days ago',
-    actionRoute: '/(finance)/investments',
-    actionLabel: 'View Portfolio',
-  },
+const FILTERS: Array<'All' | FinanceAlertCategory> = [
+  'All',
+  'Action Required',
+  'Compliance',
+  'Approvals',
+  'Investments',
+  'Budget',
+  'Salary',
+  'Completed',
 ];
 
 export const AlertsView: React.FC = () => {
   const { theme } = useTheme();
   const router = useRouter();
-  const [alerts, setAlerts] = useState(initialAlerts);
+  const { alerts, dismiss } = useFinanceAlerts();
+  const [filter, setFilter] = useState<'All' | FinanceAlertCategory>('All');
 
-  const handleAction = (route: string) => {
-    Haptics.selectionAsync().catch(() => {});
-    router.push(route as any);
-  };
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const alert of alerts) map.set(alert.category, (map.get(alert.category) ?? 0) + 1);
+    return map;
+  }, [alerts]);
+
+  const visible = filter === 'All' ? alerts : alerts.filter((a) => a.category === filter);
 
   const handleDismiss = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
+    dismiss(id);
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>
-          Financial Alerts & Compliance Triggers
-        </Text>
-        <Text style={[styles.sub, { color: theme.colors.textSubtle }]}>
-          {alerts.length} active notifications requiring executive action
-        </Text>
-      </View>
+      <HeroBanner
+        gradient={heroGradients.alerts}
+        badge={{ icon: 'Bell', label: 'Finance Alerts & Notifications' }}
+        title="Alerts & Highlights"
+        decorative={false}
+        right={
+          <View style={styles.statChips}>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipValue}>{alerts.filter((a) => a.unread).length} unread</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipValue}>{alerts.length} total</Text>
+            </View>
+          </View>
+        }
+      />
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {FILTERS.map((key) => {
+          const active = filter === key;
+          const count = key === 'All' ? alerts.length : counts.get(key) ?? 0;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setFilter(key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={({ pressed }) => [
+                styles.filterChip,
+                {
+                  borderColor: active ? theme.colors.financeAccent : theme.colors.border,
+                  backgroundColor: active ? theme.colors.financeAccentSoft : pressed ? theme.colors.surfaceSoft : 'transparent',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: active ? theme.colors.financeAccent : theme.colors.textMuted, fontWeight: active ? '600' : '500' },
+                ]}
+              >
+                {key}
+              </Text>
+              <Text
+                style={[
+                  styles.filterCount,
+                  { color: active ? theme.colors.financeAccent : theme.colors.textSubtle },
+                ]}
+              >
+                {count}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       <View style={styles.list}>
-        {alerts.map((alert) => (
-          <View
-            key={alert.id}
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.cardBg,
-                borderColor:
-                  alert.severity === 'critical'
-                    ? 'rgba(239, 68, 68, 0.35)'
-                    : alert.severity === 'warning'
-                    ? 'rgba(245, 158, 11, 0.35)'
-                    : theme.colors.border,
-                ...theme.shadows.card,
-              },
-            ]}
-          >
-            <View style={styles.cardTop}>
-              <View style={styles.titleRow}>
-                <View
-                  style={[
-                    styles.severityDot,
-                    {
-                      backgroundColor:
-                        alert.severity === 'critical'
-                          ? theme.colors.danger
-                          : alert.severity === 'warning'
-                          ? theme.colors.warning
-                          : theme.colors.brandPrimary,
-                    },
-                  ]}
-                />
-                <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
-                  {alert.title}
-                </Text>
+        {visible.length === 0 ? (
+          <EmptyState
+            icon="Bell"
+            title={filter === 'All' ? 'All caught up' : `No ${filter} alerts`}
+            description="No pending financial alerts or statutory deadlines in this category."
+          />
+        ) : (
+          visible.map((alert) => {
+            const meta = CATEGORY_META[alert.category];
+            return (
+              <View
+                key={alert.id}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.colors.moduleBg,
+                    borderColor: theme.colors.border,
+                    ...(theme.shadows.card as object),
+                  },
+                ]}
+              >
+                <View style={[styles.iconTile, { backgroundColor: `${meta.color}1A` }]}>
+                  <Icon name={meta.icon} size={17} color={meta.color} strokeWidth={1.8} />
+                </View>
+                <View style={styles.cardBody}>
+                  <View style={styles.titleRow}>
+                    {alert.unread ? <View style={styles.unreadDot} /> : null}
+                    <Text style={[styles.alertTitle, { color: theme.colors.text }]} numberOfLines={2}>
+                      {alert.title}
+                    </Text>
+                    <View style={[styles.tag, { backgroundColor: `${meta.color}1A` }]}>
+                      <Text style={[styles.tagText, { color: meta.color }]}>{alert.category}</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => handleDismiss(alert.id)}
+                      accessibilityLabel={`Dismiss alert: ${alert.title}`}
+                      hitSlop={8}
+                      style={styles.dismiss}
+                    >
+                      <Icon name="X" size={14} color={theme.colors.textSubtle} />
+                    </Pressable>
+                  </View>
+                  <Text style={[styles.bodyText, { color: theme.colors.textMuted }]}>{alert.body}</Text>
+                  <Text style={[styles.timeText, { color: theme.colors.textSubtle }]}>{alert.time}</Text>
+                </View>
               </View>
-
-              <Pressable onPress={() => handleDismiss(alert.id)}>
-                <Icon name="X" size={15} color={theme.colors.textSubtle} />
-              </Pressable>
-            </View>
-
-            <Text style={[styles.detailText, { color: theme.colors.textMuted }]}>
-              {alert.detail}
-            </Text>
-
-            <View style={styles.footerRow}>
-              <Text style={[styles.timeText, { color: theme.colors.textSubtle }]}>
-                {alert.timestamp}
-              </Text>
-
-              <Button
-                label={alert.actionLabel}
-                onPress={() => handleAction(alert.actionRoute)}
-                size="sm"
-                variant={alert.severity === 'critical' ? 'danger' : 'outline'}
-                icon="ArrowUpRight"
-                iconPosition="right"
-              />
-            </View>
-          </View>
-        ))}
-
-        {alerts.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Icon name="CheckCircle2" size={32} color={theme.colors.emerald} />
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-              All Caught Up!
-            </Text>
-            <Text style={[styles.emptySub, { color: theme.colors.textSubtle }]}>
-              No pending financial alerts or statutory deadlines at this time.
-            </Text>
-          </View>
+            );
+          })
         )}
       </View>
     </View>
@@ -166,75 +167,103 @@ const styles = StyleSheet.create({
   container: {
     gap: 16,
   },
-  header: {
-    gap: 4,
+  statChips: {
+    gap: 8,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
+  statChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-end',
   },
-  sub: {
+  statChipValue: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterText: {
     fontSize: 12,
   },
-  list: {
-    gap: 12,
+  filterCount: {
+    fontSize: 11,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
+  list: {
     gap: 10,
   },
-  cardTop: {
+  card: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  iconTile: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    marginRight: 8,
+    gap: 7,
   },
-  severityDot: {
-    width: 8,
-    height: 8,
+  unreadDot: {
+    width: 7,
+    height: 7,
     borderRadius: 4,
+    backgroundColor: '#f59e0b',
   },
   alertTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '600',
+    flexShrink: 1,
   },
-  detailText: {
+  tag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: 'auto',
+  },
+  tagText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+  },
+  dismiss: {
+    padding: 3,
+  },
+  bodyText: {
     fontSize: 12,
-    lineHeight: 18,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.1)',
-    paddingTop: 10,
-    marginTop: 2,
+    lineHeight: 17,
   },
   timeText: {
-    fontSize: 11,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  emptySub: {
-    fontSize: 12,
-    textAlign: 'center',
+    fontSize: 10.5,
+    fontWeight: '500',
   },
 });

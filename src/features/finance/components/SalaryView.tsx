@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, TextInput } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
+import { useAuth } from '../../../hooks/useAuth';
 import { useSalaryRecords } from '../useSalaryRecords';
 import {
   payrollMonths,
@@ -9,540 +11,362 @@ import {
   salaryMonthLabel,
   salaryTotals,
   SalaryRecord,
-  salaryWorkflowLabel,
+  canForwardSalary,
+  isFinanceEligible,
 } from '../salaryData';
+import { financeAreas } from '../data';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
-import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
-import { Badge } from '../../../components/ui/Badge';
+import { heroGradients } from '../../../theme/gradients';
+import { HeroBanner, HeroGlassCard } from './HeroBanner';
+import { MetricCard } from '../../../components/ui/MetricCard';
+import { SectionCard } from '../../../components/ui/Card';
+import { StatusChip } from '../../../components/ui/StatusChip';
+import { Tabs } from '../../../components/ui/Tabs';
+import { DataTable, DataColumn } from '../../../components/ui/DataTable';
+import { TextField } from '../../../components/ui/TextField';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
+import { SalaryRecordSheet, SalaryMobileCard } from './SalaryParts';
+
+type FilterKey = 'all' | 'pending' | 'ready' | 'forwarded' | 'disbursed';
 
 export const SalaryView: React.FC = () => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
+  const { user } = useAuth();
+  const actor = user ? `${user.name} (${user.roleLabel})` : 'Finance Manager';
   const [selectedMonth, setSelectedMonth] = useState(payrollMonths[0]);
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'ready' | 'forwarded' | 'disbursed'>('all');
-
-  // Disbursement modal state
-  const [disburseModalOpen, setDisburseModalOpen] = useState(false);
+  const [scopeAreaId, setScopeAreaId] = useState('all');
+  const [scopeProjectId, setScopeProjectId] = useState('all');
   const [activeRecord, setActiveRecord] = useState<SalaryRecord | null>(null);
-  const [bankRef, setBankRef] = useState('');
+  const [recordOpen, setRecordOpen] = useState(false);
 
-  const { records, forwardForPayment, savePayment } = useSalaryRecords('finance');
+  const { allRecords, forwardForPayment, forwardMultiple, approveSalary, rejectSalary, savePayment } =
+    useSalaryRecords('finance');
 
-  const monthlyRecords = records.filter((r) => r.month === selectedMonth);
-  const totals = salaryTotals(monthlyRecords);
+  const monthlyRecords = useMemo(
+    () => allRecords.filter((r) => r.month === selectedMonth),
+    [allRecords, selectedMonth],
+  );
+  const totals = useMemo(() => salaryTotals(monthlyRecords), [monthlyRecords]);
 
-  const filtered = monthlyRecords.filter((rec) => {
-    const matchesSearch =
-      rec.name.toLowerCase().includes(search.toLowerCase()) ||
-      rec.designation.toLowerCase().includes(search.toLowerCase()) ||
-      rec.id.toLowerCase().includes(search.toLowerCase());
+  const scopeAreas = useMemo(() => {
+    const ids = Array.from(new Set(monthlyRecords.map((r) => r.projectId).filter(Boolean))) as string[];
+    return financeAreas
+      .filter((area) => area.projects.some((p) => ids.includes(p.id)))
+      .map((area) => ({ area, count: monthlyRecords.filter((r) => area.projects.some((p) => p.id === r.projectId)).length }));
+  }, [monthlyRecords]);
 
-    const isReady = rec.status === 'Pending' && !rec.forwardedAt;
-    const isForwarded = Boolean(rec.forwardedAt) && rec.status === 'Pending';
-    const isDisbursed = rec.status === 'Disbursed';
+  const scopeProjects = useMemo(() => {
+    const area = financeAreas.find((a) => a.id === scopeAreaId);
+    const projects = area ? area.projects : financeAreas.flatMap((a) => a.projects);
+    return projects
+      .filter((p) => monthlyRecords.some((r) => r.projectId === p.id))
+      .map((p) => ({ project: p, count: monthlyRecords.filter((r) => r.projectId === p.id).length }));
+  }, [monthlyRecords, scopeAreaId]);
 
-    if (filter === 'ready') return matchesSearch && isReady;
-    if (filter === 'forwarded') return matchesSearch && isForwarded;
-    if (filter === 'disbursed') return matchesSearch && isDisbursed;
-    return matchesSearch;
-  });
+  const scoped = useMemo(
+    () =>
+      monthlyRecords.filter((r) => {
+        const matchesProject =
+          scopeProjectId === 'all' ||
+          r.projectId === scopeProjectId ||
+          (scopeProjectId === 'none' && !r.projectId);
+        const matchesArea =
+          scopeAreaId === 'all' ||
+          financeAreas.find((a) => a.id === scopeAreaId)?.projects.some((p) => p.id === r.projectId) ||
+          false;
+        const matchesScope = scopeProjectId === 'all' ? matchesArea : matchesProject;
+        return matchesScope;
+      }),
+    [monthlyRecords, scopeAreaId, scopeProjectId],
+  );
 
-  const handleForward = (rec: SalaryRecord) => {
+  const isReady = (rec: SalaryRecord) => rec.status === 'Pending' && !rec.forwardedAt;
+  const counts = useMemo(
+    () => ({
+      all: scoped.length,
+      pending: scoped.filter((r) => r.approvalStatus === 'Pending approval').length,
+      ready: scoped.filter(isReady).length,
+      forwarded: scoped.filter((r) => Boolean(r.forwardedAt) && r.status === 'Pending').length,
+      disbursed: scoped.filter((r) => r.status === 'Disbursed').length,
+    }),
+    [scoped],
+  );
+
+  const filtered = useMemo(
+    () =>
+      scoped.filter((rec) => {
+        const matchesSearch =
+          rec.name.toLowerCase().includes(search.toLowerCase()) ||
+          rec.designation.toLowerCase().includes(search.toLowerCase()) ||
+          rec.id.toLowerCase().includes(search.toLowerCase());
+        if (filter === 'pending') return matchesSearch && rec.approvalStatus === 'Pending approval';
+        if (filter === 'ready') return matchesSearch && isReady(rec);
+        if (filter === 'forwarded') return matchesSearch && Boolean(rec.forwardedAt) && rec.status === 'Pending';
+        if (filter === 'disbursed') return matchesSearch && rec.status === 'Disbursed';
+        return matchesSearch;
+      }),
+    [scoped, search, filter],
+  );
+
+  const forwardable = useMemo(() => filtered.filter((r) => canForwardSalary(r)), [filtered]);
+  const forwardableTotal = forwardable.reduce((sum, r) => sum + r.netPay, 0);
+
+  const runWorkflow = (fn: () => Promise<void>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    forwardForPayment(salaryKey(rec), 'Aarav Kapoor (Finance Manager)');
+    fn().catch(() => {});
   };
 
-  const handleOpenDisburse = (rec: SalaryRecord) => {
-    Haptics.selectionAsync().catch(() => {});
-    setActiveRecord(rec);
-    setBankRef(`UTR-${Date.now().toString().slice(-8)}`);
-    setDisburseModalOpen(true);
-  };
+  const columns: Array<DataColumn<SalaryRecord>> = [
+    { key: 'employee', label: 'Employee', flex: 1.8 },
+    { key: 'gross', label: 'Gross Pay', flex: 1, align: 'right', wideOnly: true },
+    { key: 'deductions', label: 'Deductions', flex: 1, align: 'right', wideOnly: true },
+    { key: 'net', label: 'Net Salary', flex: 1.1, align: 'right' },
+    { key: 'approval', label: 'Approval Status', flex: 1.6 },
+    { key: 'forwarding', label: 'Payment Forwarding', flex: 1.4, wideOnly: true },
+    { key: 'actions', label: 'Actions', flex: 1.2, align: 'right' },
+  ];
 
-  const handleConfirmDisbursement = () => {
-    if (!activeRecord || !bankRef.trim()) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    savePayment(salaryKey(activeRecord), {
-      status: 'Disbursed',
-      paidOn: new Date().toISOString().slice(0, 10),
-      reference: bankRef.trim(),
-    });
-    setDisburseModalOpen(false);
-    setActiveRecord(null);
+  const rowActions = (rec: SalaryRecord) => (
+    <View style={styles.actionsRow}>
+      {isFinanceEligible(rec) && rec.approvalStatus !== 'Approved' ? (
+        <IconBtn icon="Check" color={theme.colors.successText} label={`Approve ${rec.name}`} onPress={() => runWorkflow(() => approveSalary(salaryKey(rec), actor))} />
+      ) : null}
+      {rec.status !== 'Disbursed' && rec.approvalStatus !== 'Rejected' ? (
+        <IconBtn icon="XCircle" color={theme.colors.dangerText} label={`Reject ${rec.name}`} onPress={() => runWorkflow(() => rejectSalary(salaryKey(rec)))} />
+      ) : null}
+      {canForwardSalary(rec) ? (
+        <IconBtn icon="Send" color={theme.colors.financeAccent} label={`Forward ${rec.name}`} onPress={() => runWorkflow(() => forwardForPayment(salaryKey(rec), actor))} />
+      ) : null}
+      <IconBtn
+        icon="Eye"
+        color={theme.colors.textMuted}
+        label={`View ${rec.name}`}
+        onPress={() => {
+          setActiveRecord(rec);
+          setRecordOpen(true);
+        }}
+      />
+    </View>
+  );
+
+  const renderCell = (rec: SalaryRecord, col: DataColumn<SalaryRecord>) => {
+    switch (col.key) {
+      case 'employee':
+        return (
+          <View style={styles.employeeCell}>
+            <View style={[styles.avatar, { backgroundColor: theme.colors.financeAccentSoft }]}>
+              <Text style={[styles.avatarText, { color: theme.colors.financeAccent }]}>
+                {rec.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+              </Text>
+            </View>
+            <View style={styles.employeeText}>
+              <Text numberOfLines={1} style={[styles.employeeName, { color: theme.colors.text }]}>{rec.name}</Text>
+              <Text style={[styles.employeeSub, { color: theme.colors.textSubtle }]}>{rec.id} · {rec.designation}</Text>
+            </View>
+          </View>
+        );
+      case 'gross':
+        return <Text style={[styles.numText, { color: theme.colors.text }]}>{formatRupees(rec.basicHra + rec.allowance)}</Text>;
+      case 'deductions':
+        return <Text style={[styles.numText, { color: theme.colors.dangerText }]}>−{formatRupees(rec.pfDeduction + rec.esiDeduction + rec.tdsDeduction)}</Text>;
+      case 'net':
+        return <Text style={[styles.numText, { color: theme.colors.financeAccent, fontWeight: '700' }]}>{formatRupees(rec.netPay)}</Text>;
+      case 'approval':
+        return (
+          <View>
+            <StatusChip status={rec.approvalStatus} tone={rec.approvalStatus === 'Approved' ? 'success' : 'warning'} />
+            {rec.approvedBy ? (
+              <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                {rec.approvedBy} · {formatDate(rec.approvedOn ?? '')}
+              </Text>
+            ) : null}
+          </View>
+        );
+      case 'forwarding':
+        return <StatusChip status={rec.forwardedAt ? 'Forwarded' : 'Not forwarded'} tone={rec.forwardedAt ? 'info' : 'neutral'} />;
+      case 'actions':
+        return rowActions(rec);
+      default:
+        return null;
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Month Selector */}
-      <View style={styles.monthSelector}>
-        {payrollMonths.map((m) => {
-          const isSelected = selectedMonth === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => setSelectedMonth(m)}
-              style={[
-                styles.monthChip,
-                {
-                  backgroundColor: isSelected ? theme.colors.emerald : theme.colors.surfaceSoft,
-                  borderColor: isSelected ? theme.colors.emerald : theme.colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.monthChipText,
-                  {
-                    color: isSelected ? '#ffffff' : theme.colors.textMuted,
-                    fontWeight: isSelected ? '700' : '500',
-                  },
-                ]}
-              >
-                {salaryMonthLabel(m)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Summary KPI Banner */}
-      <View
-        style={[
-          styles.summaryCard,
-          {
-            backgroundColor: theme.colors.cardBg,
-            borderColor: theme.colors.border,
-            ...theme.shadows.card,
-          },
-        ]}
-      >
-        <View style={styles.summaryTopRow}>
-          <View>
-            <Text style={[styles.summaryTitle, { color: theme.colors.text }]}>
-              {salaryMonthLabel(selectedMonth)} Payroll Rollout
-            </Text>
-            <Text style={[styles.summarySub, { color: theme.colors.textSubtle }]}>
-              {totals.paidCount} of {totals.employees} salaries disbursed · {formatRupees(totals.paid)} settled
-            </Text>
-          </View>
-          <Badge
-            label={`${totals.employees ? Math.round((totals.paidCount / totals.employees) * 100) : 0}% Rollout`}
-            tone="emerald"
-          />
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiCol}>
-            <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>GROSS PAYROLL</Text>
-            <Text style={[styles.kpiVal, { color: theme.colors.text }]}>
-              {formatRupees(totals.gross)}
-            </Text>
-          </View>
-          <View style={styles.kpiCol}>
-            <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>TOTAL DEDUCTIONS</Text>
-            <Text style={[styles.kpiVal, { color: theme.colors.danger }]}>
-              -{formatRupees(totals.deductions)}
-            </Text>
-          </View>
-          <View style={styles.kpiCol}>
-            <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>NET DISBURSED</Text>
-            <Text style={[styles.kpiVal, { color: theme.colors.emerald }]}>
-              {formatRupees(totals.paid)}
-            </Text>
-          </View>
-          <View style={styles.kpiCol}>
-            <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>OUTSTANDING</Text>
-            <Text style={[styles.kpiVal, { color: theme.colors.warning }]}>
-              {formatRupees(totals.outstanding)}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <SearchFilterBar
-        searchQuery={search}
-        onSearchChange={setSearch}
-        placeholder="Search payroll by employee name, ID or role..."
-        filters={[
-          { id: 'all', label: 'All Staff', count: monthlyRecords.length },
-          {
-            id: 'ready',
-            label: 'Ready to Forward',
-            count: monthlyRecords.filter((r) => r.status === 'Pending' && !r.forwardedAt).length,
-          },
-          {
-            id: 'forwarded',
-            label: 'Forwarded for Payment',
-            count: monthlyRecords.filter((r) => Boolean(r.forwardedAt) && r.status === 'Pending').length,
-          },
-          {
-            id: 'disbursed',
-            label: 'Disbursed',
-            count: monthlyRecords.filter((r) => r.status === 'Disbursed').length,
-          },
-        ]}
-        activeFilter={filter}
-        onFilterChange={(f) => setFilter(f as any)}
+      <HeroBanner
+        gradient={heroGradients.salary}
+        badge={{ icon: 'Coins', label: 'Payroll & Payment Authorizations' }}
+        title="Salary Approvals & Payment Forwarding"
+        description="Approve payroll, forward verified salaries to the payment desk and track disbursement."
+        right={
+          <HeroGlassCard label="Payroll month">
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.monthChips}>
+              {payrollMonths.map((m) => {
+                const active = m === selectedMonth;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => setSelectedMonth(m)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[
+                      styles.monthChip,
+                      { backgroundColor: active ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.1)', borderColor: active ? '#ffffff' : 'rgba(255, 255, 255, 0.16)' },
+                    ]}
+                  >
+                    <Text style={[styles.monthChipText, { color: active ? '#065f46' : '#d1fae5' }]}>{salaryMonthLabel(m)}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </HeroGlassCard>
+        }
       />
 
-      <View style={styles.list}>
-        {filtered.map((rec) => {
-          const isReady = rec.status === 'Pending' && !rec.forwardedAt;
-          const isForwarded = Boolean(rec.forwardedAt) && rec.status === 'Pending';
-          const isDisbursed = rec.status === 'Disbursed';
-
-          return (
-            <View
-              key={salaryKey(rec)}
-              style={[
-                styles.salaryCard,
-                {
-                  backgroundColor: theme.colors.cardBg,
-                  borderColor: theme.colors.border,
-                  ...theme.shadows.card,
-                },
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.headerLeft}>
-                  <Text style={[styles.name, { color: theme.colors.text }]}>
-                    {rec.name}
-                  </Text>
-                  <Text style={[styles.role, { color: theme.colors.brandPrimary }]}>
-                    {rec.designation} · {rec.department}
-                  </Text>
-                  <Text style={[styles.bankDetails, { color: theme.colors.textSubtle }]}>
-                    {rec.bankName} · {rec.bankAccount} · UAN: {rec.uan}
-                  </Text>
-                </View>
-
-                <Badge
-                  label={salaryWorkflowLabel(rec)}
-                  tone={isDisbursed ? 'emerald' : isForwarded ? 'brand' : 'warning'}
-                  size="sm"
-                />
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.payGrid}>
-                <View style={styles.payCol}>
-                  <Text style={[styles.payLabel, { color: theme.colors.textSubtle }]}>BASIC + HRA</Text>
-                  <Text style={[styles.payVal, { color: theme.colors.text }]}>
-                    {formatRupees(rec.basicHra)}
-                  </Text>
-                </View>
-                <View style={styles.payCol}>
-                  <Text style={[styles.payLabel, { color: theme.colors.textSubtle }]}>ALLOWANCE</Text>
-                  <Text style={[styles.payVal, { color: theme.colors.text }]}>
-                    {formatRupees(rec.allowance)}
-                  </Text>
-                </View>
-                <View style={styles.payCol}>
-                  <Text style={[styles.payLabel, { color: theme.colors.textSubtle }]}>PF + ESI + TDS</Text>
-                  <Text style={[styles.payVal, { color: theme.colors.danger }]}>
-                    -{formatRupees(rec.pfDeduction + rec.esiDeduction + rec.tdsDeduction)}
-                  </Text>
-                </View>
-                <View style={styles.payCol}>
-                  <Text style={[styles.payLabel, { color: theme.colors.textSubtle }]}>NET PAY</Text>
-                  <Text style={[styles.payVal, { color: theme.colors.emerald, fontWeight: '700' }]}>
-                    {formatRupees(rec.netPay)}
-                  </Text>
-                </View>
-              </View>
-
-              {isDisbursed && rec.reference && (
-                <View style={styles.disbursedInfoRow}>
-                  <Icon name="CheckCircle2" size={14} color={theme.colors.emerald} />
-                  <Text style={[styles.disbursedRef, { color: theme.colors.emerald }]}>
-                    Disbursed on {formatDate(rec.paidOn || '')} · UTR Ref: {rec.reference}
-                  </Text>
-                </View>
-              )}
-
-              {/* Action Buttons */}
-              <View style={styles.actionRow}>
-                {isReady && (
-                  <Button
-                    label="Forward for Payment"
-                    onPress={() => handleForward(rec)}
-                    size="sm"
-                    variant="primary"
-                    icon="Send"
-                  />
-                )}
-
-                {isForwarded && (
-                  <Button
-                    label="Disburse via Desk"
-                    onPress={() => handleOpenDisburse(rec)}
-                    size="sm"
-                    variant="emerald"
-                    icon="CheckCircle"
-                  />
-                )}
-              </View>
-            </View>
-          );
-        })}
+      <View style={styles.metricsGrid}>
+        <MetricCard style={styles.metricCard} label="Total Payroll" value={formatRupees(totals.gross)} subtitle={`${totals.employees} employees · Gross`} icon="Coins" accentColor={theme.colors.financeAccent} arrow />
+        <MetricCard style={styles.metricCard} label="Pending Approval" value={String(counts.pending)} subtitle="Awaiting finance sign-off" icon="Clock3" accentColor={theme.colors.warning} arrow />
+        <MetricCard style={styles.metricCard} label="Ready to Forward" value={formatRupees(forwardableTotal)} subtitle={`${forwardable.length} approved & ready`} icon="Send" accentColor={theme.colors.info} arrow />
+        <MetricCard style={styles.metricCard} label="Disbursed / Paid" value={formatRupees(totals.paid)} subtitle={`${totals.paidCount} of ${totals.employees} paid`} icon="CheckCircle2" accentColor={theme.colors.emerald} arrow />
       </View>
 
-      {/* Disburse Modal */}
-      <Modal visible={disburseModalOpen} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setDisburseModalOpen(false)} />
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor: theme.colors.cardBg,
-                borderColor: theme.colors.borderStrong,
-              },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-                Record Salary Disbursement
-              </Text>
-              <Pressable onPress={() => setDisburseModalOpen(false)}>
-                <Icon name="X" size={18} color={theme.colors.textMuted} />
-              </Pressable>
-            </View>
-
-            {activeRecord && (
-              <View style={{ gap: 14 }}>
-                <View style={[styles.modalDetailBox, { backgroundColor: theme.colors.surfaceSoft }]}>
-                  <Text style={[styles.modalEmpName, { color: theme.colors.text }]}>
-                    {activeRecord.name}
-                  </Text>
-                  <Text style={[styles.modalEmpSub, { color: theme.colors.textMuted }]}>
-                    {activeRecord.designation} · {activeRecord.bankName}
-                  </Text>
-                  <Text style={[styles.modalAmount, { color: theme.colors.emerald }]}>
-                    Net Amount: {formatRupees(activeRecord.netPay)}
-                  </Text>
-                </View>
-
-                <View style={{ gap: 6 }}>
-                  <Text style={[styles.fieldLabel, { color: theme.colors.textSubtle }]}>
-                    BANK TRANSACTION UTR / REFERENCE
-                  </Text>
-                  <TextInput
-                    value={bankRef}
-                    onChangeText={setBankRef}
-                    placeholder="e.g. UTR-20261028-0912"
-                    placeholderTextColor={theme.colors.textGhost}
-                    style={[
-                      styles.input,
-                      {
-                        color: theme.colors.text,
-                        backgroundColor: theme.colors.surfaceSoft,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <Button
-                  label="Confirm Settlement & Disburse"
-                  onPress={handleConfirmDisbursement}
-                  size="lg"
-                  variant="emerald"
-                  icon="Check"
-                  style={{ marginTop: 8 }}
-                />
-              </View>
-            )}
-          </View>
+      <View style={styles.scopeBlock}>
+        <Text style={[styles.scopeTitle, { color: theme.colors.textMuted }]}>Scope — center & project</Text>
+        <View style={styles.scopeRow}>
+          <ScopeChip icon="Building2" label="All areas" active={scopeAreaId === 'all'} onPress={() => { setScopeAreaId('all'); setScopeProjectId('all'); }} theme={theme} />
+          {scopeAreas.map(({ area, count }) => (
+            <ScopeChip key={area.id} icon="Building2" label={`${area.shortName} (${count})`} active={scopeAreaId === area.id} onPress={() => { setScopeAreaId(area.id); setScopeProjectId('all'); }} theme={theme} color={area.color} />
+          ))}
         </View>
-      </Modal>
+        <View style={styles.scopeRow}>
+          <ScopeChip icon="FolderKanban" label="All projects" active={scopeProjectId === 'all'} onPress={() => setScopeProjectId('all')} theme={theme} />
+          {scopeProjects.map(({ project, count }) => (
+            <ScopeChip key={project.id} icon="FolderKanban" label={`${project.name} (${count})`} active={scopeProjectId === project.id} onPress={() => setScopeProjectId(project.id)} theme={theme} />
+          ))}
+        </View>
+      </View>
+
+      <SectionCard
+        title="Employee Salaries"
+        description="Approve, forward and disburse monthly payroll against project cost centers."
+        action={
+          <View style={[styles.registerBadge, { backgroundColor: theme.colors.financeAccentSoft }]}>
+            <Text style={[styles.registerBadgeText, { color: theme.colors.financeAccent }]}>
+              {scopeProjectId === 'all' ? 'All projects' : scopeProjectId} · {salaryMonthLabel(selectedMonth)}
+            </Text>
+          </View>
+        }
+        footer={
+          <View style={styles.registerFooter}>
+            <Button
+              label={`Forward All Approved (${forwardable.length} · ${formatRupees(forwardableTotal)})`}
+              icon="Send"
+              variant="emerald"
+              size="sm"
+              disabled={forwardable.length === 0}
+              onPress={() => runWorkflow(() => forwardMultiple(forwardable.map((r) => salaryKey(r)), actor))}
+            />
+            <Button label="Export CSV" icon="Download" variant="outline" size="sm" />
+          </View>
+        }
+      >
+        <Tabs
+          items={[
+            { key: 'all', label: `All Employees (${counts.all})` },
+            { key: 'pending', label: `Pending Approval (${counts.pending})` },
+            { key: 'ready', label: `Ready to Forward (${counts.ready})` },
+            { key: 'forwarded', label: `Forwarded to Payments (${counts.forwarded})` },
+            { key: 'disbursed', label: `Disbursed (${counts.disbursed})` },
+          ]}
+          activeKey={filter}
+          onChange={(key) => setFilter(key as FilterKey)}
+          accent={theme.colors.financeAccent}
+        />
+        <TextField value={search} onChangeText={setSearch} placeholder="Search employees by name, ID or role…" />
+
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          keyExtractor={(rec) => salaryKey(rec)}
+          renderCell={renderCell}
+          renderMobileCard={(rec) => <SalaryMobileCard record={rec} actions={rowActions(rec)} onPress={() => { setActiveRecord(rec); setRecordOpen(true); }} />}
+          emptyIcon="Coins"
+          emptyTitle="No salaries in this bucket"
+          emptyDescription="Adjust the payroll month, scope or filter to see employee records."
+        />
+      </SectionCard>
+
+      <SalaryRecordSheet
+        record={activeRecord}
+        visible={recordOpen}
+        onClose={() => setRecordOpen(false)}
+        history={activeRecord ? allRecords.filter((r) => r.id === activeRecord.id) : []}
+      />
     </View>
   );
 };
 
+const IconBtn: React.FC<{ icon: string; color: string; label: string; onPress: () => void }> = ({ icon, color, label, onPress }) => (
+  <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6} style={styles.iconBtn}>
+    <Icon name={icon} size={16} color={color} />
+  </Pressable>
+);
+
+const ScopeChip: React.FC<{
+  icon: string;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  theme: ReturnType<typeof useTheme>['theme'];
+  color?: string;
+}> = ({ icon, label, active, onPress, theme, color }) => (
+  <Pressable
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityState={{ selected: active }}
+    style={[
+      styles.scopeChip,
+      {
+        borderColor: active ? theme.colors.financeAccent : theme.colors.border,
+        backgroundColor: active ? theme.colors.financeAccentSoft : 'transparent',
+      },
+    ]}
+  >
+    <Icon name={icon} size={13} color={active ? theme.colors.financeAccent : color ?? theme.colors.textSubtle} />
+    <Text numberOfLines={1} style={[styles.scopeChipText, { color: active ? theme.colors.financeAccent : theme.colors.textMuted }]}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    gap: 16,
-  },
-  monthSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  monthChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  monthChipText: {
-    fontSize: 12,
-  },
-  summaryCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-  },
-  summaryTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  summaryTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  summarySub: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  kpiCol: {
-    minWidth: 110,
-  },
-  kpiLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  kpiVal: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  list: {
-    gap: 12,
-  },
-  salaryCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  role: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  bankDetails: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  payGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  payCol: {
-    flex: 1,
-  },
-  payLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  payVal: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  disbursedInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingTop: 2,
-  },
-  disbursedRef: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.1)',
-    paddingTop: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFill,
-  },
-  modalCard: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    padding: 24,
-    paddingBottom: 36,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  modalDetailBox: {
-    padding: 14,
-    borderRadius: 14,
-    gap: 4,
-  },
-  modalEmpName: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalEmpSub: {
-    fontSize: 12,
-  },
-  modalAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  fieldLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  input: {
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 14,
-  },
+  container: { gap: 16 },
+  monthChips: { gap: 6 },
+  monthChip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  monthChipText: { fontSize: 11.5, fontWeight: '600', textAlign: 'center' },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  metricCard: { flexGrow: 1, flexBasis: 220 },
+  scopeBlock: { gap: 8 },
+  scopeTitle: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  scopeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scopeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, maxWidth: 240 },
+  scopeChipText: { fontSize: 11.5, fontWeight: '600', flexShrink: 1 },
+  registerBadge: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
+  registerBadgeText: { fontSize: 10.5, fontWeight: '700' },
+  registerFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  employeeCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 12, fontWeight: '700' },
+  employeeText: { flex: 1, minWidth: 0 },
+  employeeName: { fontSize: 13, fontWeight: '600' },
+  employeeSub: { fontSize: 10.5, marginTop: 1 },
+  cellSub: { fontSize: 10, marginTop: 3 },
+  numText: { fontSize: 12.5, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6 },
+  iconBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: undefined },
 });

@@ -1,0 +1,143 @@
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useTheme } from '../../../hooks/useTheme';
+import { formatCurrency } from '../data';
+import { Card } from '../../../components/ui/Card';
+import { StatusChip } from '../../../components/ui/StatusChip';
+import { ModalSheet } from '../../../components/ui/ModalSheet';
+import { Icon } from '../../../components/ui/Icon';
+import type { Vendor } from './VendorManagementView';
+
+/** Vendor master card — web grid tile with inner detail panel. */
+export const VendorCard: React.FC<{ vendor: Vendor; onPress: () => void }> = ({ vendor, onPress }) => {
+  const { theme } = useTheme();
+  const last4 = vendor.bankAccount.slice(-4);
+  return (
+    <Pressable onPress={onPress}>
+      <Card padding={16} style={styles.card}>
+        <View style={styles.topRow}>
+          <StatusChip status={vendor.category} tone="brand" dot={false} />
+          {vendor.isMsme ? <StatusChip status="MSME / Udyam" tone="emerald" dot={false} /> : null}
+          <StatusChip status={vendor.status} />
+        </View>
+        <View style={styles.titleBlock}>
+          <Text style={[styles.name, { color: theme.colors.text }]}>{vendor.name}</Text>
+          <Text style={[styles.vid, { color: theme.colors.textSubtle }]}>
+            {vendor.id} · {vendor.tradeName}
+          </Text>
+        </View>
+
+        <View style={[styles.panel, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+          <PanelRow label="GSTIN" value={vendor.gstin} />
+          <PanelRow label="Payment Terms" value={vendor.paymentTerms} />
+          <PanelRow label="Bank A/C" value={`${vendor.bankName} ·••••${last4}`} />
+          <PanelRow label="Compliance" value={`${vendor.complianceScore}%`} accent={vendor.complianceScore >= 90 ? theme.colors.emerald : theme.colors.warning} />
+        </View>
+
+        <View style={styles.contactRows}>
+          <ContactRow icon="Users" text={vendor.contactPerson} />
+          <ContactRow icon="Mail" text={vendor.email} />
+          <ContactRow icon="MapPin" text={vendor.location} />
+        </View>
+
+        <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
+          <View>
+            <Text style={[styles.footerValue, { color: theme.colors.text }]}>{formatCurrency(vendor.ytdSpend)}</Text>
+            <Text style={[styles.footerLabel, { color: theme.colors.textSubtle }]}>YTD Disbursed</Text>
+          </View>
+          <View style={styles.viewDetails}>
+            <Text style={[styles.viewDetailsText, { color: theme.colors.financeAccent }]}>View Details</Text>
+            <Icon name="ArrowRight" size={14} color={theme.colors.financeAccent} />
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+};
+
+const PanelRow: React.FC<{ label: string; value: string; accent?: string }> = ({ label, value, accent }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.panelRow}>
+      <Text style={[styles.panelLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.panelValue, { color: accent ?? theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+};
+
+const ContactRow: React.FC<{ icon: string; text: string }> = ({ icon, text }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.contactRow}>
+      <Icon name={icon} size={13} color={theme.colors.textSubtle} />
+      <Text numberOfLines={1} style={[styles.contactText, { color: theme.colors.textMuted }]}>{text}</Text>
+    </View>
+  );
+};
+
+/** Vendor details overlay (web "View Details" drawer). */
+export const VendorDetailsSheet: React.FC<{ vendor: Vendor | null; visible: boolean; onClose: () => void }> = ({
+  vendor,
+  visible,
+  onClose,
+}) => {
+  const { theme } = useTheme();
+  if (!vendor) return null;
+  return (
+    <ModalSheet visible={visible} onClose={onClose} label="Vendor master" title={vendor.name} description={`${vendor.id} · ${vendor.tradeName}`} size="md">
+      <View style={[styles.detailPanel, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+        <DetailRow label="Status" value={vendor.status} />
+        <DetailRow label="Category" value={vendor.category} />
+        <DetailRow label="GSTIN" value={vendor.gstin} />
+        <DetailRow label="PAN" value={vendor.pan} />
+        <DetailRow label="Udyam / MSME" value={vendor.isMsme ? 'Registered' : 'Not registered'} />
+        <DetailRow label="Bank" value={`${vendor.bankName} · ${vendor.bankAccount}`} />
+        <DetailRow label="IFSC" value={vendor.ifsc} />
+        <DetailRow label="Payment Terms" value={vendor.paymentTerms} />
+        <DetailRow label="Contact" value={`${vendor.contactPerson} · ${vendor.phone}`} />
+        <DetailRow label="Email" value={vendor.email} />
+        <DetailRow label="Location" value={vendor.location} />
+        <DetailRow label="Compliance score" value={`${vendor.complianceScore}%`} />
+        <DetailRow label="Active contracts" value={String(vendor.activeContracts)} />
+      </View>
+      <Text style={[styles.disbursed, { color: theme.colors.financeAccent }]}>
+        YTD disbursed {formatCurrency(vendor.ytdSpend)}
+      </Text>
+    </ModalSheet>
+  );
+};
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.detailRow}>
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: { flexGrow: 1, flexBasis: 320, gap: 10 },
+  topRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
+  titleBlock: { gap: 2 },
+  name: { fontSize: 14, fontWeight: '700', lineHeight: 19 },
+  vid: { fontSize: 11 },
+  panel: { borderWidth: 1, borderRadius: 12, padding: 11, gap: 7 },
+  panelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  panelLabel: { fontSize: 10.5 },
+  panelValue: { fontSize: 11.5, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+  contactRows: { gap: 5 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  contactText: { fontSize: 11.5, flexShrink: 1 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11, marginTop: 2 },
+  footerValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  footerLabel: { fontSize: 10, marginTop: 1 },
+  viewDetails: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewDetailsText: { fontSize: 11.5, fontWeight: '600' },
+  detailPanel: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 9 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  detailLabel: { fontSize: 11.5 },
+  detailValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+  disbursed: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+});

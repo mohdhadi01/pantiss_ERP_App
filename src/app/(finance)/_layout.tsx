@@ -1,18 +1,20 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { ModuleGuard } from '../../components/auth/ModuleGuard';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function FinanceLayout() {
   const { theme } = useTheme();
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: theme.colors.background },
-        animation: 'fade',
-      }}
-    >
+    <ModuleGuard requiredModuleId="finance">
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.background },
+          animation: 'fade',
+        }}
+      >
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="budget" />
       <Stack.Screen name="books" />
@@ -28,6 +30,7 @@ export default function FinanceLayout() {
       <Stack.Screen name="invoices" />
       <Stack.Screen name="investments" />
       <Stack.Screen name="alerts" />
-    </Stack>
+      </Stack>
+    </ModuleGuard>
   );
 }

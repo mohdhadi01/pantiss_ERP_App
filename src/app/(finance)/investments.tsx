@@ -1,23 +1,24 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeNavItems, financeSectionDescriptions } from '../../features/finance/constants';
+import { financeNavItems, financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
+import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { InvestmentsView } from '../../features/finance/components/InvestmentsView';
 
-export default function InvestmentsScreen() {
+export default function InvestmentsViewScreen() {
   const router = useRouter();
+  const alerts = useFinanceAlerts();
 
   return (
     <ModuleShell
-      title="Investments & Yields"
-      subtitle={financeSectionDescriptions.investments}
-      badgeText="FINANCE CONTROLLER"
-      badgeColor="#10b981"
+      title={financeSectionTitles['investments']}
+      subtitle={financeSectionDescriptions['investments']}
       currentRoute="/(finance)/investments"
       navItems={financeNavItems}
-      accentColor="#10b981"
+      avatarVariant="finance"
+      searchPlaceholder="Search financial records"
       showAlerts
-      unreadAlertsCount={3}
+      unreadAlertsCount={alerts.unreadCount}
       onPressAlerts={() => router.push('/(finance)/alerts')}
     >
       <InvestmentsView />

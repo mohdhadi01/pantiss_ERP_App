@@ -1,23 +1,24 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeNavItems, financeSectionDescriptions } from '../../features/finance/constants';
+import { financeNavItems, financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
+import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { ProcurementView } from '../../features/finance/components/ProcurementView';
 
-export default function ProcurementScreen() {
+export default function ProcurementViewScreen() {
   const router = useRouter();
+  const alerts = useFinanceAlerts();
 
   return (
     <ModuleShell
-      title="Procurement & POs"
-      subtitle={financeSectionDescriptions.procurement}
-      badgeText="FINANCE CONTROLLER"
-      badgeColor="#10b981"
+      title={financeSectionTitles['procurement']}
+      subtitle={financeSectionDescriptions['procurement']}
       currentRoute="/(finance)/procurement"
       navItems={financeNavItems}
-      accentColor="#10b981"
+      avatarVariant="finance"
+      searchPlaceholder="Search financial records"
       showAlerts
-      unreadAlertsCount={3}
+      unreadAlertsCount={alerts.unreadCount}
       onPressAlerts={() => router.push('/(finance)/alerts')}
     >
       <ProcurementView />

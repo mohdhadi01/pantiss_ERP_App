@@ -1,21 +1,18 @@
 import React from 'react';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrNavItems, hrSectionDescriptions } from '../../features/hr/constants';
+import { hrNavItems, hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { DesignationsView } from '../../features/hr/components/DesignationsView';
 
-export default function DesignationsScreen() {
+export default function JobDesignationsScreen() {
   const store = useHR();
 
   return (
     <ModuleShell
-      title="Job Designations"
+      title={hrSectionTitles['job-designations']}
       subtitle={hrSectionDescriptions['job-designations']}
-      badgeText="HR LEAD WORKSPACE"
-      badgeColor="#3b82f6"
       currentRoute="/(hr)/job-designations"
       navItems={hrNavItems}
-      accentColor="#3b82f6"
       notice={store.notice}
       error={store.error}
       onDismissNotice={() => store.setNotice('')}

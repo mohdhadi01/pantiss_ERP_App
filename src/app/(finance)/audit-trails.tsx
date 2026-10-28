@@ -1,23 +1,24 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeNavItems, financeSectionDescriptions } from '../../features/finance/constants';
+import { financeNavItems, financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
+import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { AuditTrailsView } from '../../features/finance/components/AuditTrailsView';
 
-export default function AuditTrailsScreen() {
+export default function AuditTrailsViewScreen() {
   const router = useRouter();
+  const alerts = useFinanceAlerts();
 
   return (
     <ModuleShell
-      title="Audit Trails"
+      title={financeSectionTitles['audit-trails']}
       subtitle={financeSectionDescriptions['audit-trails']}
-      badgeText="FINANCE CONTROLLER"
-      badgeColor="#10b981"
       currentRoute="/(finance)/audit-trails"
       navItems={financeNavItems}
-      accentColor="#10b981"
+      avatarVariant="finance"
+      searchPlaceholder="Search financial records"
       showAlerts
-      unreadAlertsCount={3}
+      unreadAlertsCount={alerts.unreadCount}
       onPressAlerts={() => router.push('/(finance)/alerts')}
     >
       <AuditTrailsView />

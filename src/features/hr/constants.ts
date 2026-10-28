@@ -135,6 +135,20 @@ export const hrNavItems: NavItem[] = [
   },
 ];
 
+/** Web H1 per HR section. */
+export const hrSectionTitles: Record<string, string> = {
+  dashboard: 'HR Dashboard',
+  recruitment: 'Recruitment & Hiring',
+  'employee-onboarding': 'Employee Onboarding',
+  'project-assignment': 'Project Assignment',
+  'job-designations': 'Job Designations',
+  salary: 'Salary Approvals',
+  attendance: 'Attendance',
+  'leave-management': 'Leave Management',
+  'kbi-metrics': 'KBI Metrics',
+  appraisals: 'Year-end Appraisals',
+};
+
 export const hrSectionDescriptions: Record<string, string> = {
   dashboard: 'Your people, approvals and priorities, connected in one place.',
   recruitment: 'Applicant pipeline, interview scheduling, job requisitions and offer letter releases.',

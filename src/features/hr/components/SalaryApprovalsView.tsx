@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { useSalaryRecords } from '../../finance/useSalaryRecords';
 import {
   payrollMonths,
@@ -10,333 +11,508 @@ import {
   SalaryRecord,
 } from '../../finance/salaryData';
 import { formatRupees } from '../../../utils/formatCurrency';
+import { formatDate } from '../../../utils/formatDate';
 import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
-import { Badge } from '../../../components/ui/Badge';
+import { Card, SectionCard } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
+import { Avatar } from '../../../components/ui/Avatar';
+import { StatusChip } from '../../../components/ui/StatusChip';
+import { MetricCard } from '../../../components/ui/MetricCard';
+import { TextField } from '../../../components/ui/TextField';
+import { SelectField } from '../../../components/ui/SelectField';
+import { ModalSheet } from '../../../components/ui/ModalSheet';
+import { DataTable, DataColumn } from '../../../components/ui/DataTable';
+
+const HR_ACTOR = 'Ritika Sen (HR Manager)';
+
+type StageFilter = 'all' | 'awaiting-admin' | 'ready-hr' | 'released' | 'returned';
 
 export const SalaryApprovalsView: React.FC = () => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
   const [selectedMonth, setSelectedMonth] = useState(payrollMonths[0]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'ready' | 'released'>('all');
+  const [stage, setStage] = useState<StageFilter>('all');
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [note, setNote] = useState('');
 
   const { records, reviewByHR } = useSalaryRecords('hr');
 
   const monthlyRecords = records.filter((r) => r.month === selectedMonth);
+  const counts = {
+    awaitingAdmin: monthlyRecords.filter((r) => r.adminApproval === 'Pending').length,
+    ready: monthlyRecords.filter((r) => r.adminApproval === 'Approved' && r.hrApproval === 'Pending').length,
+    released: monthlyRecords.filter((r) => r.adminApproval === 'Approved' && r.hrApproval === 'Approved').length,
+    returned: monthlyRecords.filter((r) => r.hrApproval === 'Rejected').length,
+  };
+  const readyMoney = monthlyRecords
+    .filter((r) => r.adminApproval === 'Approved' && r.hrApproval === 'Pending')
+    .reduce((sum, r) => sum + r.netPay, 0);
 
   const filtered = monthlyRecords.filter((rec) => {
-    const matchesQuery =
-      rec.name.toLowerCase().includes(search.toLowerCase()) ||
-      rec.id.toLowerCase().includes(search.toLowerCase()) ||
-      rec.designation.toLowerCase().includes(search.toLowerCase());
-
+    const q = search.trim().toLowerCase();
+    const matches =
+      rec.name.toLowerCase().includes(q) ||
+      rec.id.toLowerCase().includes(q) ||
+      rec.designation.toLowerCase().includes(q);
     const isReady = rec.adminApproval === 'Approved' && rec.hrApproval === 'Pending';
     const isReleased = rec.adminApproval === 'Approved' && rec.hrApproval === 'Approved';
-
-    if (filter === 'ready') return matchesQuery && isReady;
-    if (filter === 'released') return matchesQuery && isReleased;
-    return matchesQuery;
+    const stageOK =
+      stage === 'all'
+        ? true
+        : stage === 'awaiting-admin'
+          ? rec.adminApproval === 'Pending'
+          : stage === 'ready-hr'
+            ? isReady
+            : stage === 'released'
+              ? isReleased
+              : rec.hrApproval === 'Rejected';
+    return matches && stageOK;
   });
 
-  const handleApprove = (rec: SalaryRecord) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    reviewByHR(salaryKey(rec), 'Approved', 'Ritika Sen (HR Manager)');
+  const reviewRecord = reviewId ? monthlyRecords.find((r) => salaryKey(r) === reviewId) : undefined;
+  const reviewable = (rec?: SalaryRecord) => Boolean(rec && rec.adminApproval === 'Approved' && rec.hrApproval === 'Pending');
+
+  const decide = (rec: SalaryRecord, decision: 'Approved' | 'Rejected') => {
+    Haptics.notificationAsync(
+      decision === 'Approved' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
+    ).catch(() => {});
+    reviewByHR(salaryKey(rec), decision, HR_ACTOR, note.trim());
+    setReviewId(null);
+    setNote('');
   };
 
-  const handleReject = (rec: SalaryRecord) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-    reviewByHR(
-      salaryKey(rec),
-      'Rejected',
-      'Ritika Sen (HR Manager)',
-      'Attendance evidence discrepancy. Returned for verification.'
-    );
-  };
+  const columns: Array<DataColumn<SalaryRecord>> = [
+    { key: 'employee', label: 'Employee', flex: 1.4 },
+    { key: 'net', label: 'Net salary', width: 110, align: 'right' },
+    { key: 'admin', label: 'Admin approval', flex: 1.2 },
+    { key: 'hr', label: 'HR approval', flex: 1.2 },
+    { key: 'finance', label: 'Finance status', flex: 1 },
+    { key: 'action', label: 'Action', width: 128 },
+  ];
 
   return (
     <View style={styles.container}>
-      {/* Month Selector Chips */}
-      <View style={styles.monthSelector}>
-        {payrollMonths.map((m) => {
-          const isSelected = selectedMonth === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => setSelectedMonth(m)}
-              style={[
-                styles.monthChip,
-                {
-                  backgroundColor: isSelected ? theme.colors.brandPrimary : theme.colors.surfaceSoft,
-                  borderColor: isSelected ? theme.colors.brandPrimary : theme.colors.border,
-                },
-              ]}
-            >
-              <Text
+      {/* Workflow strip */}
+      <Card padding={16} style={styles.workflow}>
+        <View style={[styles.workflowIcon, { backgroundColor: theme.colors.brandSoft }]}>
+          <Icon name="ShieldCheck" size={18} color={theme.colors.brandPrimary} strokeWidth={1.9} />
+        </View>
+        <View style={styles.steps}>
+          {['1. Admin approval', '2. HR approval', '3. Finance processing'].map((step, index) => {
+            const active = index === 1;
+            return (
+              <View
+                key={step}
                 style={[
-                  styles.monthChipText,
+                  styles.stepPill,
                   {
-                    color: isSelected ? '#ffffff' : theme.colors.textMuted,
-                    fontWeight: isSelected ? '700' : '500',
+                    backgroundColor: active ? theme.colors.brandPrimary : theme.colors.surfaceSoft,
+                    borderColor: active ? theme.colors.brandPrimary : theme.colors.border,
                   },
                 ]}
               >
-                {salaryMonthLabel(m)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <SearchFilterBar
-        searchQuery={search}
-        onSearchChange={setSearch}
-        placeholder="Search payroll by employee or role..."
-        filters={[
-          { id: 'all', label: 'All Records', count: monthlyRecords.length },
-          {
-            id: 'ready',
-            label: 'Ready for HR',
-            count: monthlyRecords.filter(
-              (r) => r.adminApproval === 'Approved' && r.hrApproval === 'Pending'
-            ).length,
-          },
-          {
-            id: 'released',
-            label: 'Released to Finance',
-            count: monthlyRecords.filter(
-              (r) => r.adminApproval === 'Approved' && r.hrApproval === 'Approved'
-            ).length,
-          },
-        ]}
-        activeFilter={filter}
-        onFilterChange={(f) => setFilter(f as any)}
-      />
-
-      <View style={styles.list}>
-        {filtered.map((rec) => {
-          const isReadyForHR = rec.adminApproval === 'Approved' && rec.hrApproval === 'Pending';
-          const isReleased = rec.adminApproval === 'Approved' && rec.hrApproval === 'Approved';
-
-          return (
-            <View
-              key={salaryKey(rec)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: theme.colors.cardBg,
-                  borderColor: theme.colors.border,
-                  ...theme.shadows.card,
-                },
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.headerLeft}>
-                  <Text style={[styles.name, { color: theme.colors.text }]}>
-                    {rec.name}
-                  </Text>
-                  <Text style={[styles.designation, { color: theme.colors.brandPrimary }]}>
-                    {rec.designation} · {rec.id}
-                  </Text>
-                  <Text style={[styles.location, { color: theme.colors.textSubtle }]}>
-                    {rec.location} · {rec.workingDays} days worked
-                  </Text>
-                </View>
-
-                <View style={styles.badgesCol}>
-                  <Badge
-                    label={`Admin: ${rec.adminApproval}`}
-                    tone={rec.adminApproval === 'Approved' ? 'emerald' : 'warning'}
-                    size="sm"
-                  />
-                  <Badge
-                    label={`HR: ${rec.hrApproval}`}
-                    tone={
-                      rec.hrApproval === 'Approved'
-                        ? 'emerald'
-                        : rec.hrApproval === 'Rejected'
-                        ? 'danger'
-                        : 'warning'
-                    }
-                    size="sm"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.breakdownGrid}>
-                <View style={styles.breakdownItem}>
-                  <Text style={[styles.breakdownLabel, { color: theme.colors.textSubtle }]}>
-                    BASIC + HRA
-                  </Text>
-                  <Text style={[styles.breakdownValue, { color: theme.colors.text }]}>
-                    {formatRupees(rec.basicHra)}
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownItem}>
-                  <Text style={[styles.breakdownLabel, { color: theme.colors.textSubtle }]}>
-                    ALLOWANCE
-                  </Text>
-                  <Text style={[styles.breakdownValue, { color: theme.colors.text }]}>
-                    {formatRupees(rec.allowance)}
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownItem}>
-                  <Text style={[styles.breakdownLabel, { color: theme.colors.textSubtle }]}>
-                    DEDUCTIONS
-                  </Text>
-                  <Text style={[styles.breakdownValue, { color: theme.colors.danger }]}>
-                    -{formatRupees(rec.pfDeduction + rec.esiDeduction + rec.tdsDeduction)}
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownItem}>
-                  <Text style={[styles.breakdownLabel, { color: theme.colors.textSubtle }]}>
-                    NET PAYABLE
-                  </Text>
-                  <Text style={[styles.breakdownValue, { color: theme.colors.emerald, fontWeight: '700' }]}>
-                    {formatRupees(rec.netPay)}
-                  </Text>
-                </View>
-              </View>
-
-              {rec.hrReason ? (
-                <Text style={[styles.reasonText, { color: theme.colors.danger }]}>
-                  Return reason: "{rec.hrReason}"
+                <Text
+                  numberOfLines={1}
+                  style={[styles.stepText, { color: active ? '#ffffff' : theme.colors.textMuted }]}
+                >
+                  {step}
                 </Text>
-              ) : null}
+                {index < 2 ? <Icon name="ChevronRight" size={14} color={theme.colors.textSubtle} /> : null}
+              </View>
+            );
+          })}
+        </View>
+      </Card>
 
-              {isReadyForHR && (
-                <View style={styles.actionsRow}>
-                  <Button
-                    label="Return"
-                    onPress={() => handleReject(rec)}
-                    size="sm"
-                    variant="outline"
-                    icon="XCircle"
-                  />
-                  <Button
-                    label="Approve & Release to Finance"
-                    onPress={() => handleApprove(rec)}
-                    size="sm"
-                    variant="emerald"
-                    icon="CheckCircle2"
-                  />
-                </View>
-              )}
-
-              {isReleased && (
-                <View style={styles.releasedRow}>
-                  <Icon name="Check" size={14} color={theme.colors.emerald} />
-                  <Text style={[styles.releasedText, { color: theme.colors.emerald }]}>
-                    Released to Finance Division · Eligible for Disbursement
-                  </Text>
-                </View>
-              )}
-            </View>
-          );
-        })}
+      <View style={styles.metricsGrid}>
+        <MetricCard label="Awaiting Admin" value={counts.awaitingAdmin} subtitle="HR approval is locked" style={styles.metric} />
+        <MetricCard label="Ready for HR approval" value={counts.ready} subtitle={`${formatRupees(readyMoney)} net salary`} style={styles.metric} />
+        <MetricCard label="Released to Finance" value={counts.released} subtitle="Admin and HR have approved" style={styles.metric} />
+        <MetricCard label="Returned by HR" value={counts.returned} subtitle="Held outside Finance" style={styles.metric} />
       </View>
+
+      <SectionCard
+        title="Salary approval register"
+        description="Approve after Admin clearance. Finance receives only HR-approved records."
+        action={<Button label="Export" variant="outline" size="sm" icon="Download" />}
+      >
+        <SearchFilterBar searchQuery={search} onSearchChange={setSearch} placeholder="Search payroll by employee or role…" />
+        <View style={styles.filterRow}>
+          <View style={styles.filterCell}>
+            <SelectField
+              label="Payroll month"
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              options={payrollMonths.map((m) => ({ value: m, label: salaryMonthLabel(m) }))}
+            />
+          </View>
+          <View style={styles.filterCell}>
+            <SelectField
+              label="Stage"
+              value={stage}
+              onChange={(v) => setStage(v as StageFilter)}
+              options={[
+                { value: 'all', label: `All stages (${monthlyRecords.length})` },
+                { value: 'awaiting-admin', label: `Awaiting Admin (${counts.awaitingAdmin})` },
+                { value: 'ready-hr', label: `Ready for HR (${counts.ready})` },
+                { value: 'released', label: `Released to Finance (${counts.released})` },
+                { value: 'returned', label: `Returned by HR (${counts.returned})` },
+              ]}
+            />
+          </View>
+        </View>
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          keyExtractor={(row) => salaryKey(row)}
+          emptyTitle="No salary records match"
+          emptyDescription="Adjust the search, month or stage filters."
+          emptyIcon="Wallet"
+          renderCell={(rec, column) => {
+            switch (column.key) {
+              case 'employee':
+                return (
+                  <View style={styles.personRow}>
+                    <Avatar name={rec.name} size={32} />
+                    <View style={styles.personMain}>
+                      <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{rec.name}</Text>
+                      <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                        {rec.designation} · {rec.id}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              case 'net':
+                return <Text style={[styles.money, { color: theme.colors.text }]}>{formatRupees(rec.netPay)}</Text>;
+              case 'admin':
+                return (
+                  <View style={styles.stack4}>
+                    <StatusChip status={`Admin ${rec.adminApproval}`} tone={rec.adminApproval === 'Approved' ? 'success' : rec.adminApproval === 'Rejected' ? 'danger' : 'warning'} />
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {rec.adminApprovedBy ?? 'Awaiting Admin'} · {rec.adminApprovedOn ? formatDate(rec.adminApprovedOn) : '—'}
+                    </Text>
+                  </View>
+                );
+              case 'hr':
+                return (
+                  <View style={styles.stack4}>
+                    <StatusChip status={`HR ${rec.hrApproval}`} tone={rec.hrApproval === 'Approved' ? 'success' : rec.hrApproval === 'Rejected' ? 'danger' : 'warning'} />
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {rec.hrApprovedBy ?? 'Awaiting HR review'}{rec.hrApprovedOn ? ` · ${formatDate(rec.hrApprovedOn)}` : ''}
+                    </Text>
+                  </View>
+                );
+              case 'finance':
+                return <StatusChip status={rec.status === 'Disbursed' ? 'Disbursed' : rec.status === 'Hold' ? 'On hold' : 'Pending payment'} />;
+              default:
+                return (
+                  <Button
+                    label="Review salary"
+                    variant="outline"
+                    size="sm"
+                    onPress={() => {
+                      setNote('');
+                      setReviewId(salaryKey(rec));
+                    }}
+                  />
+                );
+            }
+          }}
+          renderMobileCard={(rec) => (
+            <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
+              <View style={styles.personRow}>
+                <Avatar name={rec.name} size={36} />
+                <View style={styles.personMain}>
+                  <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{rec.name}</Text>
+                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{rec.designation} · {rec.id}</Text>
+                  <Text style={[styles.money, { color: theme.colors.text }]}>{formatRupees(rec.netPay)} net</Text>
+                </View>
+                <View style={styles.stack4}>
+                  <StatusChip status={`Admin ${rec.adminApproval}`} />
+                  <StatusChip status={`HR ${rec.hrApproval}`} />
+                </View>
+              </View>
+              <Button
+                label="Review salary"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setNote('');
+                  setReviewId(salaryKey(rec));
+                }}
+              />
+            </View>
+          )}
+        />
+      </SectionCard>
+
+      {reviewRecord ? (
+        <ModalSheet
+          key={reviewId ?? 'review'}
+          visible
+          onClose={() => setReviewId(null)}
+          label={`HR salary review · ${salaryMonthLabel(reviewRecord.month)}`}
+          title={reviewRecord.name}
+          description={`${reviewRecord.designation} · ${reviewRecord.location} · ${reviewRecord.workingDays} days`}
+          size="md"
+          footer={
+            reviewable(reviewRecord) ? (
+              <>
+                <Button
+                  label="Return salary"
+                  variant="outline"
+                  icon="XCircle"
+                  disabled={!note.trim()}
+                  onPress={() => decide(reviewRecord, 'Rejected')}
+                />
+                <Button
+                  label="Approve & release to Finance"
+                  variant="primary"
+                  icon="CheckCircle2"
+                  onPress={() => decide(reviewRecord, 'Approved')}
+                />
+              </>
+            ) : undefined
+          }
+        >
+          <View style={[styles.decisionRow, isMd && styles.decisionRowWide]}>
+            <DecisionCard
+              title="Admin decision"
+              status={`Admin ${reviewRecord.adminApproval}`}
+              actor={reviewRecord.adminApprovedBy ?? 'Awaiting Admin'}
+              date={reviewRecord.adminApprovedOn ? formatDate(reviewRecord.adminApprovedOn) : '—'}
+            />
+            <DecisionCard
+              title="HR decision"
+              status={`HR ${reviewRecord.hrApproval}`}
+              actor={reviewRecord.hrApprovedBy ?? 'Awaiting HR review'}
+              date={reviewRecord.hrApprovedOn ? formatDate(reviewRecord.hrApprovedOn) : '—'}
+            />
+          </View>
+
+          <View style={[styles.breakdown, { borderColor: theme.colors.border }]}>
+            {[
+              { label: 'Basic + HRA', value: reviewRecord.basicHra },
+              { label: 'Allowances', value: reviewRecord.allowance },
+              { label: 'EPF', value: reviewRecord.pfDeduction },
+              { label: 'ESIC', value: reviewRecord.esiDeduction },
+              { label: 'TDS', value: reviewRecord.tdsDeduction },
+            ].map((row) => (
+              <View key={row.label} style={[styles.breakdownRow, { borderBottomColor: theme.colors.border }]}>
+                <Text style={[styles.breakdownLabel, { color: theme.colors.textMuted }]}>{row.label}</Text>
+                <Text style={[styles.breakdownValue, { color: theme.colors.text }]}>{formatRupees(row.value)}</Text>
+              </View>
+            ))}
+            <View style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: theme.colors.text }]}>Net salary</Text>
+              <Text style={[styles.breakdownValue, styles.netBold, { color: theme.colors.brandPrimary }]}>
+                {formatRupees(reviewRecord.netPay)}
+              </Text>
+            </View>
+          </View>
+
+          {reviewable(reviewRecord) ? (
+            <TextField
+              label="Review note"
+              value={note}
+              onChangeText={setNote}
+              multiline
+              placeholder="Add context for the approval or the reason for returning this salary…"
+              hint="A note is required when returning a salary to Admin."
+            />
+          ) : (
+            <Card padding={14} flat style={[styles.lockedBanner, { backgroundColor: theme.colors.warningSoft, borderColor: theme.colors.warningBorder }]}>
+              <View style={styles.lockedRow}>
+                <Icon name="Lock" size={15} color={theme.colors.warningText} />
+                <Text style={[styles.lockedText, { color: theme.colors.warningText }]}>
+                  {reviewRecord.adminApproval !== 'Approved'
+                    ? 'HR approval is locked until Admin approves this salary.'
+                    : 'This salary has already been reviewed by HR.'}
+                </Text>
+              </View>
+              {reviewRecord.hrReason ? (
+                <Text style={[styles.returnReason, { color: theme.colors.dangerText }]}>Returned: &ldquo;{reviewRecord.hrReason}&rdquo;</Text>
+              ) : null}
+            </Card>
+          )}
+        </ModalSheet>
+      ) : null}
+    </View>
+  );
+};
+
+const DecisionCard: React.FC<{ title: string; status: string; actor: string; date: string }> = ({
+  title,
+  status,
+  actor,
+  date,
+}) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.decisionCard, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+      <Text style={[styles.decisionTitle, { color: theme.colors.textSubtle }]}>{title}</Text>
+      <StatusChip status={status} />
+      <Text style={[styles.decisionMeta, { color: theme.colors.textMuted }]}>{actor}</Text>
+      <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{date}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    gap: 16,
+  },
+  workflow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 14,
   },
-  monthSelector: {
+  workflowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  steps: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
   },
-  monthChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  monthChipText: {
-    fontSize: 12,
-  },
-  list: {
-    gap: 12,
-  },
-  card: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
-  },
-  cardHeader: {
+  stepPill: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  designation: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  location: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  badgesCol: {
+    alignItems: 'center',
     gap: 4,
-    alignItems: 'flex-end',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
+  stepText: {
+    fontSize: 11.5,
+    fontWeight: '600',
   },
-  breakdownGrid: {
+  metricsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  breakdownItem: {
+  metric: {
+    flexGrow: 1,
+    flexBasis: 170,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  filterCell: {
+    flexGrow: 1,
+    flexBasis: 220,
+  },
+  personRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  personMain: {
     flex: 1,
+    minWidth: 0,
+    gap: 1,
   },
-  breakdownLabel: {
-    fontSize: 9,
-    fontWeight: '700',
+  cellTitle: {
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  cellSub: {
+    fontSize: 10.5,
+  },
+  money: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  stack4: {
+    gap: 4,
+  },
+  mobileCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 13,
+    gap: 10,
+  },
+  decisionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  decisionRowWide: {
+    flexWrap: 'nowrap',
+  },
+  decisionCard: {
+    flexGrow: 1,
+    flexBasis: 200,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 6,
+  },
+  decisionTitle: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 4,
   },
-  breakdownValue: {
+  decisionMeta: {
     fontSize: 12,
     fontWeight: '500',
   },
-  reasonText: {
-    fontSize: 11,
-    fontStyle: 'italic',
+  breakdown: {
+    borderWidth: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.1)',
-    paddingTop: 10,
-  },
-  releasedRow: {
+  breakdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingTop: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  releasedText: {
-    fontSize: 11,
+  breakdownLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  breakdownValue: {
+    fontSize: 12.5,
     fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  netBold: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  lockedBanner: {
+    gap: 8,
+  },
+  lockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lockedText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  returnReason: {
+    fontSize: 11,
+    lineHeight: 16,
   },
 });
