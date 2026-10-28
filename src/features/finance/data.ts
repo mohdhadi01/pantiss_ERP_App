@@ -206,8 +206,6 @@ export const portfolioTotals = financeAreas.reduce(
   }
 );
 
-export function formatCurrency(lakhs: number, precise = false): string {
-  if (isNaN(lakhs)) return '₹0 L';
-  if (lakhs >= 100) return `₹${(lakhs / 100).toFixed(precise ? 2 : 1)} Cr`;
-  return `₹${lakhs.toFixed(precise ? 2 : 1)} L`;
-}
+// Single source of truth for money formatting — see src/utils/formatCurrency.ts
+export { formatCurrency } from '../../utils/formatCurrency';
+

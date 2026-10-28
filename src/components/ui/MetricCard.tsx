@@ -1,158 +1,181 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, StyleProp, Pressable } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { Icon } from './Icon';
+import { Icon, IconSource } from './Icon';
 
 export interface MetricCardProps {
+  /** Small caption. Rendered under the value when `icon` is set (web finance KPI),
+   *  above the value otherwise (web HR `cxo-metric`). */
   label: string;
+  /** Big number / short text. */
   value: string | number;
+  /** Bottom note line (web `mt-3 text-[10px]`). */
   subtitle?: string;
-  icon?: string;
+  /** 40px tinted icon tile (web `size-10 rounded-xl bg-{accent}-500/10`). */
+  icon?: IconSource;
   iconColor?: string;
+  /** Hex accent that also derives the icon-tile tint at 10%. */
+  accentColor?: string;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
-  accentColor?: string;
-  style?: ViewStyle;
+  /** Web finance cards show a top-right ArrowUpRight. */
+  arrow?: boolean;
+  onPress?: () => void;
+  /** Value color override (e.g. emerald expenditure values on the web). */
+  valueColor?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Web-parity KPI card. Value uses tabular-nums + tight tracking like the web's
+ * `text-2xl font-semibold tracking-[-0.04em]`.
+ */
 export const MetricCard: React.FC<MetricCardProps> = ({
   label,
   value,
   subtitle,
   icon,
   iconColor,
+  accentColor,
   trend,
   trendValue,
-  accentColor,
+  arrow = false,
+  onPress,
+  valueColor,
   style,
 }) => {
   const { theme } = useTheme();
 
-  return (
-    <View
+  const accent = iconColor ?? accentColor ?? theme.colors.brandPrimary;
+  const tileBg =
+    accentColor && accentColor.startsWith('#')
+      ? `${accentColor}1A`
+      : theme.colors.surfaceMuted;
+
+  const trendColor =
+    trend === 'up'
+      ? theme.colors.success
+      : trend === 'down'
+        ? theme.colors.danger
+        : theme.colors.textMuted;
+
+  const labelEl = (
+    <Text numberOfLines={2} style={[styles.label, { color: theme.colors.textMuted }]}>
+      {label}
+    </Text>
+  );
+
+  const valueEl = (
+    <Text
+      numberOfLines={1}
       style={[
+        styles.value,
+        theme.fontStyles.metric,
+        { color: valueColor ?? theme.colors.text },
+      ]}
+    >
+      {value}
+    </Text>
+  );
+
+  const noteEl =
+    subtitle || trendValue ? (
+      <View style={styles.noteRow}>
+        {trendValue ? (
+          <View style={styles.trendRow}>
+            <Icon
+              name={trend === 'up' ? 'TrendingUp' : trend === 'down' ? 'TrendingDown' : 'Minus'}
+              size={13}
+              color={trendColor}
+            />
+            <Text style={[styles.noteText, { color: trendColor }]}>{trendValue}</Text>
+          </View>
+        ) : null}
+        {subtitle ? (
+          <Text numberOfLines={2} style={[styles.noteText, { color: theme.colors.textSubtle }]}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+    ) : null;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [
         styles.card,
         {
-          backgroundColor: theme.colors.cardBg,
+          borderRadius: theme.radii.card,
+          backgroundColor: theme.colors.moduleBg,
           borderColor: theme.colors.border,
-          ...theme.shadows.card,
+          opacity: pressed && onPress ? 0.92 : 1,
+          ...(theme.shadows.card as object),
         },
         style,
       ]}
     >
       <View style={styles.topRow}>
-        <Text style={[styles.label, { color: theme.colors.textSubtle }]}>{label}</Text>
-        {icon && (
-          <View
-            style={[
-              styles.iconWrapper,
-              {
-                backgroundColor: accentColor ? `${accentColor}1A` : theme.colors.surfaceMuted,
-              },
-            ]}
-          >
-            <Icon
-              name={icon}
-              size={18}
-              color={iconColor || accentColor || theme.colors.brandPrimary}
-            />
+        {icon ? (
+          <View style={[styles.iconTile, { backgroundColor: tileBg }]}>
+            <Icon name={icon} size={18} color={accent} strokeWidth={1.8} />
           </View>
+        ) : (
+          labelEl
         )}
+        {arrow ? (
+          <Icon name="ArrowUpRight" size={15} color={theme.colors.textSubtle} />
+        ) : null}
       </View>
 
-      <Text style={[styles.value, { color: theme.colors.text }]}>{value}</Text>
+      {icon ? <View style={{ marginTop: 18 }}>{valueEl}</View> : valueEl}
+      {icon ? labelEl : null}
 
-      {(subtitle || trendValue) && (
-        <View style={styles.bottomRow}>
-          {trendValue && (
-            <View style={styles.trendRow}>
-              <Icon
-                name={trend === 'up' ? 'TrendingUp' : trend === 'down' ? 'TrendingDown' : 'Minus'}
-                size={14}
-                color={
-                  trend === 'up'
-                    ? theme.colors.emerald
-                    : trend === 'down'
-                    ? theme.colors.danger
-                    : theme.colors.textMuted
-                }
-              />
-              <Text
-                style={[
-                  styles.trendText,
-                  {
-                    color:
-                      trend === 'up'
-                        ? theme.colors.emerald
-                        : trend === 'down'
-                        ? theme.colors.danger
-                        : theme.colors.textMuted,
-                  },
-                ]}
-              >
-                {trendValue}
-              </Text>
-            </View>
-          )}
-          {subtitle && (
-            <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>{subtitle}</Text>
-          )}
-        </View>
-      )}
-    </View>
+      {noteEl ? <View style={{ marginTop: 10 }}>{noteEl}</View> : null}
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
     borderWidth: 1,
-    padding: 16,
+    padding: 20,
     flex: 1,
-    minWidth: 150,
+    minWidth: 140,
   },
   topRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  value: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    marginVertical: 4,
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  label: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 17,
     marginTop: 4,
-    flexWrap: 'wrap',
+  },
+  value: {
+    marginTop: 4,
+  },
+  noteRow: {
+    gap: 2,
   },
   trendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
   },
-  trendText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  subtitle: {
-    fontSize: 11,
+  noteText: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '500',
   },
 });

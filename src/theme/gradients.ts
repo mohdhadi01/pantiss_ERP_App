@@ -8,7 +8,8 @@
  */
 
 export interface GradientPreset {
-  colors: string[];
+  /** expo-linear-gradient requires a tuple of ≥2 colors. */
+  colors: [string, string, ...string[]];
   start: { x: number; y: number };
   end: { x: number; y: number };
 }
@@ -23,8 +24,8 @@ const TO_R = {
   end: { x: 1, y: 0 },
 } as const;
 
-const br = (colors: string[]): GradientPreset => ({ colors, ...TO_BR });
-const r = (colors: string[]): GradientPreset => ({ colors, ...TO_R });
+const br = (colors: [string, string, ...string[]]): GradientPreset => ({ colors, ...TO_BR });
+const r = (colors: [string, string, ...string[]]): GradientPreset => ({ colors, ...TO_R });
 
 /** Hero banners (`bg-gradient-to-br from-slate-950 …`). Dark in both modes, as on the web. */
 export const heroGradients = {
