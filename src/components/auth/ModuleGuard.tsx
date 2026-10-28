@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -22,7 +22,6 @@ const normalize = (moduleId: string): string => (moduleId === 'hr' ? 'human-reso
 export const ModuleGuard: React.FC<ModuleGuardProps> = ({ requiredModuleId, requiredRole, children }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { theme } = useTheme();
-  const router = useRouter();
 
   const authorized =
     isAuthenticated &&
@@ -30,27 +29,32 @@ export const ModuleGuard: React.FC<ModuleGuardProps> = ({ requiredModuleId, requ
     normalize(user.moduleId) === normalize(requiredModuleId) &&
     (!requiredRole || user.role === requiredRole);
 
-  useEffect(() => {
-    if (!isLoading && !authorized) {
-      router.replace('/modules/core-operations');
-    }
-  }, [isLoading, authorized, router]);
-
-  if (isLoading || !authorized) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.brandPrimary} />
-      </View>
-    );
+  // Declarative redirect (web-parity): no imperative replace racing the
+  // initial deep-link resolution.
+  if (!isLoading && !authorized) {
+    return <Redirect href="/modules/core-operations" />;
   }
 
-  return <>{children}</>;
+  // IMPORTANT: the child navigator must stay mounted while auth restores.
+  // Replacing it with a spinner makes expo-router find no navigator at the
+  // deep-linked target and fall through to +not-found. Overlay instead.
+  return (
+    <>
+      {children}
+      {isLoading ? (
+        <View style={[StyleSheet.absoluteFill, styles.loading, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.brandPrimary} />
+        </View>
+      ) : null}
+    </>
+  );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  loading: {
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 50,
+    elevation: 50,
   },
 });

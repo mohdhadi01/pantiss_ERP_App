@@ -127,7 +127,7 @@ export const FinanceDashboard: React.FC = () => {
               <View style={styles.reserveText}>
                 <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
                 <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Balance</Text>
-                <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
                   Across 4 institutional bank accounts · Click to view Banking ledger
                 </Text>
               </View>
@@ -145,7 +145,7 @@ export const FinanceDashboard: React.FC = () => {
               <View style={styles.reserveText}>
                 <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
                 <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Investments</Text>
-                <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
                   Fixed deposits (₹2.85 Cr) &amp; liquid mutual funds (₹1.42 Cr) · Click to view portfolio
                 </Text>
               </View>
@@ -164,7 +164,7 @@ export const FinanceDashboard: React.FC = () => {
                 {formatCurrency(portfolioTotals.committed)}
               </Text>
               <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Liabilities</Text>
-              <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+              <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
                 Approved purchase orders, contractor retentions &amp; statutory payables
               </Text>
             </View>
@@ -557,7 +557,9 @@ const styles = StyleSheet.create({
   },
   reserveWrap: {
     flexGrow: 1,
+    flexShrink: 1,
     flexBasis: '46%',
+    minWidth: 0,
   },
   reserveCard: {
     gap: 4,
@@ -566,11 +568,14 @@ const styles = StyleSheet.create({
   reserveCardMobile: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
+    width: '100%',
+    flexWrap: 'nowrap',
   },
   reserveText: {
     flex: 1,
     minWidth: 0,
+    flexShrink: 1,
     gap: 2,
   },
   reserveTop: {
@@ -609,6 +614,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   reserveSub: {
+    flexShrink: 1,
     fontSize: 10.5,
     marginTop: 2,
   },
@@ -793,12 +799,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   areaCard: {
-    gap: 17,
+    gap: 18,
   },
   areaHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 3,
   },
   areaTile: {
     width: 46,

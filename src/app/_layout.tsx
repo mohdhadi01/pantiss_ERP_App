@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
@@ -37,20 +38,11 @@ function RootLayoutContent() {
     setShowSplash(false);
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || showSplash) {
     return (
       <>
         <StatusBar style="light" />
-        <WelcomeSplash onComplete={handleSplashComplete} loading />
-      </>
-    );
-  }
-
-  if (showSplash) {
-    return (
-      <>
-        <StatusBar style="light" />
-        <WelcomeSplash onComplete={handleSplashComplete} />
+        <WelcomeSplash onComplete={handleSplashComplete} loading={!fontsLoaded} />
       </>
     );
   }
