@@ -148,24 +148,27 @@ export const ProjectsView: React.FC = () => {
                   }}
                   style={styles.areaCardWrap}
                 >
-                  <Card padding={16} style={styles.areaCard}>
+                  <Card padding={18} style={styles.areaCard}>
                     <View style={styles.areaTop}>
                       <View style={[styles.areaTile, { backgroundColor: `${area.color}1A` }]}>
-                        <Icon name="FolderKanban" size={17} color={area.color} strokeWidth={1.8} />
+                        <Icon name="FolderKanban" size={18} color={area.color} strokeWidth={1.8} />
                       </View>
-                      <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{area.name}</Text>
+                      <View style={styles.areaHeaderText}>
+                        <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{area.name}</Text>
+                        <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{area.projects.length} active projects</Text>
+                      </View>
                     </View>
-                    <View style={styles.areaRow}>
-                      <Text style={[styles.areaRowLabel, { color: theme.colors.textSubtle }]}>Approved budget</Text>
-                      <Text style={[styles.areaRowValue, { color: theme.colors.text }]}>{formatCurrency(totals.approved)}</Text>
+                    <View style={styles.areaStatRow}>
+                      <View style={styles.areaStat}>
+                        <Text style={[styles.areaStatLabel, { color: theme.colors.textSubtle }]}>Approved budget</Text>
+                        <Text style={[styles.areaStatValue, { color: theme.colors.text }]}>{formatCurrency(totals.approved)}</Text>
+                      </View>
+                      <View style={styles.areaStatUtil}>
+                        <ProgressBar value={totals.utilization} color={area.color} height={6} />
+                        <Text style={[styles.areaStatValue, { color: theme.colors.financeAccent }]}>{totals.utilization}%</Text>
+                      </View>
                     </View>
-                    <View style={styles.areaRow}>
-                      <Text style={[styles.areaRowLabel, { color: theme.colors.textSubtle }]}>Utilization</Text>
-                      <Text style={[styles.areaRowValue, { color: theme.colors.financeAccent }]}>{totals.utilization}%</Text>
-                    </View>
-                    <ProgressBar value={totals.utilization} color={area.color} height={5} />
                     <View style={styles.areaFooter}>
-                      <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{area.projects.length} projects</Text>
                       <Text style={[styles.viewProjects, { color: theme.colors.financeAccent }]}>View projects →</Text>
                     </View>
                   </Card>
@@ -228,6 +231,45 @@ export const ProjectsView: React.FC = () => {
               rows={rows}
               keyExtractor={(p) => p.id}
               renderCell={renderCell}
+              renderMobileCard={(p) => (
+                <View style={styles.projCard}>
+                  <View style={styles.projHead}>
+                    <View style={styles.projHeadText}>
+                      <Text style={[styles.projName, { color: theme.colors.text }]}>{p.name}</Text>
+                      <Text style={[styles.projDonor, { color: theme.colors.brandPrimary }]}>{p.donor}</Text>
+                      <Text style={[styles.projLoc, { color: theme.colors.textSubtle }]}>{p.location}</Text>
+                    </View>
+                    <StatusChip status={p.status} />
+                  </View>
+                  <View style={styles.projStats}>
+                    <View style={styles.projStat}>
+                      <Text style={[styles.projStatLabel, { color: theme.colors.textSubtle }]}>Spent</Text>
+                      <Text style={[styles.projStatValue, { color: theme.colors.financeAccent }]}>{formatCurrency(p.spent)}</Text>
+                    </View>
+                    <View style={styles.projStat}>
+                      <Text style={[styles.projStatLabel, { color: theme.colors.textSubtle }]}>Approved</Text>
+                      <Text style={[styles.projStatValue, { color: theme.colors.text }]}>{formatCurrency(p.approved)}</Text>
+                    </View>
+                    <View style={[styles.projStat, styles.projStatUtil]}>
+                      <Text style={[styles.projStatLabel, { color: theme.colors.textSubtle }]}>Utilization</Text>
+                      <ProgressBar value={p.utilization} height={5} color={theme.colors.financeAccent} />
+                      <Text style={[styles.projStatValue, { color: theme.colors.text }]}>{p.utilization}%</Text>
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      setLedgerProject(p);
+                      setLedgerOpen(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ledger ${p.name}`}
+                    style={styles.projLedgerLink}
+                  >
+                    <Text style={[styles.projLedgerText, { color: theme.colors.financeAccent }]}>View ledger</Text>
+                    <Icon name="ArrowUpRight" size={13} color={theme.colors.financeAccent} />
+                  </Pressable>
+                </View>
+              )}
               emptyIcon="FolderKanban"
               emptyTitle="No projects match"
               emptyDescription="Adjust the search, donor or status filters."
@@ -249,15 +291,25 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 32, fontWeight: '600', letterSpacing: -1.3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
-  areaCard: { gap: 9 },
+  areaCard: { gap: 13 },
   areaCardWrap: { flexGrow: 1, flexBasis: 260 },
   areaTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   areaTile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   areaName: { fontSize: 13.5, fontWeight: '600', flexShrink: 1 },
-  areaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  areaRowLabel: { fontSize: 11 },
-  areaRowValue: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  areaFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  areaHeaderText: { flex: 1, minWidth: 0, gap: 2 },
+  areaStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: 'rgba(128, 144, 168, 0.07)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  areaStat: { gap: 3 },
+  areaStatLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  areaStatValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  areaStatUtil: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  areaFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingTop: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128, 144, 168, 0.14)' },
   areaMeta: { fontSize: 10.5 },
   viewProjects: { fontSize: 11.5, fontWeight: '600' },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
@@ -265,6 +317,33 @@ const styles = StyleSheet.create({
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
+  projCard: { gap: 13 },
+  projHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  projHeadText: { flex: 1, minWidth: 0, gap: 1 },
+  projName: { fontSize: 14, fontWeight: '600' },
+  projDonor: { fontSize: 11.5, fontWeight: '500' },
+  projLoc: { fontSize: 11 },
+  projStats: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: 'rgba(128, 144, 168, 0.07)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  projStat: { gap: 4 },
+  projStatUtil: { flex: 1.4, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: 'rgba(128, 144, 168, 0.18)', paddingLeft: 12 },
+  projStatLabel: { fontSize: 9.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  projStatValue: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  projLedgerLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128, 144, 168, 0.14)',
+  },
+  projLedgerText: { fontSize: 12, fontWeight: '600' },
   searchGrow: { flexGrow: 1, flexBasis: 240 },
   filterSelect: { flexGrow: 1, flexBasis: 170 },
   cellMain: { fontSize: 12.5, fontWeight: '600' },

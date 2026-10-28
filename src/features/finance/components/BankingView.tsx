@@ -72,6 +72,7 @@ const LEDGER_COLUMNS: Array<DataColumn<BankTx>> = [
 export const BankingView: React.FC = () => {
   const { theme } = useTheme();
   const [selectedAccountId, setSelectedAccountId] = useState(BANK_ACCOUNTS[0].id);
+  const [sheetAccount, setSheetAccount] = useState<BankAccount | null>(null);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done'>('idle');
   const [transferOpen, setTransferOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -199,7 +200,14 @@ export const BankingView: React.FC = () => {
           {BANK_ACCOUNTS.map((acc) => {
             const selected = acc.id === selectedAccountId;
             return (
-              <Pressable key={acc.id} onPress={() => setSelectedAccountId(acc.id)} style={styles.accountCardWrap}>
+              <Pressable
+                key={acc.id}
+                onPress={() => {
+                  setSelectedAccountId(acc.id);
+                  setSheetAccount(acc);
+                }}
+                style={styles.accountCardWrap}
+              >
                 <Card
                   padding={16}
                   style={[
@@ -328,12 +336,82 @@ export const BankingView: React.FC = () => {
         <TextField label="Amount (₹)" value={transferAmount} onChangeText={setTransferAmount} keyboardType="numeric" placeholder="e.g. 2500000" />
         <TextField label="Purpose" value={transferPurpose} onChangeText={setTransferPurpose} placeholder="e.g. Field imprest top-up" />
       </ModalSheet>
+
+      <ModalSheet
+        visible={!!sheetAccount}
+        onClose={() => setSheetAccount(null)}
+        label="Institutional account"
+        title={sheetAccount ? `${sheetAccount.bankName} ${sheetAccount.maskedNo}` : ''}
+        description={sheetAccount ? `${sheetAccount.type} · IFSC ${sheetAccount.ifsc}` : undefined}
+        size="sm"
+      >
+        {sheetAccount ? (
+          <>
+            <View style={styles.sheetSummary}>
+              <Text style={[styles.sheetBalance, { color: theme.colors.financeAccent }]}>
+                {formatRupees(sheetAccount.balance)}
+              </Text>
+              <Text style={[styles.sheetBalanceLabel, { color: theme.colors.textMuted }]}>Current Balance</Text>
+              <StatusChip status="Reconciled" />
+            </View>
+            <SectionCard title="Recent activity" description={`Latest statement lines for ${sheetAccount.bankName}.`}>
+              {BANK_TRANSACTIONS
+                .filter((tx: BankTx) => tx.account === sheetAccount.bankName)
+                .map((tx) => (
+                  <View key={tx.id} style={styles.sheetTxRow}>
+                    <View style={styles.sheetTxMain}>
+                      <Text numberOfLines={2} style={[styles.sheetTxTitle, { color: theme.colors.text }]}>
+                        {tx.description}
+                      </Text>
+                      <Text style={[styles.sheetTxMeta, { color: theme.colors.textSubtle }]}>
+                        {tx.date} · {tx.ref}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.sheetTxAmount,
+                        { color: tx.type === 'credit' ? theme.colors.financeAccent : theme.colors.text },
+                      ]}
+                    >
+                      {tx.type === 'credit' ? '+' : '−'}
+                      {formatRupees(tx.amount)}
+                    </Text>
+                  </View>
+                ))}
+            </SectionCard>
+          </>
+        ) : null}
+      </ModalSheet>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
+  sheetSummary: {
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(128, 144, 168, 0.16)',
+    backgroundColor: 'rgba(128, 144, 168, 0.06)',
+  },
+  sheetBalance: { fontSize: 28, fontWeight: '700', letterSpacing: -0.9, fontVariant: ['tabular-nums'] },
+  sheetBalanceLabel: { fontSize: 12, marginBottom: 4 },
+  sheetTxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128, 144, 168, 0.12)',
+  },
+  sheetTxMain: { flex: 1, minWidth: 0, gap: 3 },
+  sheetTxTitle: { fontSize: 12.5, fontWeight: '600', lineHeight: 17 },
+  sheetTxMeta: { fontSize: 10.5 },
+  sheetTxAmount: { fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },
   section: { gap: 12 },
