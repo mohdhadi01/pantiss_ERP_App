@@ -1,4 +1,3 @@
-import { ComponentType } from 'react';
 
 export interface NavItem {
   id: string;

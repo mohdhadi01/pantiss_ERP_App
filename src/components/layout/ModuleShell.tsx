@@ -124,10 +124,13 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
 
   const isHR = currentRoute.includes('(hr)');
   const division = sidebarSubtitle ?? (isHR ? 'Human Resources' : 'Finance Division');
-  const headerEyebrow = eyebrow ?? badgeText;
-  const headerEyebrowColor = eyebrowColor ?? badgeColor;
+  // Web per-module theming: Finance = emerald, HR = brand blue
+  const moduleAccent = accentColor ?? (isHR ? theme.colors.brandPrimary : theme.colors.financeAccent);
+  const moduleActiveBg = activeNavBg ?? (isHR ? theme.colors.brandSoft : theme.colors.financeAccentSoft);
   const defaultEyebrow = isHR ? 'People & culture · FY 2026–27' : 'Finance Division · FY 2026–27';
   const defaultHeadingColor = isHR ? theme.colors.brandPrimary : theme.colors.financeAccent;
+  const headerEyebrow = eyebrow ?? badgeText ?? defaultEyebrow;
+  const headerEyebrowColor = eyebrowColor ?? badgeColor ?? moduleAccent;
   const defaultFootnote = isHR
     ? 'Demo environment · HR changes are saved in this device. Admin decisions are sample records. Live attendance, account activation and email delivery need the employee platform connection.'
     : 'Demo environment · Institutional banking accounts, ledger books, statutory filings and voucher audit trails are simulated.';
@@ -163,8 +166,8 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
             items={navItems}
             currentRoute={currentRoute}
             onNavigate={handleNavigate}
-            accentColor={accentColor}
-            activeBg={activeNavBg}
+            accentColor={moduleAccent}
+            activeBg={moduleActiveBg}
             collapsed={isPermanentSidebar && sidebarCollapsed}
             onToggleCollapse={isPermanentSidebar ? () => setSidebarCollapsed((v) => !v) : undefined}
             onClose={isPermanentSidebar ? undefined : handleCloseDrawer}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Animated, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -12,7 +12,7 @@ export interface SkeletonProps {
 /** Pulsing placeholder block shown while stores hydrate (web skeleton shimmer equivalent). */
 export const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = 14, radius = 8, style }) => {
   const { theme } = useTheme();
-  const pulse = useRef(new Animated.Value(0.45)).current;
+  const pulse = useMemo(() => new Animated.Value(0.45), []);
 
   useEffect(() => {
     const loop = Animated.loop(

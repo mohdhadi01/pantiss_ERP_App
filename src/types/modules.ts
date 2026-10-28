@@ -1,4 +1,3 @@
-import { ComponentType } from 'react';
 
 export type CategorySlug = 'core-operations' | 'thematic-areas' | 'cxo';
 

@@ -1,56 +1,88 @@
-# Welcome to your Expo app 👋
+# Pantiss ERP — Mobile (React Native / Expo)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native (Expo) replication of the [Pantiss ERP](../Pantiss_ERP) web application, covering the **Human Resources** and **Finance** modules with the web app's exact design system — themes, gradients, layout grammar and interactions — rebuilt mobile-first.
 
-## Get started
+Dark mode is the default experience, matching the web.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick start
 
 ```bash
-npm run reset-project
+npm install
+npm start          # Expo dev server — press i (iOS) / a (Android) / w (web)
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+- Requires Node 20+ and the [Expo Go](https://expo.dev/go) app (or an iOS/Android simulator).
+- Web build: `npx expo export --platform web` (output in `dist/`).
 
-### Other setup steps
+### Demo credentials
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+| Role | User ID | Password | Lands on |
+|---|---|---|---|
+| Finance Manager | `finance.manager@pantiss.org` | `Finance@123` | Finance dashboard |
+| HR Manager | `hr.manager@pantiss.org` | `HR@123` | HR dashboard |
 
-## Learn more
+Sign in from any Finance / HR module card, or via the full-page login. The login form has one-tap demo autofill. All data is local demo data; changes made in HR approvals, payroll, books and alerts persist on-device (AsyncStorage).
 
-To learn more about developing your project with Expo, look at the following resources:
+## Modules & screens
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+**Finance (15 screens)** — Dashboard, Budget, Books, Banking, Vendor Management, Procurement, Salary, Reimbursement, Payments, Taxation, Audit Trails, Projects, Invoices, Investments, Alerts.
 
-## Join the community
+**HR (10 screens)** — Dashboard, Recruitment & Hiring, Employee Onboarding, Project Assignment, Job Designations, Salary Approvals, Attendance, Leave Management, KBI Metrics, Year-end Appraisals.
 
-Join our community of developers creating universal apps.
+Plus the public surface: workspace landing, workspace modules grid, sign-in (modal + page), 404.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Architecture
+
+```
+src/
+├── app/                  # expo-router file tree
+│   ├── _layout.tsx       # providers, Inter font loading, root stack
+│   ├── index.tsx         # workspace landing
+│   ├── modules/[categoryId].tsx
+│   ├── (auth)/login.tsx
+│   ├── (hr)/             # 10 HR screens → ModuleShell + feature views
+│   └── (finance)/        # 15 Finance screens → ModuleShell + feature views
+├── theme/                # single source of visual truth
+│   ├── colors.ts         # exact port of web globals.css :root/.dark tokens
+│   ├── gradients.ts      # hero/accent/avatar/bar gradients (exact web stops)
+│   ├── shadows.ts        # theme-aware shadows (--shadow-card equivalents)
+│   ├── typography.ts     # Inter scale + tabular-nums metric style
+│   ├── spacing.ts        # spacing, radii (web scale), layout metrics
+│   └── breakpoints.ts    # web-aligned sm 640 / md 768 / lg 1024 / xl 1280
+├── components/
+│   ├── ui/               # primitives: Card, MetricCard, DataTable, ModalSheet,
+│   │                     # Tabs, TextField, SelectField, StatusChip, Timeline,
+│   │                     # Donut, FunnelBars, AnimatedNumber, EmptyState…
+│   ├── layout/           # ModuleShell (260/80 sidebar + 80px header), headers
+│   ├── auth/             # LoginForm (shared), LoginModal
+│   ├── cards/  navigation/  animations/
+├── context/  hooks/      # Theme, Auth, Category providers + useBreakpoint etc.
+├── features/
+│   ├── hr/               # types, seed, store (AsyncStorage), helpers, views
+│   └── finance/          # data modules, stores, views
+├── data/                 # modules registry, demo accounts
+└── utils/                # storage wrapper, currency/date formatting
+```
+
+### Conventions
+
+- **Tokens only** — screens never hardcode theme colors; module accents come from `theme.colors.financeAccent` (emerald) / `brandPrimary` (HR blue).
+- **Responsive** — `useBreakpoint()` mirrors the web's Tailwind breakpoints; tables render as real tables ≥1024px and stacked cards below; the sidebar is permanent ≥1024px and a drawer below.
+- **Primitives first** — no screen reimplements cards, tabs, inputs, modals or status pills; everything composes `src/components/ui`.
+- **Typed icons** — a static registry (`ui/Icon.tsx`), no runtime namespace lookups.
+- **Stores** — `useBooksStore`, `useSalaryRecords`, `useFinanceAlerts`, HR store persist through the typed AsyncStorage wrapper (`utils/storage.ts`).
+
+## Scripts
+
+| Script | Purpose |
+|---|---|
+| `npm start` | Expo dev server |
+| `npm run android` / `ios` / `web` | Platform targets |
+| `npm run lint` | ESLint (expo config) |
+| `npx tsc --noEmit` | Type check (strict) |
+
+## Web parity
+
+`../PLAN.md` documents the full web→mobile parity plan (design tokens, per-screen checklist, phases). `ARCHITECTURE.md` covers deeper implementation details.
+
+> Demo environment: institutional banking, statutory filings, attendance evidence and email delivery are simulated. No live APIs.

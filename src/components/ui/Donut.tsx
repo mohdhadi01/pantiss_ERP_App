@@ -32,32 +32,33 @@ export const Donut: React.FC<DonutProps> = ({
   const circumference = 2 * Math.PI * radius;
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1;
 
-  let offset = 0;
+  // Precompute each arc's dash/offset — no mutation during render.
+  const arcs: Array<{ color: string; dash: number; offset: number }> = [];
+  let running = 0;
+  for (const segment of segments) {
+    const dash = (segment.value / total) * circumference;
+    arcs.push({ color: segment.color, dash: Math.max(dash - 2, 0), offset: running });
+    running += dash;
+  }
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
       <Svg width={size} height={size}>
         <G rotation="-90" originX={size / 2} originY={size / 2}>
-          {segments.map((segment, index) => {
-            const fraction = segment.value / total;
-            const dash = fraction * circumference;
-            const element = (
-              <Circle
-                key={index}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke={segment.color}
-                strokeWidth={thickness}
-                strokeDasharray={`${Math.max(dash - 2, 0)} ${circumference - Math.max(dash - 2, 0)}`}
-                strokeDashoffset={-offset}
-                fill="none"
-                strokeLinecap="butt"
-              />
-            );
-            offset += dash;
-            return element;
-          })}
+          {arcs.map((arc, index) => (
+            <Circle
+              key={index}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={arc.color}
+              strokeWidth={thickness}
+              strokeDasharray={`${arc.dash} ${circumference - arc.dash}`}
+              strokeDashoffset={-arc.offset}
+              fill="none"
+              strokeLinecap="butt"
+            />
+          ))}
         </G>
       </Svg>
       {centerContent ? <View style={styles.center}>{centerContent}</View> : null}
