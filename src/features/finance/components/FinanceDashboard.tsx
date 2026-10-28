@@ -256,10 +256,14 @@ export const FinanceDashboard: React.FC = () => {
             {alerts.slice(0, 7).map((alert, index) => {
               const tagColor = HIGHLIGHT_TAG_COLORS[alert.category] ?? theme.colors.info;
               return (
-                <View
+                <Pressable
                   key={alert.id}
-                  style={[
+                  onPress={() => handleNav('/(finance)/alerts')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open alert: ${alert.title}`}
+                  style={({ pressed }) => [
                     styles.highlightRow,
+                    { opacity: pressed ? 0.7 : 1 },
                     index < Math.min(alerts.length, 7) - 1 && {
                       borderBottomWidth: StyleSheet.hairlineWidth,
                       borderBottomColor: 'rgba(128, 144, 168, 0.14)',
@@ -306,7 +310,7 @@ export const FinanceDashboard: React.FC = () => {
                       {alert.time}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>

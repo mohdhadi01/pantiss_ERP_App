@@ -190,13 +190,16 @@ export const BooksView: React.FC = () => {
               const spent = allocation * (portfolioTotals.spent / portfolioTotals.approved);
               return (
                 <View key={cat} style={styles.headItem}>
-                  <View style={styles.headTop}>
-                    <Text style={[styles.headName, { color: theme.colors.text }]}>{cat}</Text>
-                    <Text style={[styles.headAmt, { color: theme.colors.textMuted }]}>
-                      {formatCurrency(spent)} recorded / {formatCurrency(allocation)} allocated
+                  <Text style={[styles.headName, { color: theme.colors.text }]}>{cat}</Text>
+                  <View style={styles.headAmtRow}>
+                    <Text style={[styles.headAmtStrong, { color: theme.colors.financeAccent }]}>
+                      {formatCurrency(spent)} recorded
+                    </Text>
+                    <Text style={[styles.headAmt, { color: theme.colors.textSubtle }]}>
+                      / {formatCurrency(allocation)} allocated
                     </Text>
                   </View>
-                  <ProgressBar value={(spent / allocation) * 100} height={5} color={theme.colors.financeAccent} />
+                  <ProgressBar value={(spent / allocation) * 100} height={6} color={theme.colors.financeAccent} style={styles.headBar} />
                 </View>
               );
             })}
@@ -337,15 +340,31 @@ const styles = StyleSheet.create({
   fyPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
   fyPillText: { fontSize: 11.5, fontWeight: '600' },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  metricCard: { flexGrow: 1, flexBasis: 220 },
+  metricCard: { flexGrow: 1, flexBasis: '46%' },
   twoCol: { gap: 12 },
   twoColWide: { flexDirection: 'row', alignItems: 'flex-start' },
   colHalf: { flex: 1 },
   headsList: { gap: 12 },
-  headItem: { gap: 5 },
-  headTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  headName: { fontSize: 12, fontWeight: '600' },
-  headAmt: { fontSize: 11, fontVariant: ['tabular-nums'], textAlign: 'right' },
+  headItem: {
+    gap: 7,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128, 144, 168, 0.12)',
+  },
+  headAmtRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+    flexWrap: 'wrap',
+  },
+  headAmtStrong: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  headBar: { marginTop: 2 },
+  headName: { fontSize: 12.5, fontWeight: '600' },
+  headAmt: { fontSize: 11, fontVariant: ['tabular-nums'] },
   tallyRows: { gap: 0 },
   tallyRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128, 144, 168, 0.16)' },
   tallyRowLabel: { fontSize: 11.5 },

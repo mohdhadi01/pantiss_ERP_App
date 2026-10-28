@@ -200,7 +200,7 @@ export const BudgetsView: React.FC = () => {
                 <View key={cat} style={styles.headItem}>
                   <View style={styles.cardHeader}>
                     <Text style={[styles.headName, { color: theme.colors.text }]}>{cat}</Text>
-                    <Text style={[styles.headAmt, { color: theme.colors.textMuted }]}>
+                    <Text style={[styles.headAmt, { color: theme.colors.textMuted }]} numberOfLines={1}>
                       {formatCurrency(spent)} / {formatCurrency(allocated)}
                     </Text>
                   </View>
@@ -335,8 +335,9 @@ const styles = StyleSheet.create({
   finLabel: { fontSize: 9.5, marginTop: 1 },
   headsTitle: { fontSize: 14, fontWeight: '700', marginTop: 4 },
   headsList: { gap: 12 },
-  headItem: { gap: 5 },
-  headName: { fontSize: 12, fontWeight: '600' },
+  headItem: { gap: 7, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128, 144, 168, 0.12)' },
+  headName: { fontSize: 12.5, fontWeight: '600' },
+  headAmtWrap: { flexDirection: 'row', alignItems: 'baseline', gap: 5, flexWrap: 'wrap' },
   headAmt: { fontSize: 11, fontVariant: ['tabular-nums'] },
   formRow: { flexDirection: 'row', gap: 12 },
   formRowItem: { flex: 1 },

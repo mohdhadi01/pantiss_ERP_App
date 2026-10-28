@@ -107,16 +107,16 @@ export const QuoteCard: React.FC<{
 };
 
 const styles = StyleSheet.create({
-  areaCard: { gap: 10 },
+  areaCard: { gap: 13 },
   areaCardWrap: { flexGrow: 1, flexBasis: 280 },
   areaTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   areaTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   areaTileText: { fontSize: 16, fontWeight: '700' },
-  areaTitle: { flex: 1, minWidth: 0, gap: 4 },
+  areaTitle: { flex: 1, minWidth: 0, gap: 6 },
   areaName: { fontSize: 13.5, fontWeight: '600' },
   areaMeta: { fontSize: 10.5 },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  areaValue: { fontSize: 11, fontVariant: ['tabular-nums'] },
+  areaValue: { fontSize: 11.5, fontVariant: ['tabular-nums'], marginTop: 1 },
   quoteCard: { borderRadius: 14, padding: 14, gap: 6, flexGrow: 1, flexBasis: 170 },
   quoteTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 },
   quoteVendor: { fontSize: 12.5, fontWeight: '600', flexShrink: 1 },

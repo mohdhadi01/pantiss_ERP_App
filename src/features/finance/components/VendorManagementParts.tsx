@@ -31,7 +31,7 @@ export const VendorCard: React.FC<{ vendor: Vendor; onPress: () => void }> = ({ 
           <PanelRow label="GSTIN" value={vendor.gstin} />
           <PanelRow label="Payment Terms" value={vendor.paymentTerms} />
           <PanelRow label="Bank A/C" value={`${vendor.bankName} ·••••${last4}`} />
-          <PanelRow label="Compliance" value={`${vendor.complianceScore}%`} accent={vendor.complianceScore >= 90 ? theme.colors.emerald : theme.colors.warning} />
+          <PanelRow label="Compliance" value={`${vendor.complianceScore}%`} accent={vendor.complianceScore >= 90 ? theme.colors.emerald : theme.colors.warning} last />
         </View>
 
         <View style={styles.contactRows}>
@@ -55,10 +55,10 @@ export const VendorCard: React.FC<{ vendor: Vendor; onPress: () => void }> = ({ 
   );
 };
 
-const PanelRow: React.FC<{ label: string; value: string; accent?: string }> = ({ label, value, accent }) => {
+const PanelRow: React.FC<{ label: string; value: string; accent?: string; last?: boolean }> = ({ label, value, accent, last }) => {
   const { theme } = useTheme();
   return (
-    <View style={styles.panelRow}>
+    <View style={[styles.panelRow, last && styles.panelRowLast]}>
       <Text style={[styles.panelLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
       <Text numberOfLines={1} style={[styles.panelValue, { color: accent ?? theme.colors.text }]}>{value}</Text>
     </View>
@@ -98,7 +98,7 @@ export const VendorDetailsSheet: React.FC<{ vendor: Vendor | null; visible: bool
         <DetailRow label="Email" value={vendor.email} />
         <DetailRow label="Location" value={vendor.location} />
         <DetailRow label="Compliance score" value={`${vendor.complianceScore}%`} />
-        <DetailRow label="Active contracts" value={String(vendor.activeContracts)} />
+        <DetailRow label="Active contracts" value={String(vendor.activeContracts)} last />
       </View>
       <Text style={[styles.disbursed, { color: theme.colors.financeAccent }]}>
         YTD disbursed {formatCurrency(vendor.ytdSpend)}
@@ -107,10 +107,10 @@ export const VendorDetailsSheet: React.FC<{ vendor: Vendor | null; visible: bool
   );
 };
 
-const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+const DetailRow: React.FC<{ label: string; value: string; last?: boolean }> = ({ label, value, last }) => {
   const { theme } = useTheme();
   return (
-    <View style={styles.detailRow}>
+    <View style={[styles.detailRow, last && styles.detailRowLast]}>
       <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
       <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
     </View>
@@ -118,27 +118,45 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value })
 };
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: 14 },
   cardWrap: { flexGrow: 1, flexBasis: 320 },
-  topRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
-  titleBlock: { gap: 2 },
-  name: { fontSize: 14, fontWeight: '700', lineHeight: 19 },
+  topRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  titleBlock: { gap: 3 },
+  name: { fontSize: 14.5, fontWeight: '700', lineHeight: 20 },
   vid: { fontSize: 11 },
-  panel: { borderWidth: 1, borderRadius: 12, padding: 11, gap: 7 },
-  panelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  panelLabel: { fontSize: 10.5 },
+  panel: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 4 },
+  panelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 30,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128, 144, 168, 0.10)',
+  },
+  panelRowLast: { borderBottomWidth: 0 },
+  panelLabel: { fontSize: 11 },
   panelValue: { fontSize: 11.5, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  contactRows: { gap: 5 },
-  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  contactText: { fontSize: 11.5, flexShrink: 1 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11, marginTop: 2 },
-  footerValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  footerLabel: { fontSize: 10, marginTop: 1 },
-  viewDetails: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  viewDetailsText: { fontSize: 11.5, fontWeight: '600' },
-  detailPanel: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 9 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  contactRows: { gap: 8 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  contactText: { fontSize: 12, flexShrink: 1 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 13, marginTop: 2 },
+  footerValue: { fontSize: 14.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  footerLabel: { fontSize: 10, marginTop: 2 },
+  viewDetails: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  viewDetailsText: { fontSize: 12, fontWeight: '600' },
+  detailPanel: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 4 },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 34,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128, 144, 168, 0.10)',
+  },
+  detailRowLast: { borderBottomWidth: 0 },
   detailLabel: { fontSize: 11.5 },
   detailValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  disbursed: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  disbursed: { fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

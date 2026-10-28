@@ -359,5 +359,5 @@ const styles = StyleSheet.create({
   amountText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   mobileTx: { gap: 10 },
   mobileTxTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  mobileTxBody: { flex: 1, minWidth: 0, gap: 2 },
+  mobileTxBody: { flex: 1, minWidth: 0, gap: 5 }
 });

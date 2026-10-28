@@ -9,20 +9,20 @@ import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Timeline, TimelineItem } from '../../../components/ui/Timeline';
 import { Icon } from '../../../components/ui/Icon';
 
-const BreakdownRow: React.FC<{ label: string; value: string; accent?: string; bold?: boolean }> = ({ label, value, accent, bold }) => {
+const BreakdownRow: React.FC<{ label: string; value: string; accent?: string; bold?: boolean; last?: boolean }> = ({ label, value, accent, bold, last }) => {
   const { theme } = useTheme();
   return (
-    <View style={styles.breakRow}>
+    <View style={[styles.breakRow, last && styles.breakRowLast]}>
       <Text style={[styles.breakLabel, { color: theme.colors.textMuted }]}>{label}</Text>
       <Text style={[styles.breakValue, { color: accent ?? theme.colors.text, fontWeight: bold ? '700' : '600' }]}>{value}</Text>
     </View>
   );
 };
 
-const AuthRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+const AuthRow: React.FC<{ label: string; value: string; last?: boolean }> = ({ label, value, last }) => {
   const { theme } = useTheme();
   return (
-    <View style={styles.breakRow}>
+    <View style={[styles.breakRow, last && styles.breakRowLast]}>
       <Text style={[styles.breakLabel, { color: theme.colors.textMuted }]}>{label}</Text>
       <Text style={[styles.authValue, { color: theme.colors.text }]}>{value}</Text>
     </View>
@@ -61,7 +61,7 @@ export const SalaryRecordSheet: React.FC<{
         <BreakdownRow label="EPF" value={`− ${formatRupees(record.pfDeduction)}`} accent={theme.colors.dangerText} />
         <BreakdownRow label="ESIC" value={`− ${formatRupees(record.esiDeduction)}`} accent={theme.colors.dangerText} />
         <BreakdownRow label="TDS" value={`− ${formatRupees(record.tdsDeduction)}`} accent={theme.colors.dangerText} />
-        <BreakdownRow label="Net salary" value={formatRupees(record.netPay)} accent={theme.colors.financeAccent} bold />
+        <BreakdownRow label="Net salary" value={formatRupees(record.netPay)} accent={theme.colors.financeAccent} bold last />
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Finance Department Authorization</Text>
@@ -69,7 +69,7 @@ export const SalaryRecordSheet: React.FC<{
         <AuthRow label="Approval status" value={record.approvalStatus} />
         <AuthRow label="Finance approver" value={record.approvedBy ? `${record.approvedBy} · ${salaryDateLabel(record.approvedOn)}` : '—'} />
         <AuthRow label="Forwarded" value={record.forwardedAt ? `${record.forwardedBy ?? 'Finance'} · ${salaryDateLabel(record.forwardedAt.slice(0, 10))}` : 'Not forwarded'} />
-        <AuthRow label="Payment status" value={record.status === 'Disbursed' ? `Disbursed · Ref ${record.reference ?? '—'}` : record.status} />
+        <AuthRow label="Payment status" value={record.status === 'Disbursed' ? `Disbursed · Ref ${record.reference ?? '—'}` : record.status} last />
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Monthly Payment History</Text>
@@ -132,23 +132,24 @@ const Cell: React.FC<{ label: string; value: string; accent?: string }> = ({ lab
 };
 
 const styles = StyleSheet.create({
-  breakPanel: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 9 },
-  breakRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  breakPanel: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 4 },
+  breakRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 34, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128, 144, 168, 0.10)' },
+  breakRowLast: { borderBottomWidth: 0 },
   breakLabel: { fontSize: 12 },
   breakValue: { fontSize: 12.5, fontVariant: ['tabular-nums'], textAlign: 'right' },
   authValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   sectionTitle: { fontSize: 13.5, fontWeight: '700', marginTop: 4 },
-  card: { gap: 10 },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  card: { gap: 12 },
+  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 13, fontWeight: '700' },
   titleCol: { flex: 1, minWidth: 0 },
   name: { fontSize: 13.5, fontWeight: '700' },
   sub: { fontSize: 11, marginTop: 1 },
-  payRow: { flexDirection: 'row', gap: 10 },
-  cell: { flex: 1 },
-  cellValue: { fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  cellLabel: { fontSize: 9.5, marginTop: 1 },
+  payRow: { flexDirection: 'row', gap: 14, paddingTop: 2 },
+  cell: { flex: 1, gap: 3 },
+  cellValue: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  cellLabel: { fontSize: 9.5, marginTop: 0 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 11 },
   actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },

@@ -5,11 +5,9 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  ViewStyle,
   StyleProp,
+  ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
@@ -18,7 +16,7 @@ import { Icon } from './Icon';
 
 export type SheetSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
-/** Web Overlay sizes: sm 480 / md 620 / lg 780 / xl 1040. */
+/** Web Overlay sizes: sm 480 / md 620 / lg 780 / xl 1040 (centered panel on desktop only). */
 const SHEET_WIDTHS: Record<Exclude<SheetSize, 'full'>, number> = {
   sm: 480,
   md: 620,
@@ -41,8 +39,9 @@ export interface ModalSheetProps {
 }
 
 /**
- * Web `Overlay.tsx` equivalent: bottom sheet on phones, centered panel ≥1024px.
- * Backdrop `rgba(0,0,0,0.48)` + fade (web `.zo-backdrop`).
+ * Bottom sheet on phones (edge-to-edge bottom bar, rounded top corners,
+ * slides up), centered panel ≥1024px. RN Modal keeps it above drawers
+ * and gesture handlers on both platforms.
  */
 export const ModalSheet: React.FC<ModalSheetProps> = ({
   visible,
@@ -67,135 +66,186 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   if (!rendered) return null;
 
   const wide = isLg && size !== 'full';
-  const sheetWidth = size === 'full' ? '100%' as const : Math.min(SHEET_WIDTHS[size], 9999);
+  const maxWidth = size === 'full' ? undefined : SHEET_WIDTHS[size];
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
-      >
-        <View style={StyleSheet.absoluteFill}>
-          <Pressable
-            accessibilityLabel="Close"
-            onPress={onClose}
-            style={[styles.backdrop, { opacity: visible ? 1 : 0 }]}
-          />
-        </View>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={styles.root}>
+        <Pressable
+          accessibilityLabel="Close"
+          onPress={onClose}
+          style={[styles.backdrop, { opacity: visible ? 1 : 0 }]}
+        />
 
-        <View style={[styles.flex, wide ? styles.center : styles.bottom]}>
-          <View
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: theme.colors.moduleBg,
-                borderTopLeftRadius: wide ? theme.radii.card : 24,
-                borderTopRightRadius: wide ? theme.radii.card : 24,
-                borderRadius: wide ? theme.radii.card : 0,
-                marginTop: wide ? 0 : insets.top,
-                marginBottom: wide ? 0 : 0,
-                maxHeight: '92%',
-                width: typeof sheetWidth === 'string' ? sheetWidth : '92%',
-                maxWidth: typeof sheetWidth === 'number' ? sheetWidth : undefined,
-                ...(theme.shadows.lg as object),
-              },
-            ]}
-          >
+        {wide ? (
+          <View style={styles.centerWrap} pointerEvents="box-none">
             <View
               style={[
-                styles.header,
-                { borderBottomColor: theme.colors.border, paddingTop: wide ? 20 : 12 },
+                styles.sheet,
+                {
+                  backgroundColor: theme.colors.moduleBg,
+                  borderRadius: theme.radii.card,
+                  width: '92%',
+                  maxWidth,
+                  ...(theme.shadows.lg as object),
+                },
               ]}
             >
-              <View style={styles.grabberWrap}>
-                {!wide ? <View style={[styles.grabber, { backgroundColor: theme.colors.borderStrong }]} /> : null}
-              </View>
-              <View style={styles.headingRow}>
-                <View style={styles.headingText}>
-                  {label ? (
-                    <Text
-                      style={[
-                        theme.fontStyles.eyebrow,
-                        styles.label,
-                        { color: labelColor ?? theme.colors.brandPrimary },
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  ) : null}
-                  <Text numberOfLines={2} style={[theme.fontStyles.h3, { color: theme.colors.text }]}>
-                    {title}
-                  </Text>
-                  {description ? (
-                    <Text style={[styles.description, { color: theme.colors.textMuted }]}>
-                      {description}
-                    </Text>
-                  ) : null}
-                </View>
-                <Pressable
-                  accessibilityLabel="Close dialog"
-                  onPress={onClose}
-                  style={({ pressed }) => [
-                    styles.close,
-                    { backgroundColor: theme.colors.surfaceSoft, opacity: pressed ? 0.7 : 1 },
-                  ]}
-                >
-                  <Icon name="X" size={17} color={theme.colors.textMuted} />
-                </Pressable>
-              </View>
+              <SheetChrome
+                {...{ theme, label, labelColor, title, description, onClose, footer, insets, grabber: false }}
+              >
+                {children}
+              </SheetChrome>
             </View>
-
-            <ScrollView
-              style={styles.body}
-              contentContainerStyle={[styles.bodyContent, { paddingBottom: footer ? 0 : 32 + insets.bottom }]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {children}
-            </ScrollView>
-
-            {footer ? (
-              <View style={[styles.footer, { borderTopColor: theme.colors.border, paddingBottom: 16 + insets.bottom }]}>
-                {footer}
-              </View>
-            ) : null}
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        ) : (
+          <View style={styles.bottomWrap} pointerEvents="box-none">
+            <View
+              style={[
+                styles.sheet,
+                {
+                  backgroundColor: theme.colors.moduleBg,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  width: '100%',
+                  maxHeight: '92%',
+                  paddingBottom: insets.bottom,
+                  ...(theme.shadows.lg as object),
+                },
+              ]}
+            >
+              <SheetChrome
+                {...{ theme, label, labelColor, title, description, onClose, footer, insets, grabber: true }}
+              >
+                {children}
+              </SheetChrome>
+            </View>
+          </View>
+        )}
+      </View>
     </Modal>
   );
 };
 
+const SheetChrome: React.FC<{
+  theme: ReturnType<typeof useTheme>['theme'];
+  label?: string;
+  labelColor?: string;
+  title: string;
+  description?: string;
+  onClose: () => void;
+  footer?: React.ReactNode;
+  insets: { top: number; bottom: number; left: number; right: number };
+  grabber: boolean;
+  children: React.ReactNode;
+}> = ({ theme, label, labelColor, title, description, onClose, footer, insets, grabber, children }) => (
+  <>
+    <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+      {grabber ? (
+        <View style={styles.grabberWrap}>
+          <View style={[styles.grabber, { backgroundColor: theme.colors.borderStrong }]} />
+        </View>
+      ) : null}
+      <View style={styles.headingRow}>
+        <View style={styles.headingText}>
+          {label ? (
+            <Text
+              style={[
+                theme.fontStyles.eyebrow,
+                styles.label,
+                { color: labelColor ?? theme.colors.brandPrimary },
+              ]}
+            >
+              {label}
+            </Text>
+          ) : null}
+          <Text numberOfLines={2} style={[theme.fontStyles.h3, { color: theme.colors.text }]}>
+            {title}
+          </Text>
+          {description ? (
+            <Text style={[styles.description, { color: theme.colors.textMuted }]}>{description}</Text>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityLabel="Close dialog"
+          onPress={onClose}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.close,
+            { backgroundColor: theme.colors.surfaceSoft, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Icon name="X" size={17} color={theme.colors.textMuted} />
+        </Pressable>
+      </View>
+    </View>
+
+    <ScrollView
+      style={styles.body}
+      contentContainerStyle={[styles.bodyContent, { paddingBottom: footer ? 8 : 28 }]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      bounces={false}
+    >
+      {children}
+    </ScrollView>
+
+    {footer ? (
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: theme.colors.border, paddingBottom: 16 + (grabber ? 0 : insets.bottom) },
+        ]}
+      >
+        {footer}
+      </View>
+    ) : null}
+  </>
+);
+
 const styles = StyleSheet.create({
-  flex: {
+  root: {
     flex: 1,
+    backgroundColor: 'rgba(2, 6, 23, 0.55)',
   },
   backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.48)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  center: {
+  centerWrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  bottom: {
+  bottomWrap: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   sheet: {
     borderWidth: 1,
     borderColor: 'rgba(128, 144, 168, 0.16)',
     overflow: 'hidden',
+    maxHeight: '92%',
   },
   header: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
   grabberWrap: {
     alignItems: 'center',
-    height: 14,
-    justifyContent: 'center',
+    paddingVertical: 6,
   },
   grabber: {
     width: 40,

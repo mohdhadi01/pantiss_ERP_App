@@ -205,7 +205,7 @@ export const SalaryView: React.FC = () => {
         description="Approve payroll, forward verified salaries to the payment desk and track disbursement."
         right={
           <HeroGlassCard label="Payroll month">
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.monthChips}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthChips}>
               {payrollMonths.map((m) => {
                 const active = m === selectedMonth;
                 return (
@@ -346,8 +346,8 @@ const ScopeChip: React.FC<{
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
-  monthChips: { gap: 6 },
-  monthChip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  monthChips: { flexDirection: 'row', gap: 8, paddingRight: 4 },
+  monthChip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, minHeight: 36, justifyContent: 'center' },
   monthChipText: { fontSize: 11.5, fontWeight: '600', textAlign: 'center' },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },

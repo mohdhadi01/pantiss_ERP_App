@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   auditTitle: { fontSize: 13.5, fontWeight: '700', marginTop: 4 },
   mobileCard: { gap: 10 },
   mobileTop: { flexDirection: 'row', gap: 10 },
-  mobileBody: { flex: 1, minWidth: 0, gap: 2 },
+  mobileBody: { flex: 1, minWidth: 0, gap: 5 },
   mobileName: { fontSize: 13.5, fontWeight: '700' },
   mobileSub: { fontSize: 11, marginTop: 1 },
   mobileRight: { alignItems: 'flex-end', gap: 6 },
