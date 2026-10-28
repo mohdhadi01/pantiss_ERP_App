@@ -1,17 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ViewStyle, StyleProp } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { avatarGradients } from '../../theme/gradients';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
+
+export type HeaderAvatarVariant = 'initials' | 'finance';
 
 export interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
-  badgeText?: string;
-  badgeColor?: string;
+  /** Module eyebrow — web header `text-[9px] uppercase tracking-[0.18em]`. */
+  eyebrow?: string;
+  eyebrowColor?: string;
+  /** `finance` = emerald gradient tile with ₹ icon (web Finance header); `initials` = brandSoft tile. */
+  avatarVariant?: HeaderAvatarVariant;
   onOpenDrawer?: () => void;
   showBack?: boolean;
   onBack?: () => void;
@@ -19,15 +27,23 @@ export interface DashboardHeaderProps {
   showAlerts?: boolean;
   unreadAlertsCount?: number;
   onPressAlerts?: () => void;
+  searchPlaceholder?: string;
+  searchValue?: string;
+  onSearchChange?: (text: string) => void;
   rightAction?: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Workspace header — web `h-20` blurred topbar: eyebrow + H1 left,
+ * search + theme toggle + bell + avatar tile right.
+ */
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   title,
   subtitle,
-  badgeText,
-  badgeColor,
+  eyebrow,
+  eyebrowColor,
+  avatarVariant = 'initials',
   onOpenDrawer,
   showBack = false,
   onBack,
@@ -35,11 +51,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   showAlerts = false,
   unreadAlertsCount = 0,
   onPressAlerts,
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
   rightAction,
   style,
 }) => {
   const { theme, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const { isMd } = useBreakpoint();
   const router = useRouter();
 
   const handleBack = () => {
@@ -66,7 +86,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         {showBack ? (
           <IconButton
             icon="ChevronLeft"
-            size={38}
+            size={40}
             iconSize={20}
             onPress={handleBack}
             variant="ghost"
@@ -74,7 +94,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         ) : onOpenDrawer ? (
           <IconButton
             icon="Menu"
-            size={38}
+            size={40}
             iconSize={19}
             onPress={onOpenDrawer}
             variant="ghost"
@@ -83,39 +103,56 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         ) : null}
 
         <View style={styles.titleColumn}>
-          {badgeText && (
+          {eyebrow ? (
             <Text
               style={[
-                styles.badgeText,
-                { color: badgeColor || theme.colors.brandPrimary },
+                theme.fontStyles.eyebrow,
+                styles.eyebrow,
+                { color: eyebrowColor ?? theme.colors.brandPrimary },
               ]}
               numberOfLines={1}
             >
-              {badgeText}
+              {eyebrow}
             </Text>
-          )}
-          <Text
-            style={[styles.title, { color: theme.colors.text }]}
-            numberOfLines={1}
-          >
+          ) : null}
+          <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle && (
-            <Text
-              style={[styles.subtitle, { color: theme.colors.textSubtle }]}
-              numberOfLines={1}
-            >
+          {subtitle ? (
+            <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]} numberOfLines={1}>
               {subtitle}
             </Text>
-          )}
+          ) : null}
         </View>
       </View>
 
       <View style={styles.actionsContainer}>
+        {searchPlaceholder && isMd ? (
+          <View
+            style={[
+              styles.search,
+              {
+                backgroundColor: theme.colors.surfaceSoft,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Icon name="Search" size={15} color={theme.colors.textSubtle} />
+            <TextInput
+              value={searchValue}
+              onChangeText={onSearchChange}
+              placeholder={searchPlaceholder}
+              placeholderTextColor={theme.colors.textGhost}
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              returnKeyType="search"
+            />
+          </View>
+        ) : null}
+
         {showThemeToggle && (
           <IconButton
             icon={isDark ? 'Sun' : 'Moon'}
-            size={36}
+            size={40}
             iconSize={17}
             onPress={toggleTheme}
             variant="outline"
@@ -126,38 +163,39 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         {showAlerts && (
           <Pressable
             onPress={onPressAlerts}
-            style={[
+            accessibilityLabel={unreadAlertsCount > 0 ? `${unreadAlertsCount} unread alerts` : 'Alerts'}
+            style={({ pressed }) => [
               styles.alertButton,
               {
                 backgroundColor: theme.colors.surfaceSoft,
                 borderColor: theme.colors.border,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
             <Icon name="Bell" size={17} color={theme.colors.textMuted} />
             {unreadAlertsCount > 0 && (
-              <View
-                style={[
-                  styles.alertDot,
-                  { backgroundColor: theme.colors.warning },
-                ]}
-              />
+              <View style={[styles.alertDot, { backgroundColor: theme.colors.warning }]} />
             )}
           </Pressable>
         )}
 
-        <View
-          style={[
-            styles.initialsBox,
-            {
-              backgroundColor: theme.colors.brandSoft,
-            },
-          ]}
-        >
-          <Text style={[styles.initialsText, { color: theme.colors.brandPrimary }]}>
-            {user ? user.initials : 'AK'}
-          </Text>
-        </View>
+        {avatarVariant === 'finance' ? (
+          <LinearGradient
+            colors={avatarGradients.finance.colors}
+            start={avatarGradients.finance.start}
+            end={avatarGradients.finance.end}
+            style={styles.avatarTile}
+          >
+            <Icon name="CircleDollarSign" size={17} color="#ffffff" strokeWidth={1.9} />
+          </LinearGradient>
+        ) : (
+          <View style={[styles.avatarTile, { backgroundColor: theme.colors.brandSoft }]}>
+            <Text style={[styles.initialsText, { color: theme.colors.brandPrimary }]}>
+              {user ? user.initials : '—'}
+            </Text>
+          </View>
+        )}
 
         {rightAction}
       </View>
@@ -171,30 +209,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
     borderBottomWidth: 1,
-    minHeight: 64,
+    minHeight: 80,
+    gap: 12,
   },
   leftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    minWidth: 0,
   },
   titleColumn: {
     flex: 1,
+    minWidth: 0,
   },
-  badgeText: {
+  eyebrow: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 19,
+    fontWeight: '600',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 11,
@@ -205,33 +242,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 40,
+    width: 210,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12.5,
+    padding: 0,
+  },
   alertButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
   alertDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     position: 'absolute',
-    top: 7,
-    right: 7,
+    top: 9,
+    right: 9,
+    borderWidth: 2,
+    borderColor: 'rgba(9, 9, 11, 0.9)',
   },
-  initialsBox: {
-    width: 36,
-    height: 36,
+  avatarTile: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initialsText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: 0.5,
   },
 });

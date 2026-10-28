@@ -11,26 +11,35 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
-import { Icon } from '../ui/Icon';
+import { Icon, IconSource } from '../ui/Icon';
 import { NavItem } from '../../types/navigation';
 
 export interface AppDrawerContentProps {
-  title: string;
+  /** Sidebar brand subtitle — division name (web "Human Resources" / "Finance Division"). */
   subtitle: string;
   items: NavItem[];
   currentRoute: string;
   onNavigate: (route: string) => void;
+  /** Active item text/icon color (emerald for Finance, brand blue for HR). */
   accentColor?: string;
+  /** Active pill background (web `bg-emerald-500/10` / `bg-[var(--brand-soft)]`). */
+  activeBg?: string;
+  /** Collapsed 80px rail — icons only (web collapse toggle). */
+  collapsed?: boolean;
+  /** Web sidebar edge chevron — collapse/expand the permanent sidebar. */
+  onToggleCollapse?: () => void;
   onClose?: () => void;
 }
 
 export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
-  title,
   subtitle,
   items,
   currentRoute,
   onNavigate,
   accentColor,
+  activeBg,
+  collapsed = false,
+  onToggleCollapse,
   onClose,
 }) => {
   const { theme } = useTheme();
@@ -55,11 +64,77 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
     router.replace('/');
   };
 
-  const activeAccent = accentColor || theme.colors.brandPrimary;
-  const isFinance = title.toLowerCase().includes('finance');
-  const workspaceNote = isFinance
-    ? 'Institutional finance · Demo'
-    : 'People operations · Demo';
+  const activeAccent = accentColor ?? theme.colors.brandPrimary;
+  const activeItemBg = activeBg ?? theme.colors.brandSoft;
+  const isFinance = subtitle.toLowerCase().includes('finance');
+  const workspaceNote = isFinance ? 'Institutional finance · Demo' : 'People operations · Demo';
+
+  if (collapsed) {
+    return (
+      <View style={[styles.container, styles.collapsedContainer, { backgroundColor: theme.colors.moduleBg, borderRightColor: theme.colors.border }]}>
+        {onToggleCollapse ? (
+          <Pressable
+            onPress={onToggleCollapse}
+            accessibilityLabel="Expand sidebar"
+            style={({ pressed }) => [
+              styles.collapseToggle,
+              { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent' },
+            ]}
+          >
+            <Icon name="ChevronRight" size={15} color={theme.colors.textMuted} />
+          </Pressable>
+        ) : null}
+        <Pressable onPress={handleGoHome} style={styles.collapsedBrand} accessibilityLabel="Pantiss home">
+          <Image
+            source={require('@/assets/images/pantiss-mark.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
+        <ScrollView
+          style={styles.itemList}
+          contentContainerStyle={styles.collapsedList}
+          showsVerticalScrollIndicator={false}
+        >
+          {items.map((item) => {
+            const isActive = currentRoute === item.route;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => handleSelect(item.route)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: isActive }}
+                style={({ pressed }) => [
+                  styles.collapsedItem,
+                  {
+                    backgroundColor: isActive ? activeItemBg : pressed ? theme.colors.surfaceSoft : 'transparent',
+                  },
+                ]}
+              >
+                <Icon
+                  name={item.iconName as IconSource}
+                  size={18}
+                  color={isActive ? activeAccent : theme.colors.textMuted}
+                  strokeWidth={1.8}
+                />
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Pressable
+          onPress={handleSignOut}
+          accessibilityLabel="Sign out"
+          style={({ pressed }) => [
+            styles.collapsedItem,
+            { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent', marginBottom: 12 },
+          ]}
+        >
+          <Icon name="LogOut" size={18} color={theme.colors.textMuted} strokeWidth={1.8} />
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -71,43 +146,24 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
         },
       ]}
     >
-      {/* Brand Header matching DashboardLayout sidebar */}
-      <View
-        style={[
-          styles.brandHeader,
-          {
-            borderBottomColor: theme.colors.border,
-          },
-        ]}
-      >
-        <Pressable
-          onPress={handleGoHome}
-          style={styles.brandPressable}
-          accessibilityLabel="Pantiss home"
-        >
+      {/* Brand header — web h-20 block: mark + "Pantiss ERP" + division */}
+      <View style={[styles.brandHeader, { borderBottomColor: theme.colors.border }]}>
+        <Pressable onPress={handleGoHome} style={styles.brandPressable} accessibilityLabel="Pantiss home">
           <Image
             source={require('@/assets/images/pantiss-mark.png')}
             style={styles.logo}
             resizeMode="contain"
           />
           <View style={styles.brandText}>
-            <Text style={[styles.brandTitle, { color: theme.colors.text }]}>
-              Pantiss ERP
-            </Text>
-            <Text style={[styles.brandSubtitle, { color: theme.colors.textMuted }]}>
+            <Text style={[styles.brandTitle, { color: theme.colors.text }]}>Pantiss ERP</Text>
+            <Text style={[styles.brandSubtitle, { color: theme.colors.textMuted }]} numberOfLines={1}>
               {subtitle}
             </Text>
           </View>
         </Pressable>
       </View>
 
-      {/* Navigation Items */}
-      <ScrollView
-        style={styles.itemList}
-        contentContainerStyle={styles.itemListContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Back to Modules Shortcut matching web flow */}
+      <ScrollView style={styles.itemList} contentContainerStyle={styles.itemListContent} showsVerticalScrollIndicator={false}>
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -116,23 +172,16 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
           }}
           style={({ pressed }) => [
             styles.backLink,
-            {
-              backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent',
-            },
+            { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent' },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Back to Core Operations workspace"
         >
           <Icon name="ArrowLeft" size={14} color={theme.colors.textSubtle} />
-          <Text style={[styles.backLinkText, { color: theme.colors.textSubtle }]}>
-            All Workspaces & Modules
-          </Text>
+          <Text style={[styles.backLinkText, { color: theme.colors.textSubtle }]}>All Workspaces & Modules</Text>
         </Pressable>
 
-        {/* Nav Section Label matching DashboardLayout */}
-        <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>
-          WORKSPACE
-        </Text>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>WORKSPACE</Text>
 
         {items.map((item) => {
           const isActive = currentRoute === item.route;
@@ -143,11 +192,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
               style={({ pressed }) => [
                 styles.navItem,
                 {
-                  backgroundColor: isActive
-                    ? theme.colors.brandSoft
-                    : pressed
-                    ? theme.colors.surfaceSoft
-                    : 'transparent',
+                  backgroundColor: isActive ? activeItemBg : pressed ? theme.colors.surfaceSoft : 'transparent',
                 },
               ]}
               accessibilityRole="button"
@@ -155,9 +200,10 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
             >
               <View style={styles.itemLeft}>
                 <Icon
-                  name={item.iconName}
+                  name={item.iconName as IconSource}
                   size={18}
                   color={isActive ? activeAccent : theme.colors.textMuted}
+                  strokeWidth={1.8}
                 />
                 <Text
                   style={[
@@ -173,35 +219,23 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
                 </Text>
               </View>
 
-              {item.badge !== undefined && (
+              {item.badge !== undefined ? (
                 <View
                   style={[
                     styles.itemBadge,
-                    {
-                      backgroundColor: isActive
-                        ? activeAccent
-                        : theme.colors.surfaceMuted,
-                    },
+                    { backgroundColor: isActive ? activeAccent : theme.colors.surfaceMuted },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      {
-                        color: isActive ? '#ffffff' : theme.colors.textSubtle,
-                      },
-                    ]}
-                  >
+                  <Text style={[styles.badgeText, { color: isActive ? '#ffffff' : theme.colors.textSubtle }]}>
                     {item.badge}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </Pressable>
           );
         })}
       </ScrollView>
 
-      {/* User Info Card matching DashboardLayout */}
       {user ? (
         <View
           style={[
@@ -212,52 +246,42 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
             },
           ]}
         >
-          <Text
-            style={[styles.userName, { color: theme.colors.text }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.userName, { color: theme.colors.text }]} numberOfLines={1}>
             {user.name}
           </Text>
-          <Text
-            style={[styles.userRole, { color: activeAccent }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.userRole, { color: activeAccent }]} numberOfLines={1}>
             {user.roleLabel}
           </Text>
-          <Text
-            style={[styles.workspaceNote, { color: theme.colors.textMuted }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.workspaceNote, { color: theme.colors.textMuted }]} numberOfLines={1}>
             {workspaceNote}
           </Text>
         </View>
       ) : null}
 
-      {/* Sign Out Footer matching DashboardLayout */}
-      <View
-        style={[
-          styles.footer,
-          {
-            borderTopColor: theme.colors.border,
-          },
-        ]}
-      >
+      <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
         <Pressable
           onPress={handleSignOut}
           style={({ pressed }) => [
             styles.signOutButton,
-            {
-              backgroundColor: pressed
-                ? theme.colors.surfaceSoft
-                : 'transparent',
-            },
+            { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent' },
           ]}
         >
           <Icon name="LogOut" size={17} color={theme.colors.textMuted} />
-          <Text style={[styles.signOutText, { color: theme.colors.textMuted }]}>
-            Sign out
-          </Text>
+          <Text style={[styles.signOutText, { color: theme.colors.textMuted }]}>Sign out</Text>
         </Pressable>
+        {onToggleCollapse ? (
+          <Pressable
+            onPress={onToggleCollapse}
+            accessibilityLabel="Collapse sidebar"
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.collapseToggle,
+              { backgroundColor: pressed ? theme.colors.surfaceSoft : 'transparent' },
+            ]}
+          >
+            <Icon name="ChevronLeft" size={15} color={theme.colors.textMuted} />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -269,8 +293,27 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRightWidth: 1,
   },
+  collapsedContainer: {
+    alignItems: 'center',
+  },
+  collapsedBrand: {
+    height: 80,
+    justifyContent: 'center',
+  },
+  collapsedList: {
+    paddingVertical: 12,
+    gap: 6,
+    alignItems: 'center',
+  },
+  collapsedItem: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brandHeader: {
-    height: 72,
+    height: 80,
     borderBottomWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -281,16 +324,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logo: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
   },
   brandText: {
     flex: 1,
+    minWidth: 0,
   },
   brandTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
   brandSubtitle: {
@@ -308,8 +352,8 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.6,
+    fontWeight: '600',
+    letterSpacing: 1.62,
     textTransform: 'uppercase',
     paddingHorizontal: 12,
     marginBottom: 8,
@@ -327,6 +371,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    minWidth: 0,
   },
   navLabel: {
     fontSize: 12,
@@ -365,6 +410,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  collapseToggle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signOutButton: {
     flexDirection: 'row',

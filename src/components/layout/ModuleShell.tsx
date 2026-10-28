@@ -4,72 +4,97 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  useWindowDimensions,
   ScrollView,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Drawer } from 'react-native-drawer-layout';
 import { useTheme } from '../../hooks/useTheme';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { NavItem } from '../../types/navigation';
 import { DashboardHeader } from './DashboardHeader';
 import { AppDrawerContent } from './AppDrawerContent';
 import { ScreenWrapper } from './ScreenWrapper';
-import { Icon } from '../ui/Icon';
+import { Icon, IconSource } from '../ui/Icon';
 
 export interface ModuleShellProps {
+  /** Page title in the header (web H1). */
   title: string;
   subtitle?: string;
+  /** Sidebar division subtitle (web "Human Resources" / "Finance Division"). */
+  sidebarSubtitle?: string;
+  /** Header eyebrow (web "Finance Division · FY 2026–27"). */
+  eyebrow?: string;
+  eyebrowColor?: string;
+  /** @deprecated use `eyebrow` — mapped for compatibility until wrappers migrate. */
   badgeText?: string;
+  /** @deprecated use `eyebrowColor`. */
   badgeColor?: string;
+  avatarVariant?: 'initials' | 'finance';
   workspaceEyebrow?: string;
   headingTitle?: string;
   footnote?: string;
   currentRoute: string;
   navItems: NavItem[];
+  /** Active nav accent + pill background (web per-module theming). */
   accentColor?: string;
+  activeNavBg?: string;
   showAlerts?: boolean;
   unreadAlertsCount?: number;
   onPressAlerts?: () => void;
+  searchPlaceholder?: string;
+  searchValue?: string;
+  onSearchChange?: (text: string) => void;
   notice?: string;
   error?: string;
   onDismissNotice?: () => void;
   onDismissError?: () => void;
-  scrollable?: boolean;
   children: React.ReactNode;
 }
 
+/**
+ * Workspace shell — web DashboardLayout / FinancePage sidebar pattern:
+ * 260px collapsible sidebar ≥1024px, slide-over drawer below, 80px header,
+ * max-w-1600 content, workspace heading + Demo workspace pill + footnote.
+ */
 export const ModuleShell: React.FC<ModuleShellProps> = ({
   title,
   subtitle,
+  sidebarSubtitle,
+  eyebrow,
+  eyebrowColor,
   badgeText,
   badgeColor,
+  avatarVariant = 'initials',
   workspaceEyebrow,
   headingTitle,
   footnote,
   currentRoute,
   navItems,
   accentColor,
+  activeNavBg,
   showAlerts = false,
   unreadAlertsCount = 0,
   onPressAlerts,
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
   notice,
   error,
   onDismissNotice,
   onDismissError,
-  scrollable = true,
   children,
 }) => {
   const { theme } = useTheme();
-  const router = useRouter();
+  const { isLg } = useBreakpoint();
   const { width: windowWidth } = useWindowDimensions();
+  const router = useRouter();
 
-  // Breakpoint: permanent sidebar on desktop/tablet, native slide drawer on mobile
-  const isPermanentSidebar = windowWidth >= 880;
-  const DRAWER_WIDTH = Math.min(290, windowWidth * 0.82);
-
+  const isPermanentSidebar = isLg;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Android hardware back button closes drawer if open
   useEffect(() => {
@@ -93,18 +118,25 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
   const handleNavigate = (route: string) => {
     setDrawerOpen(false);
     if (route !== currentRoute) {
-      router.push(route as any);
+      router.push(route as never);
     }
   };
 
-  const activeAccent = accentColor || theme.colors.brandPrimary;
   const isHR = currentRoute.includes('(hr)');
-  const defaultEyebrow = isHR
-    ? 'People & culture · FY 2026–27'
-    : 'Finance & treasury · FY 2026–27';
+  const division = sidebarSubtitle ?? (isHR ? 'Human Resources' : 'Finance Division');
+  const headerEyebrow = eyebrow ?? badgeText;
+  const headerEyebrowColor = eyebrowColor ?? badgeColor;
+  const defaultEyebrow = isHR ? 'People & culture · FY 2026–27' : 'Finance Division · FY 2026–27';
+  const defaultHeadingColor = isHR ? theme.colors.brandPrimary : theme.colors.financeAccent;
   const defaultFootnote = isHR
     ? 'Demo environment · HR changes are saved in this device. Admin decisions are sample records. Live attendance, account activation and email delivery need the employee platform connection.'
     : 'Demo environment · Institutional banking accounts, ledger books, statutory filings and voucher audit trails are simulated.';
+
+  const sidebarWidth = isPermanentSidebar
+    ? sidebarCollapsed
+      ? 80
+      : 260
+    : Math.min(300, windowWidth * 0.9);
 
   return (
     <ScreenWrapper scrollable={false} contentContainerStyle={styles.rootContainer}>
@@ -119,63 +151,62 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
         drawerStyle={[
           styles.drawerStyle,
           {
-            width: isPermanentSidebar ? 260 : DRAWER_WIDTH,
+            width: sidebarWidth,
             backgroundColor: theme.colors.moduleBg,
             borderColor: theme.colors.border,
           },
         ]}
-        overlayStyle={{
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        }}
+        overlayStyle={{ backgroundColor: 'rgba(2, 6, 23, 0.55)' }}
         renderDrawerContent={() => (
           <AppDrawerContent
-            title={badgeText || 'WORKSPACE'}
-            subtitle={title}
+            subtitle={division}
             items={navItems}
             currentRoute={currentRoute}
             onNavigate={handleNavigate}
             accentColor={accentColor}
+            activeBg={activeNavBg}
+            collapsed={isPermanentSidebar && sidebarCollapsed}
+            onToggleCollapse={isPermanentSidebar ? () => setSidebarCollapsed((v) => !v) : undefined}
             onClose={isPermanentSidebar ? undefined : handleCloseDrawer}
           />
         )}
       >
         <View style={styles.mainColumn}>
-          {/* Top Header */}
           <DashboardHeader
             title={title}
             subtitle={subtitle}
-            badgeText={badgeText}
-            badgeColor={badgeColor}
+            eyebrow={headerEyebrow}
+            eyebrowColor={headerEyebrowColor}
+            avatarVariant={avatarVariant}
             onOpenDrawer={isPermanentSidebar ? undefined : handleOpenDrawer}
             showAlerts={showAlerts}
             unreadAlertsCount={unreadAlertsCount}
             onPressAlerts={onPressAlerts}
+            searchPlaceholder={searchPlaceholder}
+            searchValue={searchValue}
+            onSearchChange={onSearchChange}
           />
 
-          {/* Notice Banner */}
           {notice ? (
             <View
               style={[
                 styles.banner,
                 {
-                  backgroundColor: theme.colors.brandSoft,
-                  borderColor: theme.colors.brandRing,
+                  backgroundColor: theme.colors.successSoft,
+                  borderColor: theme.colors.successBorder,
                 },
               ]}
             >
-              <Icon name="CheckCircle2" size={16} color={theme.colors.brandPrimary} />
-              <Text style={[styles.bannerText, { color: theme.colors.text }]}>
-                {notice}
-              </Text>
-              {onDismissNotice && (
+              <Icon name="CheckCircle2" size={16} color={theme.colors.successText} />
+              <Text style={[styles.bannerText, { color: theme.colors.text }]}>{notice}</Text>
+              {onDismissNotice ? (
                 <Pressable onPress={onDismissNotice} hitSlop={8}>
                   <Icon name="X" size={14} color={theme.colors.textSubtle} />
                 </Pressable>
-              )}
+              ) : null}
             </View>
           ) : null}
 
-          {/* Error Banner */}
           {error ? (
             <View
               style={[
@@ -186,58 +217,38 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
                 },
               ]}
             >
-              <Icon name="AlertTriangle" size={16} color={theme.colors.danger} />
-              <Text style={[styles.bannerText, { color: theme.colors.danger }]}>
-                {error}
-              </Text>
-              {onDismissError && (
+              <Icon name="AlertTriangle" size={16} color={theme.colors.dangerText} />
+              <Text style={[styles.bannerText, { color: theme.colors.dangerText }]}>{error}</Text>
+              {onDismissError ? (
                 <Pressable onPress={onDismissError} hitSlop={8}>
-                  <Icon name="X" size={14} color={theme.colors.danger} />
+                  <Icon name="X" size={14} color={theme.colors.dangerText} />
                 </Pressable>
-              )}
+              ) : null}
             </View>
           ) : null}
 
-          {/* Workspace Scrollable Content */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* CXO / Workspace Dashboard Heading Banner */}
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Workspace heading — web cxo-dashboard-heading */}
             <View style={styles.dashboardHeading}>
               <View style={styles.headingLeft}>
-                <Text style={[styles.eyebrow, { color: activeAccent }]}>
+                <Text style={[theme.fontStyles.eyebrow, styles.headingEyebrow, { color: eyebrowColor ?? defaultHeadingColor }]}>
                   {workspaceEyebrow || defaultEyebrow}
                 </Text>
                 <Text style={[styles.headingTitle, { color: theme.colors.text }]}>
-                  {headingTitle || (title === 'HR Dashboard' ? 'Your people, at a glance.' : title)}
+                  {headingTitle || (title.includes('Dashboard') ? 'Your people, at a glance.' : title)}
                 </Text>
                 {subtitle ? (
-                  <Text style={[styles.headingSubtitle, { color: theme.colors.textMuted }]}>
-                    {subtitle}
-                  </Text>
+                  <Text style={[styles.headingSubtitle, { color: theme.colors.textMuted }]}>{subtitle}</Text>
                 ) : null}
               </View>
-              <View
-                style={[
-                  styles.readonlyBadge,
-                  { borderColor: theme.colors.borderStrong },
-                ]}
-              >
-                <Text style={[styles.readonlyText, { color: theme.colors.textSubtle }]}>
-                  Demo workspace
-                </Text>
+              <View style={[styles.readonlyBadge, { borderColor: theme.colors.borderStrong }]}>
+                <Text style={[styles.readonlyText, { color: theme.colors.textSubtle }]}>Demo workspace</Text>
               </View>
             </View>
 
-            {/* Child View */}
             {children}
 
-            {/* Footnote */}
-            <Text style={[styles.footnote, { color: theme.colors.textSubtle }]}>
-              {footnote || defaultFootnote}
-            </Text>
+            <Text style={[styles.footnote, { color: theme.colors.textSubtle }]}>{footnote || defaultFootnote}</Text>
           </ScrollView>
         </View>
       </Drawer>
@@ -249,16 +260,6 @@ const styles = StyleSheet.create({
   rootContainer: {
     padding: 0,
     flex: 1,
-  },
-  layoutRow: {
-    flex: 1,
-    flexDirection: 'row',
-    height: '100%',
-  },
-  permanentSidebar: {
-    width: 260,
-    height: '100%',
-    borderRightWidth: 1,
   },
   mainColumn: {
     flex: 1,
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 48,
     gap: 20,
-    maxWidth: 1200,
+    maxWidth: 1600,
     width: '100%',
     alignSelf: 'center',
   },
@@ -286,16 +287,16 @@ const styles = StyleSheet.create({
   headingLeft: {
     flex: 1,
     gap: 6,
+    minWidth: 0,
   },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  headingEyebrow: {
+    fontSize: 9,
   },
   headingTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: -0.8,
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: -1.1,
+    lineHeight: 30,
   },
   headingSubtitle: {
     fontSize: 12,
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.1)',
+    borderTopColor: 'rgba(128, 144, 168, 0.14)',
   },
   banner: {
     flexDirection: 'row',
@@ -334,10 +335,5 @@ const styles = StyleSheet.create({
   },
   drawerStyle: {
     borderRightWidth: 1,
-    elevation: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
   },
 });

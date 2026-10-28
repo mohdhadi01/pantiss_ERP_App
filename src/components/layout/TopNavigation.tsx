@@ -11,6 +11,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
+import { avatarGradients } from '../../theme/gradients';
+import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/IconButton';
 
 export interface TopNavigationProps {
@@ -118,14 +120,16 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
           accessibilityLabel={user ? `Signed in as ${user.name}` : 'Sign in'}
         >
           <LinearGradient
-            colors={['#2563eb', '#06b6d4']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={avatarGradients.brand.colors}
+            start={avatarGradients.brand.start}
+            end={avatarGradients.brand.end}
             style={styles.avatarGradient}
           >
-            <Text style={styles.avatarText}>
-              {user ? user.initials : 'AK'}
-            </Text>
+            {user ? (
+              <Text style={styles.avatarText}>{user.initials}</Text>
+            ) : (
+              <Icon name="UserRound" size={15} color="#ffffff" strokeWidth={2} />
+            )}
           </LinearGradient>
         </Pressable>
       </View>
