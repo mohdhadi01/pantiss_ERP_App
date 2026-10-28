@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { formatRupees } from '../../../utils/formatCurrency';
@@ -18,6 +19,13 @@ import { Icon } from '../../../components/ui/Icon';
 
 type InvoiceStatus = 'Pending Verification' | 'Finance Approved' | 'Disbursed' | 'Rejected';
 
+interface InvoiceSample {
+  supplier: string;
+  batch: string;
+  budgetHead: string;
+  items: Array<{ description: string; quantity: number; rate: number }>;
+}
+
 interface EmployeeInvoice {
   id: string;
   invoiceNo: string;
@@ -32,12 +40,14 @@ interface EmployeeInvoice {
   auditor: string;
   auditDate: string;
   finding: string;
+  bankUtr?: string;
+  sample?: InvoiceSample;
 }
 
 const INVOICES: EmployeeInvoice[] = [
-  { id: 'ADT-2026-901', invoiceNo: 'INV/2026/0912', employee: 'Ramesh Mohanty', employeeId: 'PAN-EMP-0112', project: 'PMKVY 4.0 Odisha Skills', raisedOn: '2026-09-24', amount: 88500, status: 'Disbursed', description: '3-way match verified with purchase order and store GRN note.', docRef: 'INV/2026/0912 + PO-2026-044', auditor: 'Internal Audit Cell (Deloitte/CAG)', auditDate: '2026-10-02', finding: 'Low risk — cleared for disbursement.' },
-  { id: 'ADT-2026-902', invoiceNo: 'MED/OD/441', employee: 'Pooja Barik', employeeId: 'PAN-EMP-0109', project: 'Swasthya Mobile Clinics', raisedOn: '2026-09-28', amount: 142000, status: 'Disbursed', description: 'Logbook vehicle odometer log verified with fuel receipts.', docRef: 'MED/OD/441 + fleet logbook 09/28', auditor: 'Internal Audit Cell', auditDate: '2026-10-04', finding: 'Low risk — cleared for disbursement.' },
-  { id: 'ADT-2026-903', invoiceNo: 'VND/INC/22', employee: 'Kiran Pradhan', employeeId: 'PAN-EMP-0115', project: 'Rural Incubation Lab', raisedOn: '2026-10-01', amount: 65000, status: 'Pending Verification', description: 'Missing counter-signature on delivery challan. Pending vendor confirmation.', docRef: 'VND/INC/22 (challan copy awaited)', auditor: 'Internal Audit Cell', auditDate: '2026-10-06', finding: 'Medium risk — held at finance verification.' },
+  { id: 'ADT-2026-901', invoiceNo: 'INV/2026/0912', employee: 'Ramesh Mohanty', employeeId: 'PAN-EMP-0112', project: 'PMKVY 4.0 Odisha Skills', raisedOn: '2026-09-24', amount: 88500, status: 'Disbursed', description: '3-way match verified with purchase order and store GRN note.', docRef: 'INV/2026/0912 + PO-2026-044', auditor: 'Internal Audit Cell (Deloitte/CAG)', auditDate: '2026-10-02', finding: 'Low risk — cleared for disbursement.', bankUtr: 'UTR-20261003-44712', sample: { supplier: 'Zenith Digital & Hardware Labs Pvt Ltd', batch: 'Training batch SKB-2026-09', budgetHead: 'Training delivery — equipment', items: [{ description: 'Interactive flat panel 65-inch (training lab)', quantity: 2, rate: 32000 }, { description: 'Installation and trainer orientation', quantity: 1, rate: 24500 }] } },
+  { id: 'ADT-2026-902', invoiceNo: 'MED/OD/441', employee: 'Pooja Barik', employeeId: 'PAN-EMP-0109', project: 'Swasthya Mobile Clinics', raisedOn: '2026-09-28', amount: 142000, status: 'Disbursed', description: 'Logbook vehicle odometer log verified with fuel receipts.', docRef: 'MED/OD/441 + fleet logbook 09/28', auditor: 'Internal Audit Cell', auditDate: '2026-10-04', finding: 'Low risk — cleared for disbursement.', bankUtr: 'UTR-20261006-33908', sample: { supplier: 'MedEquip Odisha Distributors', batch: 'Mobile clinic unit MC-04 · September cycle', budgetHead: 'Health outreach — medical consumables', items: [{ description: 'Rapid test kits and consumables', quantity: 4, rate: 28000 }, { description: 'Cold-chain transport and handling', quantity: 1, rate: 30000 }] } },
+  { id: 'ADT-2026-903', invoiceNo: 'VND/INC/22', employee: 'Kiran Pradhan', employeeId: 'PAN-EMP-0115', project: 'Rural Incubation Lab', raisedOn: '2026-10-01', amount: 65000, status: 'Pending Verification', description: 'Missing counter-signature on delivery challan. Pending vendor confirmation.', docRef: 'VND/INC/22 (challan copy awaited)', auditor: 'Internal Audit Cell', auditDate: '2026-10-06', finding: 'Medium risk — held at finance verification.', sample: { supplier: 'Vendora Incubation Supplies', batch: 'Incubation lab · October intake', budgetHead: 'Incubation — lab operations', items: [{ description: 'Lab consumables and stationery', quantity: 1, rate: 65000 }] } },
 ];
 
 const statusTone = (status: InvoiceStatus) =>
@@ -57,18 +67,24 @@ export const AuditTrailsView: React.FC = () => {
   const { isMd } = useBreakpoint();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [drillProject, setDrillProject] = useState<string | null>(null);
   const [trailItem, setTrailItem] = useState<EmployeeInvoice | null>(null);
   const [trailOpen, setTrailOpen] = useState(false);
 
+  const scoped = useMemo(
+    () => (drillProject ? INVOICES.filter((inv) => inv.project === drillProject) : INVOICES),
+    [drillProject],
+  );
+
   const stats = useMemo(() => {
-    const employees = new Set(INVOICES.map((i) => i.employee));
+    const employees = new Set(scoped.map((i) => i.employee));
     return {
-      submissions: INVOICES.length,
-      total: INVOICES.reduce((sum, i) => sum + i.amount, 0),
+      submissions: scoped.length,
+      total: scoped.reduce((sum, i) => sum + i.amount, 0),
       employees: employees.size,
-      awaiting: INVOICES.filter((i) => i.status === 'Pending Verification').length,
+      awaiting: scoped.filter((i) => i.status === 'Pending Verification').length,
     };
-  }, []);
+  }, [scoped]);
 
   const directory = useMemo(() => {
     const byProject = new Map<string, EmployeeInvoice[]>();
@@ -87,16 +103,18 @@ export const AuditTrailsView: React.FC = () => {
     });
   }, []);
 
+  const drillEntry = drillProject ? directory.find((entry) => entry.project === drillProject) : undefined;
+
   const filtered = useMemo(
     () =>
-      INVOICES.filter((inv) => {
+      scoped.filter((inv) => {
         const q = search.toLowerCase();
         const matchesSearch =
           inv.employee.toLowerCase().includes(q) || inv.invoiceNo.toLowerCase().includes(q) || inv.id.toLowerCase().includes(q) || inv.project.toLowerCase().includes(q);
         const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
         return matchesSearch && matchesStatus;
       }),
-    [search, statusFilter],
+    [scoped, search, statusFilter],
   );
 
   const renderCell = (inv: EmployeeInvoice, col: DataColumn<EmployeeInvoice>) => {
@@ -159,39 +177,69 @@ export const AuditTrailsView: React.FC = () => {
       </View>
 
       <View style={styles.metricsGrid}>
-        <MetricCard style={styles.metricCard} label="Invoice submissions" value={String(stats.submissions)} icon="FileText" accentColor={theme.colors.brandPrimary} />
-        <MetricCard style={styles.metricCard} label="Total invoice value" value={formatRupees(stats.total)} icon="BadgeIndianRupee" accentColor={theme.colors.financeAccent} />
-        <MetricCard style={styles.metricCard} label="Employees" value={String(stats.employees)} icon="Users" accentColor={theme.colors.info} />
-        <MetricCard style={styles.metricCard} label="Awaiting verification" value={String(stats.awaiting)} icon="Clock" accentColor={theme.colors.warning} />
+        <MetricCard style={styles.metricCard} label="Invoice submissions" value={String(stats.submissions)} subtitle={drillProject ? 'In this project' : 'Across all thematic areas'} icon="FileText" accentColor={theme.colors.brandPrimary} />
+        <MetricCard style={styles.metricCard} label="Total invoice value" value={formatRupees(stats.total)} subtitle="Submitted claim amounts" icon="BadgeIndianRupee" accentColor={theme.colors.financeAccent} />
+        <MetricCard style={styles.metricCard} label="Employees" value={String(stats.employees)} subtitle="With submitted invoices" icon="Users" accentColor={theme.colors.info} />
+        <MetricCard style={styles.metricCard} label="Awaiting verification" value={String(stats.awaiting)} subtitle="Pending finance review" icon="Clock" accentColor={theme.colors.warning} />
       </View>
 
-      <View style={[styles.grid, isMd && styles.gridWide]}>
-        {directory.map((entry) => (
-          <Pressable key={entry.project} onPress={() => { setSearch(entry.project); setStatusFilter('all'); }} style={styles.areaCardWrap}>
-            <Card padding={16} style={styles.areaCard}>
-              <View style={styles.areaTop}>
-                <View style={[styles.areaTile, { backgroundColor: `${entry.color}1A` }]}>
-                  <Text style={[styles.areaTileText, { color: entry.color }]}>{entry.areaName.charAt(0)}</Text>
+      {!drillProject ? (
+        <View style={[styles.grid, isMd && styles.gridWide]}>
+          {directory.map((entry) => (
+            <Pressable
+              key={entry.project}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setDrillProject(entry.project);
+                setSearch('');
+                setStatusFilter('all');
+              }}
+              style={styles.areaCardWrap}
+            >
+              <Card padding={16} style={styles.areaCard}>
+                <View style={styles.areaTop}>
+                  <View style={[styles.areaTile, { backgroundColor: `${entry.color}1A` }]}>
+                    <Text style={[styles.areaTileText, { color: entry.color }]}>{entry.areaName.charAt(0)}</Text>
+                  </View>
+                  <View style={styles.areaTitleCol}>
+                    <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{entry.project}</Text>
+                    <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{entry.areaName}</Text>
+                  </View>
                 </View>
-                <View style={styles.areaTitleCol}>
-                  <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{entry.project}</Text>
-                  <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{entry.areaName}</Text>
-                </View>
-              </View>
-              <Text style={[styles.areaStats, { color: theme.colors.textMuted }]}>
-                {entry.invoices.length} invoices · Invoice value {formatRupees(entry.invoices.reduce((sum, i) => sum + i.amount, 0))}
-              </Text>
-              {entry.pending > 0 ? (
-                <StatusChip status={`${entry.pending} pending`} tone="warning" />
-              ) : (
-                <StatusChip status="View records" tone="brand" />
-              )}
-            </Card>
+                <Text style={[styles.areaStats, { color: theme.colors.textMuted }]}>
+                  {entry.invoices.length} invoice{entry.invoices.length === 1 ? '' : 's'} · Invoice value {formatRupees(entry.invoices.reduce((sum, i) => sum + i.amount, 0))}
+                </Text>
+                {entry.pending > 0 ? (
+                  <StatusChip status={`${entry.pending} pending`} tone="warning" />
+                ) : (
+                  <StatusChip status="View records" tone="brand" />
+                )}
+              </Card>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.breadcrumbRow}>
+          <Pressable accessibilityRole="button" onPress={() => setDrillProject(null)} style={styles.crumbLink}>
+            <Text style={[styles.crumbText, { color: theme.colors.textMuted }]}>All thematic areas</Text>
           </Pressable>
-        ))}
-      </View>
+          <Icon name="ChevronRight" size={13} color={theme.colors.textSubtle} />
+          <Pressable accessibilityRole="button" onPress={() => setDrillProject(null)} style={styles.crumbLink}>
+            <Text style={[styles.crumbText, { color: theme.colors.textMuted }]}>{drillEntry?.areaName}</Text>
+          </Pressable>
+          <Icon name="ChevronRight" size={13} color={theme.colors.textSubtle} />
+          <Text numberOfLines={1} style={[styles.crumbText, styles.crumbActive, { color: theme.colors.text }]}>{drillProject}</Text>
+          <Pressable accessibilityRole="button" onPress={() => setDrillProject(null)} style={styles.backBtn}>
+            <Icon name="ArrowLeft" size={13} color={theme.colors.textMuted} />
+            <Text style={[styles.crumbText, { color: theme.colors.textMuted }]}>Back to projects</Text>
+          </Pressable>
+        </View>
+      )}
 
-      <SectionCard title="Employee invoices" description="Every submission with verification status and the full recorded trail.">
+      <SectionCard
+        title="Employee invoices"
+        description={drillProject ? `${filtered.length} of ${scoped.length} submissions · ${drillProject}` : 'Every submission with verification status and the full recorded trail.'}
+      >
         <View style={styles.filterRow}>
           <TextField value={search} onChangeText={setSearch} placeholder="Search invoices, employees or projects…" containerStyle={styles.searchGrow} />
           <SelectField
@@ -241,6 +289,14 @@ export const AuditTrailsView: React.FC = () => {
         />
       </SectionCard>
 
+      <View style={[styles.demoNote, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+        <Icon name="FileText" size={15} color={theme.colors.financeAccent} />
+        <Text style={[styles.demoNoteText, { color: theme.colors.textMuted }]}>
+          <Text style={{ color: theme.colors.text, fontWeight: '700' }}>Demo records included.</Text>{' '}
+          Explore Skill Development → PMKVY 4.0 Odisha Skills for sample invoices and reimbursements. Employee claims saved in this browser also appear here.
+        </Text>
+      </View>
+
       <ModalSheet
         visible={trailOpen && Boolean(trailItem)}
         onClose={() => setTrailOpen(false)}
@@ -261,7 +317,38 @@ export const AuditTrailsView: React.FC = () => {
               <Text style={[styles.docRef, { color: theme.colors.textSubtle }]}>
                 Supporting document reference: <Text style={{ color: theme.colors.text }}>{trailItem.docRef}</Text>
               </Text>
+              {trailItem.bankUtr ? (
+                <Text style={[styles.docRef, { color: theme.colors.textSubtle }]}>
+                  Payment reference: <Text style={{ color: theme.colors.text }}>{trailItem.bankUtr}</Text>
+                </Text>
+              ) : null}
             </View>
+            {trailItem.sample ? (
+              <View style={[styles.samplePanel, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSoft }]}>
+                <Text style={[theme.fontStyles.eyebrow, { color: theme.colors.financeAccent }]}>Demo invoice · Fictional data</Text>
+                <Text style={[styles.sampleSupplier, { color: theme.colors.text }]}>{trailItem.sample.supplier}</Text>
+                <Text style={[styles.sampleMeta, { color: theme.colors.textMuted }]}>{trailItem.sample.batch}</Text>
+                <Text style={[styles.sampleMeta, { color: theme.colors.textMuted }]}>Budget head: {trailItem.sample.budgetHead}</Text>
+                <Text style={[styles.sampleMeta, { color: theme.colors.textMuted }]}>
+                  Invoice {trailItem.invoiceNo} · Raised {formatDate(trailItem.raisedOn)}
+                </Text>
+                {trailItem.sample.items.map((item) => (
+                  <View key={item.description} style={[styles.sampleItem, { borderTopColor: theme.colors.border }]}>
+                    <Text style={[styles.sampleItemDesc, { color: theme.colors.text }]}>{item.description}</Text>
+                    <Text style={[styles.sampleItemCalc, { color: theme.colors.text }]}>
+                      {item.quantity} × {formatRupees(item.rate)} = {formatRupees(item.quantity * item.rate)}
+                    </Text>
+                  </View>
+                ))}
+                <View style={[styles.sampleTotal, { borderTopColor: theme.colors.border }]}>
+                  <Text style={[styles.sampleTotalLabel, { color: theme.colors.text }]}>Total</Text>
+                  <Text style={[styles.sampleTotalValue, { color: theme.colors.text }]}>{formatRupees(trailItem.amount)}</Text>
+                </View>
+                <Text style={[styles.sampleNote, { color: theme.colors.textSubtle }]}>
+                  Fictional demonstration data. No real supplier bill or payment is represented.
+                </Text>
+              </View>
+            ) : null}
             <Text style={[styles.auditTitle, { color: theme.colors.text }]}>Recorded events</Text>
             <Timeline
               accent={theme.colors.financeAccent}
@@ -316,6 +403,23 @@ const styles = StyleSheet.create({
   mobileBody: { flex: 1, minWidth: 0 },
   mobileFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   amountPanel: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 8 },
+  breadcrumbRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  crumbLink: { paddingVertical: 2 },
+  crumbText: { fontSize: 11.5, fontWeight: '600' },
+  crumbActive: { flexShrink: 1 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto', paddingVertical: 2 },
+  demoNote: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderWidth: 1, borderRadius: 12, padding: 14 },
+  demoNoteText: { fontSize: 11.5, lineHeight: 16, flex: 1 },
+  samplePanel: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 8 },
+  sampleSupplier: { fontSize: 13.5, fontWeight: '700' },
+  sampleMeta: { fontSize: 11.5 },
+  sampleItem: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, gap: 4 },
+  sampleItemDesc: { fontSize: 12, lineHeight: 17 },
+  sampleItemCalc: { fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  sampleTotal: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' },
+  sampleTotalLabel: { fontSize: 12.5, fontWeight: '700' },
+  sampleTotalValue: { fontSize: 13.5, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  sampleNote: { fontSize: 10.5 },
   amountTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   amountValue: { fontSize: 22, fontWeight: '700', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   desc: { fontSize: 12, lineHeight: 17 },

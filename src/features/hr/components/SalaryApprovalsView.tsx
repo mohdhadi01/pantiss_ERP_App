@@ -8,8 +8,11 @@ import {
   payrollMonths,
   salaryKey,
   salaryMonthLabel,
+  salaryWorkflowLabel,
+  isFinanceEligible,
   SalaryRecord,
 } from '../../finance/salaryData';
+import { exportCsv } from '../csv';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
 import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
@@ -36,6 +39,7 @@ export const SalaryApprovalsView: React.FC = () => {
   const [stage, setStage] = useState<StageFilter>('all');
   const [reviewId, setReviewId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [feedback, setFeedback] = useState('');
 
   const { records, reviewByHR } = useSalaryRecords('hr');
 
@@ -79,8 +83,28 @@ export const SalaryApprovalsView: React.FC = () => {
       decision === 'Approved' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
     ).catch(() => {});
     reviewByHR(salaryKey(rec), decision, HR_ACTOR, note.trim());
+    setFeedback(
+      decision === 'Approved'
+        ? `${rec.name}’s salary is approved by HR and now visible in Finance.`
+        : `${rec.name}’s salary was returned with your reason. It remains outside Finance.`,
+    );
     setReviewId(null);
     setNote('');
+  };
+
+  const handleExport = () => {
+    exportCsv(`hr-approvals-${selectedMonth}`, [
+      ['Employee', 'ID', 'Month', 'Net pay', 'Admin', 'HR', 'Finance'],
+      ...filtered.map((r) => [
+        r.name,
+        r.id,
+        r.month,
+        r.netPay,
+        r.adminApproval,
+        r.hrApproval,
+        isFinanceEligible(r) ? salaryWorkflowLabel(r) : 'Not released',
+      ]),
+    ]).catch(() => {});
   };
 
   const columns: Array<DataColumn<SalaryRecord>> = [
@@ -133,10 +157,16 @@ export const SalaryApprovalsView: React.FC = () => {
         <MetricCard label="Returned by HR" value={counts.returned} subtitle="Held outside Finance" style={styles.metric} />
       </View>
 
+      {feedback ? (
+        <Card padding={14} flat style={[styles.noticeBanner, { backgroundColor: theme.colors.successSoft, borderColor: theme.colors.successBorder }]}>
+          <Text style={[styles.noticeText, { color: theme.colors.successText }]}>{feedback}</Text>
+        </Card>
+      ) : null}
+
       <SectionCard
         title="Salary approval register"
         description="Approve after Admin clearance. Finance receives only HR-approved records."
-        action={<Button label="Export" variant="outline" size="sm" icon="Download" />}
+        action={<Button label="Export" variant="outline" size="sm" icon="Download" onPress={handleExport} />}
       >
         <SearchFilterBar searchQuery={search} onSearchChange={setSearch} placeholder="Search payroll by employee or role…" />
         <View style={styles.filterRow}>
@@ -154,11 +184,11 @@ export const SalaryApprovalsView: React.FC = () => {
               value={stage}
               onChange={(v) => setStage(v as StageFilter)}
               options={[
-                { value: 'all', label: `All stages (${monthlyRecords.length})` },
-                { value: 'awaiting-admin', label: `Awaiting Admin (${counts.awaitingAdmin})` },
-                { value: 'ready-hr', label: `Ready for HR (${counts.ready})` },
-                { value: 'released', label: `Released to Finance (${counts.released})` },
-                { value: 'returned', label: `Returned by HR (${counts.returned})` },
+                { value: 'all', label: 'All stages' },
+                { value: 'awaiting-admin', label: 'Awaiting Admin clearance' },
+                { value: 'ready-hr', label: 'Ready for HR' },
+                { value: 'released', label: 'Released to Finance' },
+                { value: 'returned', label: 'Returned by HR' },
               ]}
             />
           </View>
@@ -205,11 +235,15 @@ export const SalaryApprovalsView: React.FC = () => {
                   </View>
                 );
               case 'finance':
-                return <StatusChip status={rec.status === 'Disbursed' ? 'Disbursed' : rec.status === 'Hold' ? 'On hold' : 'Pending payment'} />;
+                return (
+                  <Text style={[styles.cellText, { color: isFinanceEligible(rec) ? theme.colors.text : theme.colors.textSubtle }]}>
+                    {isFinanceEligible(rec) ? salaryWorkflowLabel(rec) : 'Not released'}
+                  </Text>
+                );
               default:
                 return (
                   <Button
-                    label="Review salary"
+                    label={reviewable(rec) ? 'Review salary' : 'View details'}
                     variant="outline"
                     size="sm"
                     onPress={() => {
@@ -235,7 +269,7 @@ export const SalaryApprovalsView: React.FC = () => {
                 </View>
               </View>
               <Button
-                label="Review salary"
+                label={reviewable(rec) ? 'Review salary' : 'View details'}
                 variant="outline"
                 size="sm"
                 onPress={() => {
@@ -315,27 +349,29 @@ export const SalaryApprovalsView: React.FC = () => {
 
           {reviewable(reviewRecord) ? (
             <TextField
-              label="Review note"
+              label="Review note / reason for return"
               value={note}
               onChangeText={setNote}
               multiline
-              placeholder="Add context for the approval or the reason for returning this salary…"
+              placeholder="A reason is required when returning a salary."
               hint="A note is required when returning a salary to Admin."
             />
-          ) : (
+          ) : reviewRecord.adminApproval !== 'Approved' ? (
             <Card padding={14} flat style={[styles.lockedBanner, { backgroundColor: theme.colors.warningSoft, borderColor: theme.colors.warningBorder }]}>
               <View style={styles.lockedRow}>
                 <Icon name="Lock" size={15} color={theme.colors.warningText} />
                 <Text style={[styles.lockedText, { color: theme.colors.warningText }]}>
-                  {reviewRecord.adminApproval !== 'Approved'
-                    ? 'HR approval is locked until Admin approves this salary.'
-                    : 'This salary has already been reviewed by HR.'}
+                  HR approval is locked until Admin approves this salary.
                 </Text>
               </View>
-              {reviewRecord.hrReason ? (
-                <Text style={[styles.returnReason, { color: theme.colors.dangerText }]}>Returned: &ldquo;{reviewRecord.hrReason}&rdquo;</Text>
-              ) : null}
             </Card>
+          ) : (
+            <Text style={[styles.decidedNote, { color: theme.colors.textMuted }]}>
+              {reviewRecord.hrReason || 'HR review recorded.'}{' '}
+              {isFinanceEligible(reviewRecord)
+                ? 'This record is available to Finance for processing.'
+                : 'This record has not been released to Finance.'}
+            </Text>
           )}
         </ModalSheet>
       ) : null}
@@ -514,5 +550,21 @@ const styles = StyleSheet.create({
   returnReason: {
     fontSize: 11,
     lineHeight: 16,
+  },
+  noticeBanner: {
+    gap: 4,
+  },
+  noticeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  cellText: {
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  decidedNote: {
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

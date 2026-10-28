@@ -131,7 +131,7 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         <MetricCard
           label="Punch-in coverage"
           value={`${punchCoverage}%`}
-          subtitle={`${punchedIn} of ${population.length}`}
+          subtitle={`${punchedIn} of ${population.length} · ${latestDate}`}
           style={styles.metric}
         />
       </View>
@@ -197,19 +197,19 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         <MetricCard
           label="Awaiting Admin approval"
           value={payroll.filter((r) => r.adminApproval === 'Pending').length}
-          subtitle={salaryMonthLabel(month)}
+          subtitle={`Salary records · ${salaryMonthLabel(month)}`}
           style={styles.metric}
         />
         <MetricCard
           label="Released to Finance"
           value={payroll.filter(isFinanceEligible).length}
-          subtitle="Admin and HR have approved"
+          subtitle="Admin + HR approval completed"
           style={styles.metric}
         />
         <MetricCard
           label="KBI assessment coverage"
           value={`${percent(assessed)}%`}
-          subtitle={`${assessed} of ${data.employees.length} assessed · FY ${reviewYears[0]}`}
+          subtitle={`${assessed} of ${data.employees.length} · FY ${reviewYears[0]}`}
           style={styles.metric}
         />
         <MetricCard

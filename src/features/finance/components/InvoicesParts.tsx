@@ -43,10 +43,28 @@ export const CreateInvoiceSheet: React.FC<{
   onClose: () => void;
   onSave: (draft: CreateFormState, items: InvoiceItemLine[]) => void;
   projectName: string | null;
-}> = ({ visible, onClose, onSave, projectName }) => {
+  /** Pre-filled from a tranche raise (client / amount / line description). */
+  prefill?: { client?: string; amount?: number; lineDescription?: string };
+}> = ({ visible, onClose, onSave, projectName, prefill }) => {
   const { theme } = useTheme();
   const [form, setForm] = useState<CreateFormState>(EMPTY_CREATE);
   const [items, setItems] = useState<InvoiceItemLine[]>([{ id: 1, description: projectName ?? 'Grant tranche', qty: '1', rate: '' }]);
+
+  // Reset the form each time the sheet opens, applying any tranche prefill.
+  React.useEffect(() => {
+    if (visible) {
+      setForm({ ...EMPTY_CREATE, client: prefill?.client ?? '' });
+      setItems([
+        {
+          id: 1,
+          description: prefill?.lineDescription ?? projectName ?? 'Grant tranche',
+          qty: '1',
+          rate: prefill?.amount ? String(prefill.amount) : '',
+        },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, prefill?.client, prefill?.amount, prefill?.lineDescription, projectName]);
 
   const setField = (key: keyof CreateFormState) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
   const total = items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0), 0);
@@ -142,7 +160,8 @@ export const InvoiceViewSheet: React.FC<{
   onEdit: (invoice: Invoice) => void;
   onRaise: (invoice: Invoice) => void;
   onVerify: (invoice: Invoice) => void;
-}> = ({ invoice, visible, onClose, onEdit, onRaise, onVerify }) => {
+  onDownload: (invoice: Invoice) => void;
+}> = ({ invoice, visible, onClose, onEdit, onRaise, onVerify, onDownload }) => {
   const { theme } = useTheme();
   if (!invoice) return null;
   const verified = invoice.status === 'Admin Verified';
@@ -151,15 +170,15 @@ export const InvoiceViewSheet: React.FC<{
       visible={visible}
       onClose={onClose}
       label="Invoicing"
-      title={`${invoice.number} · ${invoice.client}`}
-      description={`${invoice.project} · Due ${formatDate(invoice.dueDate)}`}
+      title={invoice.number}
+      description={`${invoice.status} · ${invoice.project}`}
       size="md"
       footer={
         <>
-          <Button label="Download PDF" icon="Download" variant="outline" size="sm" />
+          <Button label="Download PDF" icon="Download" variant="outline" size="sm" onPress={() => onDownload(invoice)} />
           {invoice.status === 'Draft' ? <Button label="Edit draft" icon="FileText" variant="outline" size="sm" onPress={() => onEdit(invoice)} /> : null}
           {invoice.status === 'Draft' ? <Button label="Raise invoice" variant="emerald" size="sm" onPress={() => onRaise(invoice)} /> : null}
-          {!verified ? <Button label="Admin Verify (Super Admin)" variant="emerald" size="sm" onPress={() => onVerify(invoice)} /> : null}
+          {invoice.status === 'Raised' ? <Button label="Admin Verify (Super Admin)" variant="emerald" size="sm" onPress={() => onVerify(invoice)} /> : null}
         </>
       }
     >
@@ -180,6 +199,24 @@ export const InvoiceViewSheet: React.FC<{
         <Row label="GST" value={<Text style={[styles.rowValue, { color: theme.colors.text }]}>{formatRupees(invoice.gstAmount)}</Text>} />
         <Row label="Total" value={<Text style={[styles.rowValue, { color: theme.colors.financeAccent }]}>{formatRupees(invoice.amount + invoice.gstAmount)}</Text>} />
       </View>
+      {invoice.lines?.length ? (
+        <>
+          <Text style={[styles.notesTitle, { color: theme.colors.text }]}>Invoice items</Text>
+          {invoice.lines.map((line) => (
+            <View key={line.id} style={[styles.lineRow, { borderColor: theme.colors.border }]}>
+              <View style={styles.lineBody}>
+                <Text numberOfLines={1} style={[styles.lineDesc, { color: theme.colors.text }]}>{line.description}</Text>
+                <Text style={[styles.lineCalc, { color: theme.colors.textSubtle }]}>
+                  {line.qty} × {formatRupees(parseFloat(line.rate) || 0)}
+                </Text>
+              </View>
+              <Text style={[styles.lineTotal, { color: theme.colors.text }]}>
+                {formatRupees((parseFloat(line.qty) || 0) * (parseFloat(line.rate) || 0))}
+              </Text>
+            </View>
+          ))}
+        </>
+      ) : null}
       <Text style={[styles.notesTitle, { color: theme.colors.text }]}>Payment instructions</Text>
       <Text style={[styles.notesText, { color: theme.colors.textMuted }]}>{invoice.notes}</Text>
     </ModalSheet>
@@ -217,4 +254,9 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   notesTitle: { fontSize: 13, fontWeight: '700', marginTop: 4 },
   notesText: { fontSize: 12, lineHeight: 17 },
+  lineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderWidth: 1, borderRadius: 10, padding: 12 },
+  lineBody: { flex: 1, minWidth: 0 },
+  lineDesc: { fontSize: 12, fontWeight: '600' },
+  lineCalc: { fontSize: 10.5, marginTop: 2 },
+  lineTotal: { fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

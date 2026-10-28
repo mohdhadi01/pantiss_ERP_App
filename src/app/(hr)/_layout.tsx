@@ -8,7 +8,7 @@ export default function HRLayout() {
   const { theme } = useTheme();
 
   return (
-    <ModuleGuard requiredModuleId="human-resources">
+    <ModuleGuard requiredModuleId="human-resources" requiredRole="hr-manager">
       <HRProvider>
         <Stack
           screenOptions={{

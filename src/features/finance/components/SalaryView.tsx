@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Share } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
@@ -10,6 +10,7 @@ import {
   salaryKey,
   salaryMonthLabel,
   salaryTotals,
+  salaryWorkflowLabel,
   SalaryRecord,
   canForwardSalary,
   isFinanceEligible,
@@ -27,9 +28,14 @@ import { DataTable, DataColumn } from '../../../components/ui/DataTable';
 import { TextField } from '../../../components/ui/TextField';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
-import { SalaryRecordSheet, SalaryMobileCard } from './SalaryParts';
+import { SalaryRecordSheet, SalaryMobileCard, MonthTrackingCard } from './SalaryParts';
 
 type FilterKey = 'all' | 'pending' | 'ready' | 'forwarded' | 'disbursed';
+
+const projectNameOf = (id?: string) => {
+  if (!id) return 'Unassigned';
+  return financeAreas.flatMap((area) => area.projects).find((project) => project.id === id)?.name ?? id;
+};
 
 export const SalaryView: React.FC = () => {
   const { theme } = useTheme();
@@ -86,6 +92,8 @@ export const SalaryView: React.FC = () => {
   );
 
   const isReady = (rec: SalaryRecord) => rec.status === 'Pending' && !rec.forwardedAt;
+  const readyAll = useMemo(() => scoped.filter((rec) => canForwardSalary(rec)), [scoped]);
+  const readyAllTotal = readyAll.reduce((sum, rec) => sum + rec.netPay, 0);
   const counts = useMemo(
     () => ({
       all: scoped.length,
@@ -100,10 +108,10 @@ export const SalaryView: React.FC = () => {
   const filtered = useMemo(
     () =>
       scoped.filter((rec) => {
+        const q = search.trim().toLowerCase();
         const matchesSearch =
-          rec.name.toLowerCase().includes(search.toLowerCase()) ||
-          rec.designation.toLowerCase().includes(search.toLowerCase()) ||
-          rec.id.toLowerCase().includes(search.toLowerCase());
+          !q ||
+          `${rec.name} ${rec.id} ${rec.designation} ${rec.department}`.toLowerCase().includes(q);
         if (filter === 'pending') return matchesSearch && rec.approvalStatus === 'Pending approval';
         if (filter === 'ready') return matchesSearch && isReady(rec);
         if (filter === 'forwarded') return matchesSearch && Boolean(rec.forwardedAt) && rec.status === 'Pending';
@@ -115,6 +123,42 @@ export const SalaryView: React.FC = () => {
 
   const forwardable = useMemo(() => filtered.filter((r) => canForwardSalary(r)), [filtered]);
   const forwardableTotal = forwardable.reduce((sum, r) => sum + r.netPay, 0);
+
+  const exportCsv = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const cell = (value: string | number) => `"${String(value).replace(/^[=+@-]/, "'$&").replace(/"/g, '""')}"`;
+    const header = [
+      'Month', 'Project', 'Employee ID', 'Employee', 'Designation', 'Department', 'Bank', 'Account No',
+      'Gross', 'EPF', 'ESIC', 'TDS', 'Net Pay', 'Approval Status', 'Approved By', 'Workflow', 'Payment Date', 'Bank Reference',
+    ];
+    const rows = filtered.map((record) => [
+      salaryMonthLabel(selectedMonth),
+      projectNameOf(record.projectId),
+      record.id,
+      record.name,
+      record.designation,
+      record.department,
+      record.bankName,
+      record.bankAccount,
+      record.basicHra + record.allowance,
+      record.pfDeduction,
+      record.esiDeduction,
+      record.tdsDeduction,
+      record.netPay,
+      record.approvalStatus,
+      record.approvedBy ?? '',
+      salaryWorkflowLabel(record),
+      record.paidOn ?? '',
+      record.reference ?? '',
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(cell).join(',')).join('\r\n');
+    Share.share({ title: 'Salary register (CSV)', message: csv }).catch(() => {});
+  };
+
+  const monthSummaries = useMemo(
+    () => payrollMonths.map((m) => salaryTotals(scoped.filter((r) => r.month === m))),
+    [scoped],
+  );
 
   const runWorkflow = (fn: () => Promise<void>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -202,7 +246,7 @@ export const SalaryView: React.FC = () => {
         gradient={heroGradients.salary}
         badge={{ icon: 'Coins', label: 'Payroll & Payment Authorizations' }}
         title="Salary Approvals & Payment Forwarding"
-        description="Approve payroll, forward verified salaries to the payment desk and track disbursement."
+        description="Verify if monthly salaries are approved across projects, authorize pending requests, and forward them directly to the Finance Payment Desk for disbursement."
         right={
           <HeroGlassCard label="Payroll month">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthChips}>
@@ -229,9 +273,9 @@ export const SalaryView: React.FC = () => {
       />
 
       <View style={styles.metricsGrid}>
-        <MetricCard style={styles.metricCard} label="Total Payroll" value={formatRupees(totals.gross)} subtitle={`${totals.employees} employees · Gross`} icon="Coins" accentColor={theme.colors.financeAccent} arrow />
-        <MetricCard style={styles.metricCard} label="Pending Approval" value={String(counts.pending)} subtitle="Awaiting finance sign-off" icon="Clock3" accentColor={theme.colors.warning} arrow />
-        <MetricCard style={styles.metricCard} label="Ready to Forward" value={formatRupees(forwardableTotal)} subtitle={`${forwardable.length} approved & ready`} icon="Send" accentColor={theme.colors.info} arrow />
+        <MetricCard style={styles.metricCard} label="Total Payroll" value={formatRupees(totals.net)} subtitle={`${totals.employees} employees · Gross ${formatRupees(totals.gross)}`} icon="Coins" accentColor={theme.colors.financeAccent} arrow />
+        <MetricCard style={styles.metricCard} label="Pending Approval" value={String(counts.pending)} subtitle={counts.pending ? 'Awaiting Finance review' : 'All salaries approved'} icon="Clock3" accentColor={theme.colors.warning} arrow />
+        <MetricCard style={styles.metricCard} label="Ready to Forward" value={String(readyAll.length)} subtitle={readyAll.length ? `${formatRupees(readyAllTotal)} approved & ready` : 'None waiting to forward'} icon="Send" accentColor={theme.colors.info} arrow />
         <MetricCard style={styles.metricCard} label="Disbursed / Paid" value={formatRupees(totals.paid)} subtitle={`${totals.paidCount} of ${totals.employees} paid`} icon="CheckCircle2" accentColor={theme.colors.emerald} arrow />
       </View>
 
@@ -257,7 +301,7 @@ export const SalaryView: React.FC = () => {
         action={
           <View style={[styles.registerBadge, { backgroundColor: theme.colors.financeAccentSoft }]}>
             <Text style={[styles.registerBadgeText, { color: theme.colors.financeAccent }]}>
-              {scopeProjectId === 'all' ? 'All projects' : scopeProjectId} · {salaryMonthLabel(selectedMonth)}
+              {scopeProjectId === 'all' ? 'All projects' : projectNameOf(scopeProjectId)} · {salaryMonthLabel(selectedMonth)}
             </Text>
           </View>
         }
@@ -271,7 +315,7 @@ export const SalaryView: React.FC = () => {
               disabled={forwardable.length === 0}
               onPress={() => runWorkflow(() => forwardMultiple(forwardable.map((r) => salaryKey(r)), actor))}
             />
-            <Button label="Export CSV" icon="Download" variant="outline" size="sm" />
+            <Button label="Export CSV" icon="Download" variant="outline" size="sm" disabled={filtered.length === 0} onPress={exportCsv} />
           </View>
         }
       >
@@ -287,7 +331,7 @@ export const SalaryView: React.FC = () => {
           onChange={(key) => setFilter(key as FilterKey)}
           accent={theme.colors.financeAccent}
         />
-        <TextField value={search} onChangeText={setSearch} placeholder="Search employees by name, ID or role…" />
+        <TextField value={search} onChangeText={setSearch} placeholder="Search by employee name, PAN-EMP ID, designation, or department..." />
 
         <DataTable
           columns={columns}
@@ -299,6 +343,30 @@ export const SalaryView: React.FC = () => {
           emptyTitle="No salaries in this bucket"
           emptyDescription="Adjust the payroll month, scope or filter to see employee records."
         />
+      </SectionCard>
+
+      <SectionCard
+        title="Month-wise payment tracking"
+        description="Compare this project's payroll and open any month to review its employees."
+        action={<Icon name="CalendarDays" size={20} color={theme.colors.financeAccent} />}
+      >
+        <View style={styles.trackGrid}>
+          {payrollMonths.map((m, index) => {
+            const summary = monthSummaries[index];
+            return (
+              <MonthTrackingCard
+                key={m}
+                monthLabel={salaryMonthLabel(m)}
+                paidAmount={formatRupees(summary.paid)}
+                paidCount={summary.paidCount}
+                employees={summary.employees}
+                outstanding={formatRupees(summary.outstanding)}
+                active={m === selectedMonth}
+                onPress={() => setSelectedMonth(m)}
+              />
+            );
+          })}
+        </View>
       </SectionCard>
 
       <SalaryRecordSheet
@@ -359,6 +427,7 @@ const styles = StyleSheet.create({
   registerBadge: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
   registerBadgeText: { fontSize: 10.5, fontWeight: '700' },
   registerFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  trackGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   employeeCell: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 12, fontWeight: '700' },

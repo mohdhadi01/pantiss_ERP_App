@@ -67,7 +67,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
   const activeAccent = accentColor ?? theme.colors.brandPrimary;
   const activeItemBg = activeBg ?? theme.colors.brandSoft;
   const isFinance = subtitle.toLowerCase().includes('finance');
-  const workspaceNote = isFinance ? 'Institutional finance · Demo' : 'People operations · Demo';
+  const workspaceNote = isFinance ? undefined : 'People operations · Demo';
 
   if (collapsed) {
     return (
@@ -181,7 +181,9 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
           <Text style={[styles.backLinkText, { color: theme.colors.textSubtle }]}>All Workspaces & Modules</Text>
         </Pressable>
 
-        <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>WORKSPACE</Text>
+        <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>
+          {isFinance ? 'Finance Workspace' : 'WORKSPACE'}
+        </Text>
 
         {items.map((item) => {
           const isActive = currentRoute === item.route;

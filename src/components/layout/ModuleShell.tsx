@@ -127,7 +127,7 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
   // Web per-module theming: Finance = emerald, HR = brand blue
   const moduleAccent = accentColor ?? (isHR ? theme.colors.brandPrimary : theme.colors.financeAccent);
   const moduleActiveBg = activeNavBg ?? (isHR ? theme.colors.brandSoft : theme.colors.financeAccentSoft);
-  const defaultEyebrow = isHR ? 'People & culture · FY 2026–27' : 'Finance Division · FY 2026–27';
+  const defaultEyebrow = isHR ? 'Human Resources' : 'Finance Division · FY 2026–27';
   const defaultHeadingColor = isHR ? theme.colors.brandPrimary : theme.colors.financeAccent;
   const headerEyebrow = eyebrow ?? badgeText ?? defaultEyebrow;
   const headerEyebrowColor = eyebrowColor ?? badgeColor ?? moduleAccent;

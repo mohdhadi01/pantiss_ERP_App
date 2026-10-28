@@ -9,7 +9,7 @@ import { formatDate } from '../../../utils/formatDate';
 import { financeAreas } from '../data';
 import { heroGradients } from '../../../theme/gradients';
 import { HeroBanner, HeroGlassCard } from './HeroBanner';
-import { Card, SectionCard } from '../../../components/ui/Card';
+import { Card } from '../../../components/ui/Card';
 import { Tabs } from '../../../components/ui/Tabs';
 import { StatusChip } from '../../../components/ui/StatusChip';
 import { Button } from '../../../components/ui/Button';
@@ -18,52 +18,26 @@ import { SelectField } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Timeline } from '../../../components/ui/Timeline';
 import { Icon } from '../../../components/ui/Icon';
-import { ProcAreaCard, ProcProjectCard, QuoteCard } from './ProcurementParts';
+import {
+  ProcAreaCard,
+  ProcProjectCard,
+  ProcExpanded,
+  ReviewQuoteCard,
+  ProcAuditEntry,
+  Requisition,
+  ProcurementStatus,
+  STATUS_LABELS,
+  chipTones,
+  procurementStamp,
+  initialRequisitions,
+  purchaseOrderHistory,
+  PROJECT_AREA,
+} from './ProcurementParts';
 
-export interface Requisition {
-  id: string;
-  project: string;
-  department: string;
-  item: string;
-  quantity: number;
-  estimatedCost: number;
-  requestedBy: string;
-  date: string;
-  vendor: string;
-  status: 'Approved' | 'Pending approval' | 'RFQ Released' | 'PO Created' | 'PO Sent' | 'Invoice Awaited';
-}
-
-const initialRequisitions: Requisition[] = [
-  { id: 'REQ-2026-081', project: 'PMKVY 4.0 Odisha Skills', department: 'Skill Development', item: 'Smart Classroom Interactive Flat Panels (65 inch)', quantity: 4, estimatedCost: 380000, requestedBy: 'Subhashree Ray (SPM)', date: '2026-10-04', vendor: 'Zenith Labs Pvt Ltd', status: 'Pending approval' },
-  { id: 'REQ-2026-082', project: 'Swasthya Mobile Clinics', department: 'Health & Nutrition', item: 'Portable Digital ECG Machines & Consumables', quantity: 2, estimatedCost: 165000, requestedBy: 'Dr. Priyadarshini Mohapatra (CMO)', date: '2026-10-02', vendor: 'MedTech Diagnostics', status: 'RFQ Released' },
-  { id: 'REQ-2026-083', project: 'Poshan Community Network', department: 'Health & Nutrition', item: 'Anthropometric Infant Weighing Scales & MUAC Tapes', quantity: 25, estimatedCost: 85000, requestedBy: 'Kavita Soren (Supervisor)', date: '2026-09-28', vendor: 'Apex Tooling Systems', status: 'Approved' },
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  ...(Object.keys(STATUS_LABELS) as ProcurementStatus[]).map((value) => ({ value, label: STATUS_LABELS[value] })),
 ];
-
-const PROJECT_AREA: Record<string, string> = {
-  'PMKVY 4.0 Odisha Skills': 'skill-development',
-  'Swasthya Mobile Clinics': 'health',
-  'Poshan Community Network': 'nutrition',
-};
-
-const PROCUREMENT_HISTORY: Array<{ id: string; item: string; vendor: string; value: number; date: string; status: Requisition['status'] }> = [
-  { id: 'PO-2026-044', item: 'Community Nutrition Fellows — Field Tablets (12 units)', vendor: 'Zenith Labs Pvt Ltd', value: 296000, date: '2026-09-12', status: 'PO Sent' },
-  { id: 'PO-2026-041', item: 'Mobile Clinic Fuel & Fleet AMC Contract', vendor: 'MTR Logistics', value: 412000, date: '2026-08-30', status: 'Invoice Awaited' },
-  { id: 'PO-2026-038', item: 'Incubation Lab Workstations & Networking', vendor: 'Kalinga Tech', value: 538000, date: '2026-08-14', status: 'PO Sent' },
-];
-
-const QUOTE_VENDORS = ['Zenith Labs Pvt Ltd', 'MedTech Diagnostics', 'Apex Tooling Systems'];
-const QUOTE_FACTORS = [0.98, 1.03, 1.005];
-const QUOTE_LEAD = ['2–3 weeks', '3–4 weeks', '2 weeks'];
-const QUOTE_RATINGS = ['4.8', '4.5', '4.6'];
-
-const chipTones: Record<Requisition['status'], 'warning' | 'success' | 'info' | 'danger' | 'neutral' | 'violet' | 'emerald' | 'brand'> = {
-  'Pending approval': 'warning',
-  Approved: 'success',
-  'RFQ Released': 'info',
-  'PO Created': 'info',
-  'PO Sent': 'brand',
-  'Invoice Awaited': 'warning',
-};
 
 export const ProcurementView: React.FC = () => {
   const { theme } = useTheme();
@@ -74,62 +48,132 @@ export const ProcurementView: React.FC = () => {
   const [step, setStep] = useState(0);
   const [areaId, setAreaId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [compareReq, setCompareReq] = useState<Requisition | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ req: Requisition; quote: Requisition['quotes'][number] } | null>(null);
+  const [slipId, setSlipId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [historySearch, setHistorySearch] = useState('');
   const [historyStatus, setHistoryStatus] = useState('all');
 
-  const stats = useMemo(() => {
-    const pending = requisitions.filter((r) => r.status === 'Pending approval').length;
-    const active = requisitions.filter((r) => ['RFQ Released', 'Approved', 'PO Created'].includes(r.status)).length;
-    const done = requisitions.filter((r) => ['PO Sent', 'Invoice Awaited'].includes(r.status)).length;
-    return { total: requisitions.length, pending, active, done };
-  }, [requisitions]);
+  const records = useMemo(() => [...requisitions, ...purchaseOrderHistory], [requisitions]);
+  const reviewReq = requisitions.find((r) => r.id === reviewId) ?? null;
+  const slipReq = requisitions.find((r) => r.id === slipId) ?? null;
+  const selectedQuote = reviewReq?.quotes.find((q) => q.id === reviewReq.selectedQuoteId) ?? null;
+
+  const stats = useMemo(
+    () => ({
+      total: requisitions.length,
+      pending: requisitions.filter((r) => r.status === 'Quotation review').length,
+      active: requisitions.filter((r) => !['Quotation review', 'Payment slip uploaded'].includes(r.status)).length,
+      done: requisitions.filter((r) => r.status === 'Payment slip uploaded').length,
+    }),
+    [requisitions],
+  );
 
   const areaStats = useMemo(
     () =>
-      financeAreas.map((area) => {
-        const reqs = requisitions.filter((r) => PROJECT_AREA[r.project] === area.id);
-        const done = reqs.filter((r) => ['PO Sent', 'Invoice Awaited', 'Approved'].includes(r.status)).length;
-        return { area, total: reqs.length, done, value: reqs.reduce((sum, r) => sum + r.estimatedCost, 0) };
-      }),
-    [requisitions],
+      financeAreas
+        .map((area) => {
+          const reqs = records.filter((r) => PROJECT_AREA[r.project] === area.id);
+          return {
+            area,
+            projects: new Set(reqs.map((r) => r.project)).size,
+            total: reqs.length,
+            done: reqs.filter((r) => r.status === 'Payment slip uploaded').length,
+            value: reqs.reduce((sum, r) => sum + (r.quotes.find((q) => q.id === r.selectedQuoteId)?.amount ?? r.budgetCeiling), 0),
+          };
+        })
+        .filter((row) => row.total > 0),
+    [records],
   );
 
   const projectRows = useMemo(() => {
     if (!areaId) return [];
     const map = new Map<string, Requisition[]>();
-    requisitions
+    records
       .filter((r) => PROJECT_AREA[r.project] === areaId)
       .forEach((r) => map.set(r.project, [...(map.get(r.project) ?? []), r]));
     return Array.from(map.entries()).map(([project, reqs]) => ({
       project,
       reqs,
-      pending: reqs.filter((r) => r.status === 'Pending approval').length,
-      done: reqs.filter((r) => ['PO Sent', 'Invoice Awaited', 'Approved'].includes(r.status)).length,
-      value: reqs.reduce((sum, r) => sum + r.estimatedCost, 0),
+      pending: reqs.filter((r) => r.status === 'Quotation review').length,
+      done: reqs.filter((r) => r.status === 'Payment slip uploaded').length,
+      value: reqs.reduce((sum, r) => sum + (r.quotes.find((q) => q.id === r.selectedQuoteId)?.amount ?? r.budgetCeiling), 0),
     }));
-  }, [areaId, requisitions]);
+  }, [areaId, records]);
 
   const activeReqs = useMemo(
-    () => requisitions.filter((r) => !projectId || r.project === projectId),
-    [projectId, requisitions],
+    () => records.filter((r) => !projectId || r.project === projectId),
+    [projectId, records],
   );
 
   const historyFiltered = useMemo(
     () =>
-      PROCUREMENT_HISTORY.filter((h) => {
-        const q = historySearch.toLowerCase();
-        const matchesSearch = h.item.toLowerCase().includes(q) || h.id.toLowerCase().includes(q) || h.vendor.toLowerCase().includes(q);
+      records.filter((h) => {
+        const q = historySearch.trim().toLowerCase();
+        const matchesSearch = [h.id, h.item, h.project, h.requestedBy].some((v) => v.toLowerCase().includes(q));
         const matchesStatus = historyStatus === 'all' || h.status === historyStatus;
         return matchesSearch && matchesStatus;
       }),
-    [historySearch, historyStatus],
+    [records, historySearch, historyStatus],
   );
 
-  const advance = (id: string, status: Requisition['status']) => {
+  const patchReq = (id: string, patch: (req: Requisition) => Partial<Requisition>) =>
+    setRequisitions((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch(r) } : r)));
+
+  const auditEntry = (action: string, actor: string, detail: string): ProcAuditEntry => ({
+    action,
+    actor,
+    date: procurementStamp(),
+    detail,
+  });
+
+  const createPO = (req: Requisition) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    setRequisitions((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    const poNo = `PO-${req.id.replace('REQ-', '')}-${Math.floor(Math.random() * 900 + 100)}`;
+    patchReq(req.id, (r) => ({
+      status: 'PO Created',
+      purchaseOrderNo: poNo,
+      audit: [...r.audit, auditEntry('Purchase order created', 'Finance Manager', `PO ${poNo} generated for ${r.quotes.find((q) => q.id === r.selectedQuoteId)?.vendor ?? 'selected vendor'}.`)],
+    }));
   };
+
+  const advance = (id: string, status: ProcurementStatus, action: string, actor: string, detail: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    patchReq(id, (r) => ({ status, audit: [...r.audit, auditEntry(action, actor, detail)] }));
+  };
+
+  const selectQuote = (quote: Requisition['quotes'][number]) => {
+    if (!reviewReq || reviewReq.selectedQuoteId === quote.id) return;
+    Haptics.selectionAsync().catch(() => {});
+    patchReq(reviewReq.id, (r) => ({
+      selectedQuoteId: quote.id,
+      audit: [...r.audit, auditEntry('Quote selected', 'Finance Manager', `${quote.vendor} selected at ${formatRupees(quote.amount)} after comparison.`)],
+    }));
+  };
+
+  const approveSelected = () => {
+    if (!reviewReq || !selectedQuote) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    patchReq(reviewReq.id, (r) => ({
+      status: 'Approved',
+      audit: [...r.audit, auditEntry('Procurement approved', 'Finance Approver', `${selectedQuote.vendor} approved for ${formatRupees(selectedQuote.amount)}.`)],
+    }));
+  };
+
+  const attachSlip = () => {
+    if (!slipReq) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const fileName = slipReq.paymentSlip ?? `payment-slip-${slipReq.id}.pdf`;
+    patchReq(slipReq.id, (r) => ({
+      status: 'Payment slip uploaded',
+      paymentSlip: fileName,
+      audit: [...r.audit, auditEntry(r.paymentSlip ? 'Payment slip replaced' : 'Payment slip uploaded', 'Accounts Executive', `${fileName} attached after payment processing.`)],
+    }));
+    setSlipId(null);
+  };
+
+  const toggleExpanded = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const crumb = (label: string, active: boolean, onPress?: () => void) => (
     <Pressable
@@ -143,13 +187,71 @@ export const ProcurementView: React.FC = () => {
     </Pressable>
   );
 
+  const renderRow = (req: Requisition, withActions: boolean) => {
+    const quote = req.quotes.find((q) => q.id === req.selectedQuoteId);
+    const isOpen = Boolean(expanded[req.id]);
+    return (
+      <Card key={req.id} padding={0} style={styles.requestCard}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => toggleExpanded(req.id)}
+          style={({ pressed }) => [styles.requestTop, pressed && { opacity: 0.9 }]}
+        >
+          <View style={styles.requestBody}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.requestItem, { color: theme.colors.text }]} numberOfLines={2}>{req.item}</Text>
+              <StatusChip status={STATUS_LABELS[req.status]} tone={chipTones[req.status]} />
+              {req.priority === 'High' ? <StatusChip status="High" tone="danger" dot={false} /> : null}
+            </View>
+            <Text style={[styles.requestSub, { color: theme.colors.brandPrimary }]}>
+              {req.id} · {req.requestedBy} · {formatDate(req.date)}
+            </Text>
+            {req.purchaseOrderNo ? (
+              <Text style={[styles.poLine, { color: theme.isDark ? '#c084fc' : '#7c3aed' }]}>PO: {req.purchaseOrderNo}</Text>
+            ) : null}
+          </View>
+          <View style={styles.requestRight}>
+            <Text style={[styles.amountValue, { color: theme.colors.text }]} numberOfLines={1}>
+              {formatRupees(quote?.amount ?? req.budgetCeiling)}
+            </Text>
+            <Text style={[styles.amountCaption, { color: theme.colors.textSubtle }]}>{quote ? 'selected' : 'ceiling'}</Text>
+          </View>
+          <Icon name="ChevronDown" size={15} color={theme.colors.textMuted} style={isOpen ? styles.chevronUp : undefined} />
+        </Pressable>
+        {isOpen ? <ProcExpanded req={req} /> : null}
+        {withActions ? (
+          <View style={styles.actionRow}>
+            {req.status === 'Quotation review' ? (
+              <Button label="Review" icon="Scale" variant="emerald" size="sm" onPress={() => setReviewId(req.id)} />
+            ) : null}
+            {req.status === 'Approved' ? (
+              <Button label="Create PO" icon="FileText" variant="primary" size="sm" onPress={() => createPO(req)} />
+            ) : null}
+            {req.status === 'PO Created' ? (
+              <Button label="Send PO" icon="Send" variant="primary" size="sm" onPress={() => advance(req.id, 'PO Sent', 'Purchase order sent', 'Finance Manager', `${req.purchaseOrderNo} dispatched to vendor via email.`)} />
+            ) : null}
+            {req.status === 'PO Sent' ? (
+              <Button label="Invoice Reminder" icon="Receipt" variant="primary" size="sm" onPress={() => advance(req.id, 'Invoice Reminder Sent', 'Invoice reminder sent', 'Accounts Executive', `Payment reminder sent to ${req.vendor}.`)} />
+            ) : null}
+            {req.status === 'Invoice Reminder Sent' ? (
+              <Button label="Upload Payment" icon="Upload" variant="outline" size="sm" onPress={() => setSlipId(req.id)} />
+            ) : null}
+            {req.status === 'Payment slip uploaded' ? (
+              <StatusChip status="Complete" tone="emerald" dot={false} />
+            ) : null}
+          </View>
+        ) : null}
+      </Card>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <HeroBanner
         gradient={heroGradients.finance}
         badge={{ icon: 'ShoppingCart', label: 'Procurement' }}
         title="Procurement tracker"
-        description="Requisitions, quotations and purchase orders across thematic projects."
+        description="Manage requests by project or review the history of all procurement requests."
         right={
           <HeroGlassCard label="Pipeline">
             <View style={styles.glassChips}>
@@ -166,7 +268,7 @@ export const ProcurementView: React.FC = () => {
       <Tabs
         items={[
           { key: 'requests', label: 'Requests', icon: 'ShoppingCart', count: requisitions.length },
-          { key: 'history', label: 'History', icon: 'History', count: PROCUREMENT_HISTORY.length },
+          { key: 'history', label: 'History', icon: 'History', count: records.length },
         ]}
         activeKey={tab}
         onChange={setTab}
@@ -183,11 +285,12 @@ export const ProcurementView: React.FC = () => {
 
           {step === 0 && (
             <View style={[styles.grid, isMd && styles.gridWide]}>
-              {areaStats.map(({ area, total, done, value }) => (
+              {areaStats.map(({ area, projects, total, done, value }) => (
                 <ProcAreaCard
                   key={area.id}
                   name={area.name}
                   color={area.color}
+                  projects={projects}
                   done={done}
                   total={total}
                   value={value}
@@ -202,140 +305,268 @@ export const ProcurementView: React.FC = () => {
           )}
 
           {step === 1 && (
-            <View style={[styles.grid, isMd && styles.gridWide]}>
-              {projectRows.map((row) => (
-                <ProcProjectCard
-                  key={row.project}
-                  project={row.project}
-                  total={row.reqs.length}
-                  pending={row.pending}
-                  done={row.done}
-                  value={row.value}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setProjectId(row.project);
-                    setStep(2);
-                  }}
-                />
-              ))}
+            <View style={styles.list}>
+              <Text style={[styles.stepHint, { color: theme.colors.textSubtle }]}>
+                {projectRows.length} project{projectRows.length !== 1 ? 's' : ''} — select one to view requests
+              </Text>
+              <View style={[styles.grid, isMd && styles.gridWide]}>
+                {projectRows.map((row) => (
+                  <ProcProjectCard
+                    key={row.project}
+                    project={row.project}
+                    total={row.reqs.length}
+                    pending={row.pending}
+                    done={row.done}
+                    value={row.value}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      setProjectId(row.project);
+                      setStep(2);
+                    }}
+                  />
+                ))}
+              </View>
             </View>
           )}
 
-          {step === 2 && (
-            <View style={styles.list}>
-              {activeReqs.map((req) => (
-                <Card key={req.id} padding={16} style={styles.requestCard}>
-                  <View style={styles.requestTop}>
-                    <View style={styles.requestBody}>
-                      <Text style={[styles.requestItem, { color: theme.colors.text }]}>{req.item}</Text>
-                      <Text style={[styles.requestSub, { color: theme.colors.brandPrimary }]}>
-                        {req.id} · {req.project}
-                      </Text>
-                      <Text style={[styles.requestMeta, { color: theme.colors.textSubtle }]}>
-                        Requested by {req.requestedBy} · {formatDate(req.date)} · Supplier: {req.vendor}
-                      </Text>
-                    </View>
-                    <StatusChip status={req.status} tone={chipTones[req.status]} />
-                  </View>
-                  <View style={styles.requestDetails}>
-                    <Detail label="Quantity" value={`${req.quantity} Units`} />
-                    <Detail label="Estimated value" value={formatRupees(req.estimatedCost)} accent={theme.colors.emerald} />
-                    <Detail label="Stage" value={req.status} />
-                  </View>
-                  <View style={styles.actionRow}>
-                    {req.status === 'Pending approval' ? (
-                      <Button label="Approve Request" icon="CheckCircle" variant="emerald" size="sm" onPress={() => advance(req.id, 'Approved')} />
-                    ) : null}
-                    {req.status === 'Approved' ? (
-                      <Button label="Create PO" icon="Plus" variant="primary" size="sm" onPress={() => advance(req.id, 'PO Created')} />
-                    ) : null}
-                    {req.status === 'RFQ Released' ? (
-                      <Button label="Compare quotations" icon="GitCompareArrows" variant="primary" size="sm" onPress={() => setCompareReq(req)} />
-                    ) : null}
-                    {req.status === 'PO Created' ? (
-                      <Button label="Send PO" icon="Send" variant="emerald" size="sm" onPress={() => advance(req.id, 'PO Sent')} />
-                    ) : null}
-                    {req.status === 'PO Sent' ? (
-                      <Button label="Invoice reminder" icon="Receipt" variant="outline" size="sm" onPress={() => advance(req.id, 'Invoice Awaited')} />
-                    ) : null}
-                  </View>
-                </Card>
-              ))}
-            </View>
-          )}
+          {step === 2 ? <View style={styles.list}>{activeReqs.map((req) => renderRow(req, true))}</View> : null}
         </View>
       ) : (
         <View style={styles.section}>
-          <View style={styles.historyFilters}>
-            <TextField value={historySearch} onChangeText={setHistorySearch} placeholder="Search purchase orders…" containerStyle={styles.historySearch} />
-            <SelectField
-              value={historyStatus}
-              onChange={setHistoryStatus}
-              options={[
-                { value: 'all', label: 'All statuses' },
-                { value: 'PO Sent', label: 'PO Sent' },
-                { value: 'Invoice Awaited', label: 'Invoice Awaited' },
-              ]}
-              placeholder="All statuses"
-              containerStyle={styles.historySelect}
-            />
+          <View style={styles.historyHead}>
+            <Text style={[styles.historyTitle, { color: theme.colors.text }]}>Procurement request history</Text>
+            <Text style={[styles.historyDesc, { color: theme.colors.textMuted }]}>
+              All requests across every thematic area and project, from submission through payment. Expand a request to review its quotations and recorded events.
+            </Text>
           </View>
+          <View style={styles.historyFilters}>
+            <TextField value={historySearch} onChangeText={setHistorySearch} placeholder="Search requests, projects or requesters" containerStyle={styles.historySearch} />
+            <SelectField value={historyStatus} onChange={setHistoryStatus} options={STATUS_OPTIONS} placeholder="All statuses" containerStyle={styles.historySelect} />
+          </View>
+          <Text style={[styles.historyCount, { color: theme.colors.textSubtle }]}>
+            {historyFiltered.length} of {records.length} requests
+          </Text>
           {historyFiltered.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>No purchase orders match the filters.</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>
+              {records.length ? 'No matching requests. Try another search or status filter.' : 'No procurement requests yet.'}
+            </Text>
           ) : (
-            <View style={styles.list}>
-              {historyFiltered.map((h) => (
-                <Card key={h.id} padding={16} style={styles.requestCard}>
-                  <View style={styles.requestTop}>
-                    <View style={styles.requestBody}>
-                      <Text style={[styles.requestItem, { color: theme.colors.text }]}>{h.item}</Text>
-                      <Text style={[styles.requestSub, { color: theme.colors.brandPrimary }]}>{h.id} · {h.vendor}</Text>
-                      <Text style={[styles.requestMeta, { color: theme.colors.textSubtle }]}>Raised {formatDate(h.date)} · {formatRupees(h.value)}</Text>
-                    </View>
-                    <StatusChip status={h.status} tone={chipTones[h.status]} />
-                  </View>
-                </Card>
-              ))}
-            </View>
+            <View style={styles.list}>{historyFiltered.map((h) => renderRow(h, false))}</View>
           )}
         </View>
       )}
 
       <ModalSheet
-        visible={Boolean(compareReq)}
-        onClose={() => setCompareReq(null)}
-        label="Quotation evaluation"
-        title="Compare three quotations"
-        description={compareReq ? `${compareReq.item} · ${compareReq.project}` : undefined}
+        visible={Boolean(reviewReq)}
+        onClose={() => setReviewId(null)}
+        label="Procurement approval"
+        title={reviewReq?.item ?? ''}
+        description={reviewReq ? `${reviewReq.id} · ${reviewReq.project} · Requested by ${reviewReq.requestedBy}` : undefined}
         size="lg"
-        footer={<Button label="Close" variant="outline" onPress={() => setCompareReq(null)} />}
+        footer={
+          <View style={styles.reviewFooter}>
+            <View style={styles.reviewFooterLeft}>
+              <Text style={[styles.footerCaption, { color: theme.colors.textSubtle }]}>Selected quotation</Text>
+              <Text numberOfLines={1} style={[styles.footerValue, { color: theme.colors.text }]}>
+                {selectedQuote ? `${selectedQuote.vendor} · ${formatRupees(selectedQuote.amount)}` : 'Select one of the three quotations'}
+              </Text>
+            </View>
+            <Button label="Close" variant="outline" size="sm" onPress={() => setReviewId(null)} />
+            <Button
+              label={reviewReq?.status === 'Quotation review' ? 'Approve selected quotation' : 'Request approved'}
+              icon="CheckCircle2"
+              variant="emerald"
+              size="sm"
+              disabled={!selectedQuote || reviewReq?.status !== 'Quotation review'}
+              onPress={approveSelected}
+            />
+          </View>
+        }
       >
-        {compareReq ? (
+        {reviewReq ? (
           <>
+            <View style={styles.statGrid}>
+              <SpecTile label="Budget ceiling" value={formatRupees(reviewReq.budgetCeiling)} />
+              <SpecTile label="Quantity" value={reviewReq.quantity} />
+              <SpecTile label="Department" value={reviewReq.department} />
+              <SpecTile label="Status" value={STATUS_LABELS[reviewReq.status]} />
+            </View>
+            <View style={[styles.specBox, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+              <Text style={[styles.specBoxLabel, { color: theme.colors.textSubtle }]}>Procurement specification</Text>
+              <Text style={[styles.specBoxText, { color: theme.colors.textMuted }]}>{reviewReq.specification}</Text>
+            </View>
+            <View style={styles.compareHead}>
+              <View style={[styles.compareIcon, { backgroundColor: theme.colors.infoSoft }]}>
+                <Icon name="Scale" size={17} color={theme.colors.infoText} />
+              </View>
+              <View style={styles.compareHeadText}>
+                <Text style={[styles.compareTitle, { color: theme.colors.text }]}>Compare three quotations</Text>
+                <Text style={[styles.compareSub, { color: theme.colors.textSubtle }]}>Select the best-value compliant quotation before approval.</Text>
+              </View>
+            </View>
             <View style={[styles.quoteRow, !isMd && { flexDirection: 'column' }]}>
-              {QUOTE_VENDORS.map((vendor, index) => (
-                <QuoteCard
-                  key={vendor}
-                  vendor={vendor}
-                  amount={Math.round(compareReq.estimatedCost * QUOTE_FACTORS[index])}
-                  leadTime={QUOTE_LEAD[index]}
-                  rating={QUOTE_RATINGS[index]}
-                  lowest={index === 0}
-                />
-              ))}
+              {reviewReq.quotes.map((quote) => {
+                const lowest = Math.min(...reviewReq.quotes.map((q) => q.amount));
+                return (
+                  <ReviewQuoteCard
+                    key={quote.id}
+                    quote={quote}
+                    ceiling={reviewReq.budgetCeiling}
+                    selected={quote.id === reviewReq.selectedQuoteId}
+                    lowest={quote.amount === lowest}
+                    canSelect={reviewReq.status === 'Quotation review'}
+                    onView={() => setPreview({ req: reviewReq, quote })}
+                    onSelect={() => selectQuote(quote)}
+                  />
+                );
+              })}
             </View>
             <Text style={[styles.auditTitle, { color: theme.colors.text }]}>Audit trail</Text>
             <Timeline
-              items={[
-                { key: '1', title: 'Requisition raised', actor: compareReq.requestedBy, detail: `${compareReq.quantity} units · ${formatRupees(compareReq.estimatedCost)} estimated`, time: formatDate(compareReq.date) },
-                { key: '2', title: 'RFQ released to empaneled vendors', actor: 'Procurement Cell', detail: 'Three quotations invited from the vendor master directory' },
-                { key: '3', title: 'Quotations received', actor: compareReq.vendor, detail: 'Comparative statement pending finance sign-off' },
-              ]}
+              items={reviewReq.audit.map((entry, index) => ({
+                key: `${entry.action}-${index}`,
+                title: entry.action,
+                actor: entry.actor,
+                detail: entry.detail,
+                time: entry.date,
+              }))}
               accent={theme.colors.financeAccent}
             />
           </>
         ) : null}
       </ModalSheet>
+
+      <ModalSheet
+        visible={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        label="Uploaded vendor quotation"
+        title={preview?.quote.vendor ?? ''}
+        description={preview ? `${preview.quote.id} · ${preview.quote.file}` : undefined}
+        size="md"
+        footer={<Button label="Close quotation" variant="primary" onPress={() => setPreview(null)} />}
+      >
+        {preview ? <QuoteDocument req={preview.req} quote={preview.quote} /> : null}
+      </ModalSheet>
+
+      <ModalSheet
+        visible={Boolean(slipReq)}
+        onClose={() => setSlipId(null)}
+        label="Post-approval payment evidence"
+        title="Upload payment slip"
+        description={slipReq ? `${slipReq.id} · ${slipReq.item}` : undefined}
+        size="sm"
+        footer={
+          <View style={styles.slipFooter}>
+            <Button label="Close" variant="outline" size="sm" onPress={() => setSlipId(null)} />
+            <Button label="Attach & mark complete" icon="CheckCircle2" variant="emerald" size="sm" onPress={attachSlip} />
+          </View>
+        }
+      >
+        {slipReq ? (
+          <>
+            <View style={[styles.dropzone, { borderColor: theme.colors.brandRing, backgroundColor: theme.colors.brandSoft }]}>
+              <View style={[styles.dropIcon, { backgroundColor: theme.colors.infoSoft }]}>
+                <Icon name="Upload" size={16} color={theme.colors.infoText} />
+              </View>
+              <View style={styles.dropText}>
+                <Text numberOfLines={1} style={[styles.dropTitle, { color: theme.colors.text }]}>
+                  {slipReq.paymentSlip ?? 'Upload payment slip'}
+                </Text>
+                <Text style={[styles.dropSub, { color: theme.colors.textSubtle }]}>PDF, JPG or PNG · Maximum 10 MB</Text>
+              </View>
+            </View>
+            <Text style={[styles.notice, { color: theme.colors.textMuted }]}>
+              Demo build — attaching simulates the upload, records the audit entry and marks the request Complete.
+            </Text>
+          </>
+        ) : null}
+      </ModalSheet>
+    </View>
+  );
+};
+
+const SpecTile: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.statTile, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+      <Text style={[styles.statLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.statValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+};
+
+/** Static quotation document preview (web ProcurementQuotePreview, simplified paper). */
+const QuoteDocument: React.FC<{ req: Requisition; quote: Requisition['quotes'][number] }> = ({ req, quote }) => {
+  const { theme } = useTheme();
+  const subtotal = quote.amount / 1.18;
+  return (
+    <View style={[styles.paper, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
+      <View style={[styles.paperHead, { borderBottomColor: theme.colors.border }]}>
+        <View style={styles.paperHeadLeft}>
+          <Text style={[styles.paperVendor, { color: theme.colors.text }]}>{quote.vendor}</Text>
+          <Text style={[styles.paperSub, { color: theme.colors.textSubtle }]}>GST-registered procurement vendor</Text>
+        </View>
+        <StatusChip status="QUOTATION" tone="info" dot={false} />
+      </View>
+      <View style={styles.paperGrid}>
+        <PaperField label="Quotation number" value={quote.id} />
+        <PaperField label="Quotation date" value={formatDate(req.date)} />
+        <PaperField label="Issued to" value="Pantiss Foundation" />
+        <PaperField label="Project" value={req.project} />
+      </View>
+      <View style={[styles.paperLine, { borderColor: theme.colors.border }]}>
+        <View style={[styles.paperLineHead, { backgroundColor: theme.colors.surfaceSoft }]}>
+          <Text style={[styles.paperColLabel, { color: theme.colors.textSubtle }]}>Description</Text>
+          <Text style={[styles.paperColLabel, { color: theme.colors.textSubtle }]}>Amount</Text>
+        </View>
+        <View style={styles.paperLineBody}>
+          <View style={styles.paperLineDesc}>
+            <Text style={[styles.paperLineTitle, { color: theme.colors.text }]}>{req.item}</Text>
+            <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>{req.specification}</Text>
+            <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>Quantity: {req.quantity}</Text>
+          </View>
+          <Text style={[styles.paperLineAmount, { color: theme.colors.text }]}>{formatRupees(quote.amount)}</Text>
+        </View>
+      </View>
+      <View style={styles.totals}>
+        <View style={styles.totalsRow}>
+          <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>Subtotal</Text>
+          <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>{formatRupees(subtotal)}</Text>
+        </View>
+        <View style={styles.totalsRow}>
+          <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>GST {quote.gstIncluded ? '(included)' : '(extra)'}</Text>
+          <Text style={[styles.paperSub, { color: theme.colors.textMuted }]}>
+            {quote.gstIncluded ? formatRupees(quote.amount - subtotal) : 'As applicable'}
+          </Text>
+        </View>
+        <View style={[styles.totalsRow, styles.totalsFinal, { borderTopColor: theme.colors.border }]}>
+          <Text style={[styles.totalLabel, { color: theme.colors.text }]}>Total</Text>
+          <Text style={[styles.totalLabel, { color: theme.colors.text }]}>{formatRupees(quote.amount)}</Text>
+        </View>
+      </View>
+      <View style={styles.paperTiles}>
+        <PaperField label="Delivery" value={`${quote.deliveryDays} days`} />
+        <PaperField label="Warranty" value={quote.warranty} />
+        <PaperField label="Technical score" value={`${quote.technicalScore}/100`} />
+      </View>
+      <View style={[styles.paperFoot, { borderTopColor: theme.colors.border }]}>
+        <Text style={[styles.paperSub, { color: theme.colors.textSubtle }]}>Authorized vendor signature</Text>
+        <Text style={[styles.paperSub, { color: theme.colors.textSubtle }]}>Valid for 30 days</Text>
+      </View>
+      <View style={[styles.paperFoot, { borderTopColor: theme.colors.border }]}>
+        <Text numberOfLines={1} style={[styles.paperSub, { color: theme.colors.textSubtle }]}>{quote.file}</Text>
+        <Text style={[styles.paperSub, { color: theme.colors.textSubtle }]}>Uploaded through Pantiss ERP</Text>
+      </View>
+    </View>
+  );
+};
+
+const PaperField: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.paperField}>
+      <Text style={[styles.paperFieldLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text numberOfLines={2} style={[styles.paperFieldValue, { color: theme.colors.text }]}>{value}</Text>
     </View>
   );
 };
@@ -346,16 +577,6 @@ const GlassChip: React.FC<{ value: string }> = ({ value }) => (
   </View>
 );
 
-const Detail: React.FC<{ label: string; value: string; accent?: string }> = ({ label, value, accent }) => {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.detailCol}>
-      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
-      <Text style={[styles.detailValue, { color: accent ?? theme.colors.text }]}>{value}</Text>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
   container: { gap: 16 },
   glassChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
@@ -365,24 +586,75 @@ const styles = StyleSheet.create({
   breadcrumb: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   crumb: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, maxWidth: 220 },
   crumbText: { fontSize: 11.5, fontWeight: '600' },
+  stepHint: { fontSize: 11.5, fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
   list: { gap: 12 },
-  requestCard: { gap: 12 },
-  requestTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
-  requestBody: { flex: 1, minWidth: 0 },
-  requestItem: { fontSize: 14.5, fontWeight: '700', lineHeight: 19 },
-  requestSub: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  requestMeta: { fontSize: 11, marginTop: 2 },
-  requestDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  detailCol: { minWidth: 110 },
-  detailLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, marginBottom: 3 },
-  detailValue: { fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  actionRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128, 144, 168, 0.16)', paddingTop: 12 },
+  requestCard: { gap: 0, overflow: 'hidden', borderRadius: 16 },
+  requestTop: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
+  requestBody: { flex: 1, minWidth: 0, gap: 3 },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  requestItem: { fontSize: 13.5, fontWeight: '700', lineHeight: 18, flexShrink: 1 },
+  requestSub: { fontSize: 11, fontWeight: '600' },
+  poLine: { fontSize: 11, fontWeight: '700' },
+  requestRight: { alignItems: 'flex-end', gap: 2 },
+  amountValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  amountCaption: { fontSize: 9.5 },
+  chevronUp: { transform: [{ rotate: '180deg' }] },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128, 144, 168, 0.16)', padding: 14, paddingTop: 12 },
+  historyHead: { gap: 4 },
+  historyTitle: { fontSize: 16, fontWeight: '700' },
+  historyDesc: { fontSize: 12, lineHeight: 17 },
   historyFilters: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   historySearch: { flexGrow: 1, flexBasis: 220 },
   historySelect: { flexGrow: 1, flexBasis: 170 },
+  historyCount: { fontSize: 11.5, fontWeight: '600' },
   emptyText: { fontSize: 13, paddingVertical: 18, textAlign: 'center' },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  statTile: { flexGrow: 1, flexBasis: '45%', minWidth: 130, borderRadius: 12, borderWidth: 1, padding: 12, gap: 4 },
+  statLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  statValue: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  specBox: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 6 },
+  specBoxLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  specBoxText: { fontSize: 12, lineHeight: 17 },
+  compareHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
+  compareIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  compareHeadText: { flex: 1, minWidth: 0 },
+  compareTitle: { fontSize: 14, fontWeight: '700' },
+  compareSub: { fontSize: 10.5, marginTop: 1 },
   quoteRow: { flexDirection: 'row', gap: 10 },
   auditTitle: { fontSize: 14, fontWeight: '700', marginTop: 4 },
+  reviewFooter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reviewFooterLeft: { flex: 1, minWidth: 0 },
+  footerCaption: { fontSize: 9.5 },
+  footerValue: { fontSize: 12, fontWeight: '700', marginTop: 2 },
+  slipFooter: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  dropzone: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', padding: 14 },
+  dropIcon: { width: 40, height: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  dropText: { flex: 1, minWidth: 0, gap: 2 },
+  dropTitle: { fontSize: 12.5, fontWeight: '700' },
+  dropSub: { fontSize: 10.5 },
+  notice: { fontSize: 11.5, lineHeight: 16 },
+  paper: { borderRadius: 12, borderWidth: 1, padding: 16, gap: 14 },
+  paperHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, borderBottomWidth: 1, paddingBottom: 12 },
+  paperHeadLeft: { flex: 1, minWidth: 0 },
+  paperVendor: { fontSize: 15, fontWeight: '700' },
+  paperSub: { fontSize: 10.5, marginTop: 2 },
+  paperGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  paperField: { flexBasis: '45%', flexGrow: 1, minWidth: 120, gap: 3 },
+  paperFieldLabel: { fontSize: 8.5, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  paperFieldValue: { fontSize: 12, fontWeight: '700' },
+  paperLine: { borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
+  paperLineHead: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 9 },
+  paperColLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  paperLineBody: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: 'rgba(128, 144, 168, 0.16)' },
+  paperLineDesc: { flex: 1, minWidth: 0 },
+  paperLineTitle: { fontSize: 12.5, fontWeight: '700' },
+  paperLineAmount: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  totals: { alignSelf: 'stretch', marginLeft: 'auto', width: 200, gap: 6 },
+  totalsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  totalsFinal: { borderTopWidth: 1, paddingTop: 8, marginTop: 2 },
+  totalLabel: { fontSize: 14, fontWeight: '800' },
+  paperTiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  paperFoot: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, paddingTop: 10 },
 });

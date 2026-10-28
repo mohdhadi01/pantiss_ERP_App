@@ -7,7 +7,6 @@ import { HRStore } from '../store';
 import { projects, projectCenters } from '../seed';
 import { areaName, assignEmployee } from '../helpers';
 import { formatDate } from '../../../utils/formatDate';
-import { hrSectionDescriptions } from '../constants';
 import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
 import { Card, SectionCard } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -34,6 +33,7 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
   const [projectId, setProjectId] = useState('');
   const [centerId, setCenterId] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [formError, setFormError] = useState('');
   const [deepLinked, setDeepLinked] = useState(false);
 
   const openAssign = (employeeId: string) => {
@@ -45,6 +45,7 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
     setTargetId(employeeId);
     setProjectId(project?.id ?? '');
     setCenterId(existing?.centerId ?? '');
+    setFormError('');
     setStartDate(
       existing?.startDate ?? (new Date().toISOString().slice(0, 10) < emp.joiningDate ? emp.joiningDate : new Date().toISOString().slice(0, 10)),
     );
@@ -59,10 +60,15 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
   }, [params.employee, deepLinked]);
 
   const handleSave = async () => {
-    if (!targetId) return;
+    if (!targetId || !target) return;
+    if (!startDate || startDate < target.joiningDate) {
+      setFormError('Assignment date must be on or after the joining date.');
+      return;
+    }
+    setFormError('');
     const ok = await commit(
       (prev) => assignEmployee(prev, { employeeId: targetId, projectId, centerId, startDate }),
-      'Project and centre assigned successfully.',
+      'Project assignment saved.',
     );
     if (ok) setTargetId(null);
   };
@@ -95,7 +101,8 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
             Deploy employees within their thematic area.
           </Text>
           <Text style={[styles.bannerSub, { color: theme.colors.textMuted }]}>
-            {hrSectionDescriptions['project-assignment']}
+            Each employee has one primary project and centre assignment. Project choices follow their
+            onboarding area.
           </Text>
         </View>
       </Card>
@@ -135,13 +142,13 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
               case 'project':
                 return (
                   <Text style={[styles.cellText, { color: project ? theme.colors.text : theme.colors.textSubtle }]}>
-                    {project ? `${project.name} (${project.id})` : '—'}
+                    {project?.name ?? '—'}
                   </Text>
                 );
               case 'centre':
                 return (
                   <Text style={[styles.cellText, { color: center ? theme.colors.textMuted : theme.colors.warningText }]}>
-                    {center?.name ?? 'Unassigned'}
+                    {center?.name ?? '—'}
                   </Text>
                 );
               case 'from':
@@ -225,8 +232,8 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
             }}
             options={projects
               .filter((p) => p.areaId === target.areaId)
-              .map((p) => ({ value: p.id, label: `${p.name} (${p.id})` }))}
-            placeholder="Select a project in this thematic area"
+              .map((p) => ({ value: p.id, label: p.name }))}
+            placeholder="Select a project"
           />
           <SelectField
             label="Centre / worksite"
@@ -234,12 +241,15 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store }) => {
             onChange={setCenterId}
             options={centers.map((c) => ({ value: c.id, label: c.name }))}
             disabled={!projectId}
-            placeholder={projectId ? 'Select centre' : 'Choose a project first'}
+            placeholder="Select a centre"
           />
           <TextField label="Effective from" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
           <Text style={[styles.hint, { color: theme.colors.textSubtle }]}>
             The assignment date must be on or after the joining date.
           </Text>
+          {formError || store.error ? (
+            <Text style={[styles.errorText, { color: theme.colors.dangerText }]}>{formError || store.error}</Text>
+          ) : null}
         </ModalSheet>
       ) : null}
     </View>
@@ -310,5 +320,10 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 11,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
   },
 });

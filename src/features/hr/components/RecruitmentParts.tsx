@@ -10,13 +10,12 @@ import {
   Candidate,
   Interview,
   OfferLetter,
-  CandidateStage,
   InterviewRound,
   InterviewMode,
 } from '../types';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { financeAreas } from '../../finance/data';
-import { formatDate } from '../../../utils/formatDate';
+import { formatDate, formatDateTime } from '../../../utils/formatDate';
 import { areaName } from '../helpers';
 import { Avatar } from '../../../components/ui/Avatar';
 import { Badge } from '../../../components/ui/Badge';
@@ -26,7 +25,6 @@ import { Icon } from '../../../components/ui/Icon';
 import { TextField } from '../../../components/ui/TextField';
 import { SelectField, SelectOption } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
-import { Timeline } from '../../../components/ui/Timeline';
 
 /** Amber star-rating color (web data-identity). */
 const STAR_FILLED = '#f59e0b';
@@ -54,20 +52,18 @@ const ROUND_OPTIONS: SelectOption[] = [
 
 const DURATION_OPTIONS: SelectOption[] = [30, 45, 60, 90].map((n) => ({
   value: String(n),
-  label: `${n} Minutes`,
+  label: n === 60 ? '60 Minutes (1 Hour)' : `${n} Minutes`,
 }));
 
 const MODE_OPTIONS: SelectOption[] = (
   ['Google Meet', 'In-Person (HQ)', 'Phone Screen', 'Microsoft Teams'] as InterviewMode[]
 ).map((mode) => ({ value: mode, label: mode }));
 
-const RATING_OPTIONS: SelectOption[] = [
-  { value: '5', label: '5 / 5 · Outstanding' },
-  { value: '4', label: '4 / 5 · Strong' },
-  { value: '3', label: '3 / 5 · Meets expectations' },
-  { value: '2', label: '2 / 5 · Needs improvement' },
-  { value: '1', label: '1 / 5 · Poor' },
-];
+/** Web interview evaluation labels (web RecruitmentViews.tsx:2171-2175). */
+const RATING_OPTIONS: SelectOption[] = [1, 2, 3, 4, 5].map((n) => ({
+  value: String(n),
+  label: `${n} / 5 ${n === 5 ? '· Outstanding' : n === 4 ? '· Strong Fit' : n === 3 ? '· Acceptable' : '· Substandard'}`,
+}));
 
 const RECOMMENDATION_OPTIONS: SelectOption[] = [
   { value: 'Select for Offer', label: 'Select for Offer (Move to Selected)' },
@@ -84,20 +80,25 @@ export function daysLeft(closingDate: string): number {
   return Math.ceil((new Date(`${closingDate}T23:59:59`).getTime() - Date.now()) / 86_400_000);
 }
 
+/** Web urgencyLabel (web RecruitmentViews.tsx:70-75). */
+export function urgencyLabel(days: number): { label: string; tone: 'ok' | 'warn' | 'danger' } {
+  if (days < 0) return { label: 'Closed', tone: 'danger' };
+  if (days <= 5) return { label: `${days}d left`, tone: 'danger' };
+  if (days <= 14) return { label: `${days}d left`, tone: 'warn' };
+  return { label: `${days}d left`, tone: 'ok' };
+}
+
 export function pipelineCounts(candidates: Candidate[]) {
-  const activeStages: CandidateStage[] = [
-    'Interview Scheduled',
-    'Technical Round',
-    'HR Round',
-    'Selected',
-    'Offer Released',
-    'Offer Accepted',
-  ];
   return {
-    applied: candidates.filter((c) => c.stage === 'Applied' || c.stage === 'Screening').length,
-    active: candidates.filter((c) => activeStages.includes(c.stage)).length,
+    applied: candidates.length,
+    active: candidates.filter((c) => c.stage !== 'Applied' && c.stage !== 'Rejected').length,
     onboarded: candidates.filter((c) => c.stage === 'Onboarded').length,
   };
+}
+
+/** "{n} vacanc{ies|y}" (web JobCard meta, web RecruitmentViews.tsx:316). */
+export function vacanciesLabel(n: number): string {
+  return `${n} vacanc${n > 1 ? 'ies' : 'y'}`;
 }
 
 export const Stars: React.FC<{ rating?: number; size?: number }> = ({ rating = 0, size = 12 }) => {
@@ -167,7 +168,7 @@ export const JobCard: React.FC<{
       <View style={styles.metaCol}>
         <MetaRow icon="Building2" text={job.location} />
         <MetaRow icon="Clock" text={job.experience} />
-        <MetaRow icon="Users" text={`${job.openings} vacancies`} />
+        <MetaRow icon="Users" text={vacanciesLabel(job.openings)} />
       </View>
       <Text style={[styles.pipelineLine, { color: theme.colors.textSubtle }]}>
         {counts.applied} applied › {counts.active} active › {counts.onboarded} onboarded
@@ -238,6 +239,11 @@ export const ApplicantRow: React.FC<{
             {candidate.experienceYears} yrs exp · Exp. {formatRupees(candidate.expectedSalary)}/yr
             {candidate.currentCompany ? ` · ${candidate.currentCompany}` : ''}
           </Text>
+          {candidate.resumeSummary ? (
+            <Text numberOfLines={2} style={[styles.resumeBlurb, { color: theme.colors.textMuted }]}>
+              &ldquo;{candidate.resumeSummary}&rdquo;
+            </Text>
+          ) : null}
         </View>
         <View style={styles.applicantSide}>
           <StatusChip status={candidate.stage} />
@@ -360,7 +366,7 @@ export const PostingModal: React.FC<{
       visible={visible}
       onClose={onClose}
       label="Recruitment"
-      title={initial ? 'Edit Job Requisition' : 'Create Job Requisition'}
+      title={initial ? `Edit Requisition · ${initial.title}` : 'Create Job Requisition'}
       size="lg"
       footer={
         <>
@@ -414,13 +420,19 @@ export const PostingModal: React.FC<{
         </View>
         <Text style={[styles.monthBandHint, { color: theme.colors.textMuted }]}>Monthly = Annual ÷ 12</Text>
       </View>
-      <TextField label="Job Description" value={description} onChangeText={setDescription} multiline placeholder="Role purpose, scope and reporting line…" />
+      <TextField
+        label="Job Description & Core Purpose"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        placeholder="Detailed responsibilities, team leadership, field expectations..."
+      />
       <TextField
         label="Key Requirements (One requirement per line)"
         value={requirements}
         onChangeText={setRequirements}
         multiline
-        placeholder="Postgraduate degree in relevant field…"
+        placeholder={'Diploma / B.Tech degree required\nTOT certification preferred\nProficiency in Odia & English...'}
       />
     </ModalSheet>
   );
@@ -445,8 +457,10 @@ export const ApplicantModal: React.FC<{
   onClose: () => void;
   jobs: JobPosting[];
   defaultJobId?: string;
+  error?: string;
   onSave: (candidate: Candidate) => void;
-}> = ({ visible, onClose, jobs, defaultJobId, onSave }) => {
+}> = ({ visible, onClose, jobs, defaultJobId, error, onSave }) => {
+  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -485,95 +499,39 @@ export const ApplicantModal: React.FC<{
       footer={
         <>
           <Button label="Cancel" variant="outline" onPress={onClose} />
-          <Button label="Save Applicant" variant="primary" icon="Check" onPress={save} />
+          <Button label="Register Candidate" variant="primary" icon="Check" onPress={save} />
         </>
       }
     >
       <FieldRow>
-        <TextField label="Full Name" value={name} onChangeText={setName} placeholder="Candidate full name" />
-        <TextField label="Email" value={email} onChangeText={setEmail} placeholder="name@example.com" autoCapitalize="none" />
+        <TextField label="Candidate Full Name" value={name} onChangeText={setName} placeholder="e.g. Ananya Das" />
+        <TextField label="Email Address" value={email} onChangeText={setEmail} placeholder="candidate@example.org" autoCapitalize="none" />
       </FieldRow>
       <FieldRow>
-        <TextField label="Phone" value={phone} onChangeText={setPhone} placeholder="+91 …" keyboardType="phone-pad" />
+        <TextField label="Phone Number" value={phone} onChangeText={setPhone} placeholder="+91 98000 00000" keyboardType="phone-pad" />
         <SelectField
           label="Target Job Requisition"
           value={jobId}
           onChange={setJobId}
-          options={jobs.map((job) => ({ value: job.id, label: job.title }))}
+          options={jobs.map((job) => ({ value: job.id, label: `${job.title} (${areaName(job.areaId)})` }))}
         />
       </FieldRow>
       <FieldRow>
-        <TextField label="Total Experience (years)" value={experience} onChangeText={setExperience} keyboardType="numeric" placeholder="e.g. 4" />
+        <TextField label="Total Experience (Years)" value={experience} onChangeText={setExperience} keyboardType="numeric" placeholder="e.g. 4" />
         <SelectField label="Notice Period" value={notice} onChange={setNotice} options={NOTICE_OPTIONS} />
       </FieldRow>
       <FieldRow>
-        <TextField label="Current Company" value={company} onChangeText={setCompany} placeholder="e.g. Pradan Foundation" />
+        <TextField label="Current Company / Employer" value={company} onChangeText={setCompany} placeholder="Optional" />
         <TextField label="Expected Annual CTC" value={expected} onChangeText={setExpected} keyboardType="numeric" suffix="₹" />
       </FieldRow>
-      <TextField label="Profile Summary" value={summary} onChangeText={setSummary} multiline placeholder="Qualifications, field exposure and key strengths…" />
-    </ModalSheet>
-  );
-};
-
-/* ------------------------------ Candidate profile ----------------------------- */
-
-export const ProfileModal: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  candidate: Candidate;
-  interviews: Interview[];
-  onStageChange: (stage: CandidateStage) => void;
-}> = ({ visible, onClose, candidate, interviews, onStageChange }) => {
-  const { theme } = useTheme();
-  return (
-    <ModalSheet visible={visible} onClose={onClose} label="Candidate profile" title={candidate.name} size="md">
-      <View style={styles.profileTop}>
-        <Avatar name={candidate.name} size={46} />
-        <View style={styles.profileHeadText}>
-          <Text style={[styles.applicantSub, { color: theme.colors.textMuted }]}>
-            {candidate.email} · {candidate.phone}
-          </Text>
-          <Stars rating={candidate.rating} size={14} />
-        </View>
-      </View>
-      <SelectField
-        label="Pipeline stage"
-        value={candidate.stage}
-        onChange={(v) => onStageChange(v as CandidateStage)}
-        options={STAGE_OPTIONS}
+      <TextField
+        label="Profile & Experience Summary"
+        value={summary}
+        onChangeText={setSummary}
+        multiline
+        placeholder="Key qualifications, degree, past projects, skill highlights..."
       />
-      <View style={styles.bandGrid}>
-        <View style={[styles.bandCell, styles.compCard, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
-          <Text style={[styles.bandLabel, { color: theme.colors.textSubtle }]}>Expected CTC</Text>
-          <Text style={[styles.bandValue, { color: theme.colors.text }]}>{formatRupees(candidate.expectedSalary)}/yr</Text>
-        </View>
-        <View style={[styles.bandCell, styles.compCard, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
-          <Text style={[styles.bandLabel, { color: theme.colors.textSubtle }]}>Current CTC</Text>
-          <Text style={[styles.bandValue, { color: theme.colors.text }]}>
-            {candidate.currentSalary ? `${formatRupees(candidate.currentSalary)}/yr` : '—'}
-          </Text>
-        </View>
-      </View>
-      {candidate.resumeSummary ? (
-        <Text style={[styles.notesText, { color: theme.colors.textMuted }]}>&ldquo;{candidate.resumeSummary}&rdquo;</Text>
-      ) : null}
-      <View>
-        <Text style={[styles.sectionMiniTitle, { color: theme.colors.text }]}>Interview Rounds</Text>
-        {interviews.length ? (
-          <Timeline
-            items={interviews.map((interview) => ({
-              key: interview.id,
-              title: interview.round,
-              actor: interview.interviewer,
-              detail: interview.feedback ?? `${interview.mode} · ${interview.durationMinutes} min`,
-              time: formatDate(interview.scheduledAt),
-              color: interview.status === 'Completed' ? theme.colors.success : theme.colors.brandPrimary,
-            }))}
-          />
-        ) : (
-          <Text style={[styles.emptyMini, { color: theme.colors.textSubtle }]}>No interview rounds scheduled yet.</Text>
-        )}
-      </View>
+      {error ? <Text style={[styles.modalError, { color: theme.colors.dangerText }]}>{error}</Text> : null}
     </ModalSheet>
   );
 };
@@ -586,12 +544,20 @@ export const ScheduleModal: React.FC<{
   candidate: Candidate;
   onSave: (interview: Interview) => void;
 }> = ({ visible, onClose, candidate, onSave }) => {
-  const [round, setRound] = useState<string>('Initial Screening');
-  const [when, setWhen] = useState('');
+  const { theme } = useTheme();
+  const defaultSlot = () => {
+    const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    d.setHours(11, 0, 0, 0);
+    // Local "YYYY-MM-DDTHH:MM" like the web datetime-local default (+2 days, 11:00).
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const [round, setRound] = useState<string>('Technical Assessment');
+  const [when, setWhen] = useState(defaultSlot);
   const [duration, setDuration] = useState('45');
-  const [interviewer, setInterviewer] = useState('');
+  const [interviewer, setInterviewer] = useState('Dr. Alok Verma (Lead Technical Panel)');
   const [mode, setMode] = useState<string>('Google Meet');
-  const [meetLink, setMeetLink] = useState('');
+  const [meetLink, setMeetLink] = useState('https://meet.google.com/pan-interview-room');
 
   const save = () => {
     onSave({
@@ -618,19 +584,24 @@ export const ScheduleModal: React.FC<{
       footer={
         <>
           <Button label="Cancel" variant="outline" onPress={onClose} />
-          <Button label="Schedule Interview" variant="primary" icon="CalendarClock" onPress={save} />
+          <Button label="Confirm & Schedule Round" variant="primary" icon="CalendarClock" onPress={save} />
         </>
       }
     >
-      <SelectField label="Round" value={round} onChange={setRound} options={ROUND_OPTIONS} />
-      <TextField label="Date & Time" value={when} onChangeText={setWhen} placeholder="YYYY-MM-DDTHH:MM" autoCapitalize="none" />
+      <SelectField label="Interview Round" value={round} onChange={setRound} options={ROUND_OPTIONS} />
+      <TextField label="Interview Date & Time" value={when} onChangeText={setWhen} placeholder="YYYY-MM-DDTHH:MM" autoCapitalize="none" />
       <FieldRow>
-        <SelectField label="Duration" value={duration} onChange={setDuration} options={DURATION_OPTIONS} />
-        <TextField label="Interviewer / Panel Name" value={interviewer} onChangeText={setInterviewer} placeholder="e.g. Dr. Minati Biswal" />
+        <SelectField label="Duration (Minutes)" value={duration} onChange={setDuration} options={DURATION_OPTIONS} />
+        <TextField
+          label="Interviewer / Panel Name"
+          value={interviewer}
+          onChangeText={setInterviewer}
+          placeholder="e.g. Ramesh Chandra Das (Programme Director)"
+        />
       </FieldRow>
-      <SelectField label="Mode" value={mode} onChange={setMode} options={MODE_OPTIONS} />
+      <SelectField label="Interview Mode" value={mode} onChange={setMode} options={MODE_OPTIONS} />
       {mode === 'Google Meet' || mode === 'Microsoft Teams' ? (
-        <TextField label="Meeting URL" value={meetLink} onChangeText={setMeetLink} placeholder="https://meet.google.com/…" autoCapitalize="none" />
+        <TextField label="Meeting URL" value={meetLink} onChangeText={setMeetLink} placeholder="https://meet.google.com/..." autoCapitalize="none" />
       ) : null}
     </ModalSheet>
   );
@@ -642,139 +613,55 @@ export const FeedbackModal: React.FC<{
   visible: boolean;
   onClose: () => void;
   interview: Interview;
+  candidateName?: string;
   onSubmit: (feedback: string, rating: number, recommendation: NonNullable<Interview['recommendation']>) => void;
-}> = ({ visible, onClose, interview, onSubmit }) => {
+}> = ({ visible, onClose, interview, candidateName, onSubmit }) => {
+  const { theme } = useTheme();
+  const isCompleted = interview.status === 'Completed';
   const [rating, setRating] = useState(String(interview.rating ?? 4));
-  const [recommendation, setRecommendation] = useState<string>(interview.recommendation ?? 'Advance to Next Round');
+  const [recommendation, setRecommendation] = useState<string>(interview.recommendation ?? 'Select for Offer');
   const [feedback, setFeedback] = useState(interview.feedback ?? '');
 
   return (
     <ModalSheet
       visible={visible}
       onClose={onClose}
-      label={`${interview.round} · ${interview.status}`}
-      title="Interview Evaluation"
+      label={candidateName ?? interview.round}
+      title={`Interview Evaluation · ${interview.round}`}
       size="md"
       footer={
-        <Button
-          label="Submit Evaluation"
-          variant="primary"
-          icon="Check"
-          onPress={() => onSubmit(feedback, Number(rating) || 0, recommendation as NonNullable<Interview['recommendation']>)}
-        />
+        isCompleted ? (
+          <Button label="Close" variant="outline" onPress={onClose} />
+        ) : (
+          <Button
+            label="Save Evaluation & Update Candidate Stage"
+            variant="primary"
+            icon="Check"
+            onPress={() => onSubmit(feedback, Number(rating) || 0, recommendation as NonNullable<Interview['recommendation']>)}
+          />
+        )
       }
     >
+      <View style={[styles.evalHead, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+        <Text style={[styles.evalHeadName, { color: theme.colors.text }]}>
+          {candidateName ?? 'Candidate'} · {interview.round}
+        </Text>
+        <Text style={[styles.evalHeadNote, { color: theme.colors.textMuted }]}>
+          Interviewer: {interview.interviewer} · Scheduled: {formatDateTime(interview.scheduledAt)}
+        </Text>
+      </View>
       <FieldRow>
-        <SelectField label="Rating" value={rating} onChange={setRating} options={RATING_OPTIONS} />
-        <SelectField label="Recommendation Decision" value={recommendation} onChange={setRecommendation} options={RECOMMENDATION_OPTIONS} />
+        <SelectField label="Evaluation Rating (1–5 Stars)" value={rating} onChange={setRating} options={RATING_OPTIONS} disabled={isCompleted} />
+        <SelectField label="Recommendation Decision" value={recommendation} onChange={setRecommendation} options={RECOMMENDATION_OPTIONS} disabled={isCompleted} />
       </FieldRow>
       <TextField
         label="Panel Observations & Technical Feedback"
         value={feedback}
         onChangeText={setFeedback}
         multiline
-        placeholder="Domain depth, field readiness, communication and culture fit…"
+        editable={!isCompleted}
+        placeholder="Record strengths, technical knowledge, safety compliance, communication skills..."
       />
-    </ModalSheet>
-  );
-};
-
-/* ------------------------------- Release offer ------------------------------- */
-
-export const ReleaseOfferModal: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  candidate: Candidate;
-  job?: JobPosting;
-  onRelease: (annualSalary: number, joiningDate: string) => void;
-}> = ({ visible, onClose, candidate, job, onRelease }) => {
-  const [salary, setSalary] = useState(String(candidate.expectedSalary || ''));
-  const [joiningDate, setJoiningDate] = useState('');
-
-  return (
-    <ModalSheet
-      visible={visible}
-      onClose={onClose}
-      label="Offer release"
-      title={`Release Offer Letter · ${candidate.name}`}
-      description={job ? `${job.title} · ${areaName(job.areaId)}` : undefined}
-      size="sm"
-      footer={
-        <Button
-          label="Release Offer Letter"
-          variant="primary"
-          icon="Sparkles"
-          onPress={() => onRelease(Number(salary) || 0, joiningDate)}
-        />
-      }
-    >
-      <TextField label="Annual CTC" value={salary} onChangeText={setSalary} keyboardType="numeric" suffix="₹" />
-      <TextField label="Joining Date" value={joiningDate} onChangeText={setJoiningDate} placeholder="YYYY-MM-DD" />
-      <Text style={styles.monthBandHint}>
-        Monthly = Annual ÷ 12. The letter is valid for 21 days before the joining date.
-      </Text>
-    </ModalSheet>
-  );
-};
-
-/* ------------------------------- Offer letter view ---------------------------- */
-
-export const OfferLetterModal: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  offer: OfferLetter;
-}> = ({ visible, onClose, offer }) => {
-  const { theme } = useTheme();
-  const refDate = new Date(offer.releasedAt).toISOString().slice(0, 10);
-  const compensation = [
-    { label: 'Basic Salary & HRA', value: formatRupees(offer.basicHra * 12) },
-    { label: 'Special Field Allowances', value: formatRupees(offer.allowance * 12) },
-  ];
-  return (
-    <ModalSheet visible={visible} onClose={onClose} label="Offer letter" title={`OFR · ${offer.candidateName}`} size="md">
-      <View style={[styles.letterHead, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.letterOrg, { color: theme.colors.brandPrimary }]}>PANTISS FOUNDATION</Text>
-        <Text style={[styles.letterSub, { color: theme.colors.textMuted }]}>
-          Centre for Skill &amp; Rural Transformation
-        </Text>
-      </View>
-      <View style={styles.letterMeta}>
-        <MetaRow icon="FileText" text={`Ref No: ${offer.id}`} />
-        <MetaRow icon="Calendar" text={`Date: ${refDate}`} />
-        <MetaRow icon="Clock" text={`Validity: ${formatDate(offer.expiryDate)}`} />
-      </View>
-      <Text style={[styles.letterSubject, { color: theme.colors.text }]}>
-        SUBJECT: LETTER OF EMPLOYMENT OFFER AND APPOINTMENT
-      </Text>
-      <Text style={[styles.letterBody, { color: theme.colors.textMuted }]}>
-        Dear {offer.candidateName}, we are pleased to offer you the position of {offer.designationTitle} at
-        Pantiss Foundation, joining on {formatDate(offer.joiningDate)}. Your compensation is structured as
-        follows:
-      </Text>
-      <View style={[styles.compTable, { borderColor: theme.colors.border }]}>
-        {compensation.map((row) => (
-          <View key={row.label} style={[styles.compRow, { borderBottomColor: theme.colors.border }]}>
-            <Text style={[styles.compLabel, { color: theme.colors.textMuted }]}>{row.label}</Text>
-            <Text style={[styles.compValue, { color: theme.colors.text }]}>{row.value}</Text>
-          </View>
-        ))}
-        <View style={styles.compRow}>
-          <Text style={[styles.compLabel, { color: theme.colors.text }]}>Total CTC</Text>
-          <Text style={[styles.compValue, { color: theme.colors.brandPrimary }]}>{formatRupees(offer.annualSalary)}</Text>
-        </View>
-      </View>
-      <Text style={[styles.letterTermsTitle, { color: theme.colors.text }]}>TERMS OF APPOINTMENT</Text>
-      <Text style={[styles.letterBody, { color: theme.colors.textMuted }]}>
-        {offer.termsNotes ??
-          'Probationary period: 6 months. Workstation: as per the assigned project centre.'}{' '}
-        This offer is valid until {formatDate(offer.expiryDate)}. Acceptance confirms your availability from
-        the joining date and adherence to foundation policies.
-      </Text>
-      <View style={styles.signature}>
-        <Text style={[styles.letterBody, { color: theme.colors.textMuted }]}>For Pantiss Foundation</Text>
-        <Text style={[styles.signatureName, { color: theme.colors.text }]}>Ritika Sen</Text>
-        <Text style={[styles.letterSub, { color: theme.colors.textSubtle }]}>HR Manager</Text>
-      </View>
     </ModalSheet>
   );
 };
@@ -938,6 +825,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   applicantSub: {
+    fontSize: 11,
+  },
+  resumeBlurb: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontStyle: 'italic',
+  },
+  modalError: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  evalHead: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 3,
+  },
+  evalHeadName: {
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  evalHeadNote: {
     fontSize: 11,
   },
   activeMark: {

@@ -2,7 +2,9 @@
 
 > **Method:** three independent line-by-line audits (Finance screens, HR screens, shell/shared surfaces) comparing every web file in `../Pantiss_ERP/src/features/{finance,hr}` + pages with its app counterpart in `src/features` + `src/app`, quoting exact label strings and file:line on both sides. Intentional mobile adaptations are logged separately so fixes never undo them.
 >
-> **Totals:** 15 × P1 (missing section/flow) · 76 × P2 (wrong label/option, inert button, wrong content) · 113 × P3 (minor copy/notes). Screen structure, navigation, data flows and the design-token system otherwise match the web.
+> **Totals at audit time:** 15 × P1 (missing section/flow) · 76 × P2 (wrong label/option, inert button, wrong content) · 113 × P3 (minor copy/notes). Screen structure, navigation, data flows and the design-token system otherwise match the web.
+>
+> **STATUS — remediation executed (see git log after `6fccbf5`):** all P1 sections/flows built (area dashboard, budget workflow, Tally panels, procurement quote flow, TA/DA & bill review depth, month-wise tracking, tranche section, recruitment offer form, attendance evidence), all inert buttons wired, all label/vocab/seed datasets aligned to the web, shell/login/404 corrected. Remaining known deviations are the agreed scope cuts (static PDF/Tally-XML/email/print parity) and the intentional mobile adaptations in §5.
 
 ---
 

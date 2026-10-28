@@ -4,11 +4,12 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { useBooksStore } from '../booksStore';
-import { booksProjects, BookEntry } from '../booksData';
+import { booksProjects, BookEntry, DEFAULT_COST_CENTRE_KEY, FY_PAYMENT_DATE_HINT, FY_START, FY_END } from '../booksData';
 import { budgetCategories, allocationShares, BudgetCategory } from '../budgetCategories';
 import { portfolioTotals, financeAreas, formatCurrency } from '../data';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
+import { exportCsv } from '../../../utils/exportCsv';
 import { MetricCard } from '../../../components/ui/MetricCard';
 import { Card, SectionCard } from '../../../components/ui/Card';
 import { StatusChip } from '../../../components/ui/StatusChip';
@@ -19,6 +20,7 @@ import { TextField } from '../../../components/ui/TextField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
+import { TallyIntegrationCard, TallySetupSheet, TallyImportSheet } from './BooksParts';
 
 const OPENING_EXPENDITURE = 4250000; // brought forward from FY 2025–26
 
@@ -42,7 +44,7 @@ const REGISTER_COLUMNS: Array<DataColumn<BookEntry>> = [
 export const BooksView: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  const { entries, addEntry } = useBooksStore();
+  const { entries, settings, addEntry, saveSettings } = useBooksStore();
   const [areaId, setAreaId] = useState('all');
   const [projectId, setProjectId] = useState('all');
   const [search, setSearch] = useState('');
@@ -51,12 +53,29 @@ export const BooksView: React.FC = () => {
   const [toDate, setToDate] = useState('');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [notice, setNotice] = useState('');
   // New voucher form
   const [payee, setPayee] = useState('');
   const [amount, setAmount] = useState('');
   const [narration, setNarration] = useState('');
   const [head, setHead] = useState<BudgetCategory>(budgetCategories[0]);
   const [voucherProject, setVoucherProject] = useState(booksProjects[0].id);
+  const [paymentDate, setPaymentDate] = useState('');
+  const [invoiceReference, setInvoiceReference] = useState('');
+  const [dateError, setDateError] = useState('');
+
+  React.useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  /** Tally cost-centre key: per project when one is selected, else the portfolio default. */
+  const costCentreKey = projectId !== 'all' ? projectId : DEFAULT_COST_CENTRE_KEY;
+  const costCentreScope =
+    projectId !== 'all' ? booksProjects.find((p) => p.id === projectId)?.name ?? 'this project' : 'the portfolio scope';
 
   const totalSpent = useMemo(() => entries.reduce((sum, e) => sum + e.amount, 0), [entries]);
 
@@ -98,13 +117,21 @@ export const BooksView: React.FC = () => {
   const handleAddVoucher = async () => {
     const numAmount = parseFloat(amount);
     if (!payee.trim() || isNaN(numAmount) || numAmount <= 0) return;
+    const trimmedDate = paymentDate.trim();
+    if (trimmedDate && (trimmedDate < FY_START || trimmedDate > FY_END)) {
+      setDateError(`Payment date must fall within ${FY_PAYMENT_DATE_HINT}`);
+      return;
+    }
+    setDateError('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     await addEntry({
       projectId: voucherProject,
       head,
-      date: new Date().toISOString().slice(0, 10),
+      date: trimmedDate || new Date().toISOString().slice(0, 10),
+      paymentDate: trimmedDate || undefined,
       payee: payee.trim(),
-      reference: `REF-${Date.now().toString(36).toUpperCase()}`,
+      reference: invoiceReference.trim() || `REF-${Date.now().toString(36).toUpperCase()}`,
+      invoiceReference: invoiceReference.trim() || undefined,
       narration: narration.trim() || 'Project expenditure voucher',
       amount: numAmount,
       source: 'manual',
@@ -112,7 +139,31 @@ export const BooksView: React.FC = () => {
     setPayee('');
     setAmount('');
     setNarration('');
+    setPaymentDate('');
+    setInvoiceReference('');
+    setDateError('');
     setModalOpen(false);
+    setNotice('Expenditure recorded in the books. Ready for Tally export.');
+  };
+
+  /** Register "Export CSV" — share sheet, AsyncStorage fallback (web downloads books CSV). */
+  const handleExportCsv = async () => {
+    const result = await exportCsv(
+      `books-${projectId === 'all' ? 'portfolio' : projectId}.csv`,
+      ['Date', 'Payment date', 'Invoice / reference', 'Payee', 'Budget head', 'Narration', 'Amount (INR)', 'Tally status'],
+      filtered.map((e) => [e.date, e.paymentDate ?? '', e.reference, e.payee, e.head, e.narration, e.amount, tallyPill(e).status]),
+    );
+    setNotice(result.message);
+  };
+
+  /** "Export N new manual entries to Tally" — static parity (no XML generation on mobile). */
+  const pendingTallyCount = entries.filter((e) => e.source === 'manual' && !e.exportedAt).length;
+  const handleExportTally = () => {
+    setNotice(
+      pendingTallyCount
+        ? `${pendingTallyCount} payment voucher(s) queued for the Tally export file. Import and verify them in Tally — export does not confirm posting.`
+        : 'No new manual entries are pending a Tally export.',
+    );
   };
 
   const renderRegisterCell = (entry: BookEntry, col: DataColumn<BookEntry>) => {
@@ -124,6 +175,9 @@ export const BooksView: React.FC = () => {
           <View>
             <Text style={[styles.cellMain, { color: theme.colors.text }]}>{formatDate(entry.date)}</Text>
             <Text style={[styles.cellSub, { color: theme.colors.brandPrimary }]}>{entry.id} · {entry.reference}</Text>
+            {entry.paymentDate ? (
+              <Text style={[styles.cellTiny, { color: theme.colors.textSubtle }]}>Paid {formatDate(entry.paymentDate)}</Text>
+            ) : null}
           </View>
         );
       case 'payee':
@@ -158,14 +212,24 @@ export const BooksView: React.FC = () => {
           Every expenditure, against the right project and budget.
         </Text>
         <View style={styles.headingButtons}>
-          <Button label="Tally setup" icon="Settings2" variant="outline" size="sm" />
+          <Button label="Tally setup" icon="Settings2" variant="outline" size="sm" onPress={() => setSetupOpen(true)} />
           <Button label="Record expenditure" icon="Plus" variant="outline" size="sm" onPress={() => setModalOpen(true)} />
-          <Pressable style={({ pressed }) => [styles.invertedBtn, { backgroundColor: theme.colors.text, opacity: pressed ? 0.85 : 1 }]}>
+          <Pressable
+            onPress={() => setImportOpen(true)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.invertedBtn, { backgroundColor: theme.colors.text, opacity: pressed ? 0.85 : 1 }]}
+          >
             <Icon name="Upload" size={14} color={theme.colors.background} />
             <Text style={[styles.invertedText, { color: theme.colors.background }]}>Import from Tally</Text>
           </Pressable>
         </View>
       </Card>
+
+      {notice ? (
+        <Card padding={12} flat style={styles.noticeBar}>
+          <Text style={[styles.noticeText, { color: theme.colors.successText }]}>{notice}</Text>
+        </Card>
+      ) : null}
 
       <View style={styles.scopeBar}>
         <SelectField value={areaId} onChange={(v) => { setAreaId(v); setProjectId('all'); }} options={areaOptions} placeholder="Thematic area" containerStyle={styles.scopeSelect} />
@@ -188,9 +252,24 @@ export const BooksView: React.FC = () => {
             {budgetCategories.map((cat) => {
               const allocation = portfolioTotals.approved * allocationShares[cat];
               const spent = allocation * (portfolioTotals.spent / portfolioTotals.approved);
+              const selected = headFilter === cat;
               return (
-                <View key={cat} style={styles.headItem}>
-                  <Text style={[styles.headName, { color: theme.colors.text }]}>{cat}</Text>
+                <Pressable
+                  key={cat}
+                  onPress={() => setHeadFilter(selected ? 'all' : cat)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`Filter register by ${cat}`}
+                  style={({ pressed }) => [
+                    styles.headItem,
+                    selected && { backgroundColor: `${theme.colors.financeAccent}0F`, borderRadius: 12 },
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <View style={styles.headItemRow}>
+                    <Text style={[styles.headName, { color: theme.colors.text }]}>{cat}</Text>
+                    <Icon name="ArrowUpRight" size={14} color={selected ? theme.colors.financeAccent : theme.colors.textSubtle} />
+                  </View>
                   <View style={styles.headAmtRow}>
                     <Text style={[styles.headAmtStrong, { color: theme.colors.financeAccent }]}>
                       {formatCurrency(spent)} recorded
@@ -200,36 +279,27 @@ export const BooksView: React.FC = () => {
                     </Text>
                   </View>
                   <ProgressBar value={(spent / allocation) * 100} height={6} color={theme.colors.financeAccent} style={styles.headBar} />
-                </View>
+                </Pressable>
               );
             })}
           </View>
         </SectionCard>
 
-        <SectionCard
-          title="Bring your Tally books here"
-          description="Exchange vouchers with Tally without breaking your existing accounting workflow."
+        <TallyIntegrationCard
+          settings={settings}
+          importedCount={entries.filter((e) => e.source === 'tally').length}
+          pendingCount={pendingTallyCount}
+          onImport={() => setImportOpen(true)}
+          onSetup={() => setSetupOpen(true)}
+          onExportTally={handleExportTally}
           style={isMd ? styles.colHalf : undefined}
-          action={<StatusChip status="XML exchange" tone="brand" dot={false} />}
-        >
-          <View style={styles.tallyRows}>
-            <TallyRow label="Company" value="Pantiss Foundation HQ" />
-            <TallyRow label="Connection" value="Manual import · no live sync" />
-            <TallyRow label="Imported lines" value={`${entries.filter((e) => e.source === 'tally').length} voucher lines`} />
-            <TallyRow label="Last import" value="12 Aug 2026" />
-          </View>
-          <View style={styles.tallyButtons}>
-            <Button label="Import from Tally" icon="Upload" variant="outline" size="sm" />
-            <Button label={`Export ${entries.filter((e) => e.source === 'manual' && !e.exportedAt).length} new manual entries to Tally`} icon="Download" variant="emerald" size="sm" />
-            <Button label="Manage ledger mappings" icon="Settings2" variant="ghost" size="sm" />
-          </View>
-        </SectionCard>
+        />
       </View>
 
       <SectionCard
         title="Expenditure register"
         description="Search, filter and audit every voucher in the books."
-        action={<Button label="Export CSV" icon="Download" variant="outline" size="sm" />}
+        action={<Button label="Export CSV" icon="Download" variant="outline" size="sm" onPress={handleExportCsv} />}
       >
         <View style={styles.filterWrap}>
           <TextField value={search} onChangeText={setSearch} placeholder="Payee or reference…" containerStyle={styles.filterSearch} />
@@ -310,20 +380,65 @@ export const BooksView: React.FC = () => {
           onChange={(v) => setHead(v as BudgetCategory)}
           options={budgetCategories.map((c) => ({ value: c, label: c }))}
         />
+        <TextField
+          label="Payment date"
+          value={paymentDate}
+          onChangeText={(text) => {
+            setPaymentDate(text);
+            setDateError('');
+          }}
+          placeholder="YYYY-MM-DD"
+          hint={FY_PAYMENT_DATE_HINT}
+          error={dateError}
+        />
         <TextField label="Payee / vendor name" value={payee} onChangeText={setPayee} placeholder="e.g. Apex Tooling Systems" />
         <TextField label="Amount (INR ₹)" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="e.g. 148500" />
+        <TextField
+          label="Invoice / payment reference"
+          value={invoiceReference}
+          onChangeText={setInvoiceReference}
+          placeholder="e.g. INV/2026/884"
+        />
         <TextField label="Narration & detail" value={narration} onChangeText={setNarration} multiline placeholder="Reason for expenditure…" />
       </ModalSheet>
-    </View>
-  );
-};
 
-const TallyRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.tallyRow}>
-      <Text style={[styles.tallyRowLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
-      <Text style={[styles.tallyRowValue, { color: theme.colors.text }]}>{value}</Text>
+      <ModalSheet
+        visible={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        label="Books integration"
+        title="Tally integration setup"
+        description={`${costCentreScope} · FY 2026–27 · INR`}
+        size="md"
+      >
+        <TallySetupSheet
+          visible={setupOpen}
+          onClose={() => setSetupOpen(false)}
+          settings={settings}
+          costCentreKey={costCentreKey}
+          costCentreScope={costCentreScope}
+          onSave={(next) => {
+            saveSettings(next);
+            setNotice('Tally mappings saved. No live connection has been established.');
+          }}
+        />
+      </ModalSheet>
+
+      <ModalSheet
+        visible={importOpen}
+        onClose={() => setImportOpen(false)}
+        label="Books integration"
+        title="Import from Tally"
+        description={`${costCentreScope} · Day Book exchange`}
+        size="md"
+      >
+        <TallyImportSheet
+          onClose={() => setImportOpen(false)}
+          settings={settings}
+          projectName={costCentreScope}
+          costCentre={settings.costCentres[costCentreKey] ?? 'Map cost centre'}
+          onNotify={setNotice}
+        />
+      </ModalSheet>
     </View>
   );
 };
@@ -335,6 +450,8 @@ const styles = StyleSheet.create({
   headingButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
   invertedBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 13, borderRadius: 9 },
   invertedText: { fontSize: 12, fontWeight: '600' },
+  noticeBar: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.25)', backgroundColor: 'rgba(16, 185, 129, 0.08)' },
+  noticeText: { fontSize: 12, fontWeight: '500', lineHeight: 17 },
   scopeBar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
   scopeSelect: { flexGrow: 1, flexBasis: 200 },
   fyPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
@@ -347,9 +464,17 @@ const styles = StyleSheet.create({
   headsList: { gap: 12 },
   headItem: {
     gap: 7,
+    padding: 8,
+    marginHorizontal: -8,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(128, 144, 168, 0.12)',
+  },
+  headItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   headAmtRow: {
     flexDirection: 'row',
@@ -365,16 +490,12 @@ const styles = StyleSheet.create({
   headBar: { marginTop: 2 },
   headName: { fontSize: 12.5, fontWeight: '600' },
   headAmt: { fontSize: 11, fontVariant: ['tabular-nums'] },
-  tallyRows: { gap: 0 },
-  tallyRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128, 144, 168, 0.16)' },
-  tallyRowLabel: { fontSize: 11.5 },
-  tallyRowValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  tallyButtons: { gap: 8, marginTop: 12 },
   filterWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
   filterSearch: { flexGrow: 1, flexBasis: 220 },
   filterSelect: { flexGrow: 1, flexBasis: 170 },
   cellMain: { fontSize: 12.5, fontWeight: '600' },
   cellSub: { fontSize: 11, marginTop: 1 },
+  cellTiny: { fontSize: 10, marginTop: 1 },
   amountText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   mobileVoucher: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   mobileVoucherTop: { flexDirection: 'row', gap: 10 },

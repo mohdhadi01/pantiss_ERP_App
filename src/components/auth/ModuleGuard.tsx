@@ -7,6 +7,8 @@ import { useTheme } from '../../hooks/useTheme';
 export interface ModuleGuardProps {
   /** 'finance' | 'human-resources' — web route-guard rule per module. */
   requiredModuleId: string;
+  /** Web HRPage additionally requires role === 'hr-manager'. */
+  requiredRole?: string;
   children: React.ReactNode;
 }
 
@@ -17,12 +19,16 @@ const normalize = (moduleId: string): string => (moduleId === 'hr' ? 'human-reso
  * never see workspace screens — they are redirected to the modules page.
  * Waits for session restore before deciding, so refreshes don't flash a redirect.
  */
-export const ModuleGuard: React.FC<ModuleGuardProps> = ({ requiredModuleId, children }) => {
+export const ModuleGuard: React.FC<ModuleGuardProps> = ({ requiredModuleId, requiredRole, children }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   const { theme } = useTheme();
   const router = useRouter();
 
-  const authorized = isAuthenticated && !!user && normalize(user.moduleId) === normalize(requiredModuleId);
+  const authorized =
+    isAuthenticated &&
+    !!user &&
+    normalize(user.moduleId) === normalize(requiredModuleId) &&
+    (!requiredRole || user.role === requiredRole);
 
   useEffect(() => {
     if (!isLoading && !authorized) {

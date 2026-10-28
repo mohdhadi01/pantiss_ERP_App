@@ -92,9 +92,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.brandTitle, { color: theme.colors.text }]}>
-            Pantiss ERP
-          </Text>
         </Pressable>
 
         {subtitle ? (

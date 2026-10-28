@@ -40,7 +40,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -70,14 +70,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setSubmitting(false);
 
     if (!result.success || !result.user) {
-      setError(result.error || 'The user ID or password is incorrect.');
+      setError(result.error || 'The user ID or password is incorrect. Contact your administrator if you need access.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return;
     }
 
     const userModule = result.user.moduleId === 'hr' ? 'human-resources' : result.user.moduleId;
     if (targetModule && userModule !== targetModule) {
-      setError(`This account is assigned to ${result.user.roleLabel} and cannot access ${moduleTitle}.`);
+      setError(`This account is assigned to ${result.user.roleLabel} access and cannot open ${moduleTitle}.`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       return;
     }
@@ -144,25 +144,28 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         editable={!submitting}
       />
 
-      <Pressable onPress={() => setRemember((v) => !v)} style={styles.rememberRow}>
-        <View
-          style={[
-            styles.checkbox,
-            {
-              borderColor: remember ? theme.colors.brandPrimary : theme.colors.borderStrong,
-              backgroundColor: remember ? theme.colors.brandPrimary : 'transparent',
-            },
-          ]}
-        >
-          {remember ? <Icon name="Check" size={12} color="#ffffff" strokeWidth={3} /> : null}
-        </View>
-        <Text style={[styles.rememberLabel, { color: theme.colors.textMuted }]}>
-          Remember my session on this device
-        </Text>
-      </Pressable>
+      <View style={styles.rememberRow}>
+        <Pressable onPress={() => setRemember((v) => !v)} style={styles.rememberControl}>
+          <View
+            style={[
+              styles.checkbox,
+              {
+                borderColor: remember ? theme.colors.brandPrimary : theme.colors.borderStrong,
+                backgroundColor: remember ? theme.colors.brandPrimary : 'transparent',
+              },
+            ]}
+          >
+            {remember ? <Icon name="Check" size={12} color="#ffffff" strokeWidth={3} /> : null}
+          </View>
+          <Text style={[styles.rememberLabel, { color: theme.colors.textMuted }]}>Remember me</Text>
+        </Pressable>
+        <Pressable accessibilityRole="link" hitSlop={6}>
+          <Text style={[styles.forgotText, { color: theme.colors.brandPrimary }]}>Forgot password?</Text>
+        </Pressable>
+      </View>
 
       <Button
-        label={submitting ? 'Authenticating…' : 'Sign in'}
+        label={submitting ? 'Signing in…' : 'Sign in'}
         onPress={handleLogin}
         loading={submitting}
         size="lg"
@@ -238,8 +241,18 @@ const styles = StyleSheet.create({
   rememberRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
     marginTop: 2,
+  },
+  rememberControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  forgotText: {
+    fontSize: 12.5,
+    fontWeight: '500',
   },
   checkbox: {
     width: 18,

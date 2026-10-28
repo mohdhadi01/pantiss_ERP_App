@@ -30,6 +30,7 @@ export interface Invoice {
   status: InvoiceStatus;
   billingAddress: string;
   notes: string;
+  lines?: InvoiceItemLine[];
 }
 
 const TODAY = '2026-10-28';
@@ -41,9 +42,9 @@ const initialInvoices: Invoice[] = [
 ];
 
 const TRANCHES = [
-  { no: 1, pct: 40, date: '2026-08-20', approved: true },
-  { no: 2, pct: 35, date: '2026-12-15', approved: false },
-  { no: 3, pct: 25, date: '2027-03-31', approved: false },
+  { no: 1, pct: 40, date: '2026-08-20' },
+  { no: 2, pct: 35, date: '2026-12-15' },
+  { no: 3, pct: 25, date: '2027-03-31' },
 ];
 
 export const InvoicesView: React.FC = () => {
@@ -57,18 +58,33 @@ export const InvoicesView: React.FC = () => {
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createPrefill, setCreatePrefill] = useState<{ client?: string; amount?: number; lineDescription?: string } | undefined>(undefined);
+  const [trancheApprovals, setTrancheApprovals] = useState<Record<string, boolean>>({});
+  const [pdfNotice, setPdfNotice] = useState('');
+
+  const isTrancheApproved = (tranche: (typeof TRANCHES)[number]) => Boolean(trancheApprovals[`${projectId ?? ''}#${tranche.no}`]);
+
+  const approveTranche = (tranche: (typeof TRANCHES)[number]) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setTrancheApprovals((prev) => ({ ...prev, [`${projectId ?? ''}#${tranche.no}`]: true }));
+  };
+
+  const scopedInvoices = useMemo(
+    () => (projectId ? invoices.filter((i) => i.project === projectId) : invoices),
+    [invoices, projectId],
+  );
 
   const metrics = useMemo(() => {
-    const drafts = invoices.filter((i) => i.status === 'Draft');
-    const raised = invoices.filter((i) => i.status === 'Raised');
-    const verified = invoices.filter((i) => i.status === 'Admin Verified');
+    const drafts = scopedInvoices.filter((i) => i.status === 'Draft');
+    const raised = scopedInvoices.filter((i) => i.status === 'Raised');
+    const verified = scopedInvoices.filter((i) => i.status === 'Admin Verified');
     return {
       drafts: drafts.length,
       awaiting: raised.length,
       verified: verified.length,
       raisedValue: [...raised, ...verified].reduce((sum, i) => sum + i.amount + i.gstAmount, 0),
     };
-  }, [invoices]);
+  }, [scopedInvoices]);
 
   const areaRows = useMemo(() => {
     return financeAreas
@@ -89,14 +105,16 @@ export const InvoicesView: React.FC = () => {
 
   const filtered = useMemo(
     () =>
-      invoices.filter((inv) => {
+      scopedInvoices.filter((inv) => {
         const q = search.toLowerCase();
         const matchesSearch = inv.client.toLowerCase().includes(q) || inv.number.toLowerCase().includes(q) || inv.project.toLowerCase().includes(q);
         const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
         return matchesSearch && matchesStatus;
       }),
-    [invoices, search, statusFilter],
+    [scopedInvoices, search, statusFilter],
   );
+
+  const dueDays = (dueDate: string) => Math.ceil((new Date(dueDate).getTime() - new Date(TODAY).getTime()) / 86400000);
 
   const dueState = (dueDate: string): 'overdue' | 'dueSoon' | 'ok' => {
     if (dueDate < TODAY) return 'overdue';
@@ -120,9 +138,11 @@ export const InvoicesView: React.FC = () => {
       status: 'Draft',
       billingAddress: form.billingAddress.trim() || '—',
       notes: form.notes,
+      lines: items,
     };
     setInvoices((prev) => [next, ...prev]);
     setCreateOpen(false);
+    setCreatePrefill(undefined);
   };
 
   const raiseInvoice = (invoice: Invoice) => {
@@ -138,6 +158,13 @@ export const InvoicesView: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <View>
+        <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Client Invoices</Text>
+        <Text style={[styles.pageSub, { color: theme.colors.textMuted }]}>
+          Select a thematic area and project to review tranche amounts, tentative dates and approval status before raising an invoice.
+        </Text>
+      </View>
+
       <View style={styles.metricsGrid}>
         <MetricCard style={styles.metricCard} label="Draft invoices" value={String(metrics.drafts)} icon="FileText" accentColor={theme.colors.financeAccent} arrow />
         <MetricCard style={styles.metricCard} label="Awaiting verification" value={String(metrics.awaiting)} icon="Clock" accentColor={theme.colors.warning} arrow />
@@ -230,11 +257,15 @@ export const InvoicesView: React.FC = () => {
           ) : null}
 
           {projectInfo?.project ? (
-            <SectionCard title="Tranche-wise invoicing" description="Tentative dates and admin approvals before invoices are raised.">
+            <SectionCard
+              title="Tranche-wise invoicing"
+              description={`${projectInfo.project.donor} · ${TRANCHES.length} tranches · An invoice can be raised only after super admin approval.`}
+            >
               <View style={styles.trancheList}>
                 {TRANCHES.map((tranche) => {
                   const amount = projectInfo.project!.approved * (tranche.pct / 100);
-                  const overdue = tranche.date < TODAY && !tranche.approved;
+                  const approved = isTrancheApproved(tranche);
+                  const overdue = tranche.date < TODAY && !approved;
                   const raisedForProject = projectInfo.invoices[0];
                   return (
                     <View key={tranche.no} style={[styles.trancheRow, { borderColor: theme.colors.border }]}>
@@ -244,8 +275,8 @@ export const InvoicesView: React.FC = () => {
                             Tranche {tranche.no} · {tranche.pct}%
                           </Text>
                           <StatusChip
-                            status={tranche.approved ? 'Admin approved' : 'Awaiting admin approval'}
-                            tone={tranche.approved ? 'success' : 'warning'}
+                            status={approved ? 'Admin approved' : 'Awaiting admin approval'}
+                            tone={approved ? 'success' : 'warning'}
                           />
                         </View>
                         <Text style={[styles.trancheAmount, { color: theme.colors.financeAccent }]}>{formatCurrency(amount)}</Text>
@@ -260,14 +291,13 @@ export const InvoicesView: React.FC = () => {
                         ) : null}
                       </View>
                       <View style={styles.trancheActions}>
-                        {!tranche.approved ? (
+                        {!approved ? (
                           <Pressable
-                            onPress={() => {
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-                            }}
+                            onPress={() => approveTranche(tranche)}
                             accessibilityRole="button"
                             style={[styles.approveBtn, { borderColor: theme.colors.borderStrong }]}
                           >
+                            <Icon name="ShieldCheck" size={13} color={theme.colors.text} />
                             <Text style={[styles.approveBtnText, { color: theme.colors.text }]}>Approve (Super Admin)</Text>
                           </Pressable>
                         ) : null}
@@ -278,13 +308,20 @@ export const InvoicesView: React.FC = () => {
                           </View>
                         ) : (
                           <Pressable
-                            onPress={() => setCreateOpen(true)}
-                            disabled={!tranche.approved}
+                            onPress={() => {
+                              setCreatePrefill({
+                                client: projectInfo.project!.donor,
+                                amount: Math.round(amount),
+                                lineDescription: `Tranche ${tranche.no} (${tranche.pct}%) – ${projectId}`,
+                              });
+                              setCreateOpen(true);
+                            }}
+                            disabled={!approved}
                             accessibilityRole="button"
-                            accessibilityState={{ disabled: !tranche.approved }}
-                            style={[styles.raiseBtn, { backgroundColor: tranche.approved ? theme.colors.financeAccent : theme.colors.surfaceMuted, opacity: tranche.approved ? 1 : 0.55 }]}
+                            accessibilityState={{ disabled: !approved }}
+                            style={[styles.raiseBtn, { backgroundColor: approved ? theme.colors.financeAccent : theme.colors.surfaceMuted, opacity: approved ? 1 : 0.55 }]}
                           >
-                            <Text style={[styles.raiseBtnText, { color: tranche.approved ? '#ffffff' : theme.colors.textMuted }]}>Raise invoice</Text>
+                            <Text style={[styles.raiseBtnText, { color: approved ? '#ffffff' : theme.colors.textMuted }]}>Raise invoice</Text>
                           </Pressable>
                         )}
                       </View>
@@ -297,7 +334,10 @@ export const InvoicesView: React.FC = () => {
         </View>
       )}
 
-      <SectionCard title="Invoice list" description="Drafts, raised invoices and admin verification status.">
+      <SectionCard
+        title="Invoice list"
+        description={`Showing ${filtered.length} of ${scopedInvoices.length} invoices · ${projectId ?? 'All projects'}`}
+      >
         <View style={styles.filterRow}>
           <TextField value={search} onChangeText={setSearch} placeholder="Search client or invoice number…" containerStyle={styles.searchGrow} />
           <SelectField
@@ -319,6 +359,9 @@ export const InvoicesView: React.FC = () => {
           <View style={styles.list}>
             {filtered.map((inv) => {
               const due = dueState(inv.dueDate);
+              const days = dueDays(inv.dueDate);
+              const overdueHint = inv.status === 'Raised' && days < 0 ? ` (${Math.abs(days)}d overdue)` : '';
+              const urgentHint = inv.status === 'Raised' && days >= 0 && days <= 3 ? ` (Due in ${days}d)` : '';
               return (
                 <Pressable
                   key={inv.id}
@@ -338,6 +381,11 @@ export const InvoicesView: React.FC = () => {
                           ]}
                         >
                           {inv.number} · Due {formatDate(inv.dueDate)}
+                          {overdueHint || urgentHint ? (
+                            <Text style={{ color: overdueHint ? theme.colors.dangerText : theme.colors.warningText, fontWeight: '700' }}>
+                              {overdueHint || urgentHint}
+                            </Text>
+                          ) : null}
                         </Text>
                       </View>
                       <View style={styles.invoiceRight}>
@@ -354,7 +402,24 @@ export const InvoicesView: React.FC = () => {
         )}
       </SectionCard>
 
-      <CreateInvoiceSheet visible={createOpen} onClose={() => setCreateOpen(false)} onSave={saveDraft} projectName={projectId} />
+      {pdfNotice ? (
+        <Pressable accessibilityRole="button" onPress={() => setPdfNotice('')} style={[styles.pdfNotice, { backgroundColor: theme.colors.infoSoft, borderColor: theme.colors.brandRing }]}>
+          <Icon name="Download" size={14} color={theme.colors.infoText} />
+          <Text style={[styles.pdfNoticeText, { color: theme.colors.infoText }]}>{pdfNotice}</Text>
+          <Icon name="X" size={13} color={theme.colors.infoText} />
+        </Pressable>
+      ) : null}
+
+      <CreateInvoiceSheet
+        visible={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setCreatePrefill(undefined);
+        }}
+        onSave={saveDraft}
+        projectName={projectId}
+        prefill={createPrefill}
+      />
 
       <InvoiceViewSheet
         invoice={viewInvoice}
@@ -363,6 +428,10 @@ export const InvoicesView: React.FC = () => {
         onEdit={() => setViewOpen(false)}
         onRaise={raiseInvoice}
         onVerify={verifyInvoice}
+        onDownload={(invoice) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+          setPdfNotice(`Download PDF is simulated in this demo build — ${invoice.number} is available on the web workspace.`);
+        }}
       />
     </View>
   );
@@ -370,6 +439,10 @@ export const InvoicesView: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
+  pageTitle: { fontSize: 26, fontWeight: '700', letterSpacing: -0.8 },
+  pageSub: { fontSize: 12.5, marginTop: 4, lineHeight: 17 },
+  pdfNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
+  pdfNoticeText: { fontSize: 11.5, fontWeight: '600', flex: 1 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },
   section: { gap: 12 },

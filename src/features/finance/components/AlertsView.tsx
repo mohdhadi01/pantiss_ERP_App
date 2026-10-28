@@ -8,6 +8,8 @@ import { useFinanceAlerts } from '../data/alertsStore';
 import { FinanceAlertCategory } from '../data/alertsData';
 import { HeroBanner } from './HeroBanner';
 import { Icon, IconSource } from '../../../components/ui/Icon';
+import { TextField } from '../../../components/ui/TextField';
+import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
 
 const CATEGORY_META: Record<FinanceAlertCategory, { icon: IconSource; color: string }> = {
@@ -34,8 +36,10 @@ const FILTERS: Array<'All' | FinanceAlertCategory> = [
 export const AlertsView: React.FC = () => {
   const { theme } = useTheme();
   const router = useRouter();
-  const { alerts, dismiss } = useFinanceAlerts();
+  const { alerts, dismiss, markAllRead } = useFinanceAlerts();
   const [filter, setFilter] = useState<'All' | FinanceAlertCategory>('All');
+  const [search, setSearch] = useState('');
+  const unreadCount = alerts.filter((a) => a.unread).length;
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -43,7 +47,12 @@ export const AlertsView: React.FC = () => {
     return map;
   }, [alerts]);
 
-  const visible = filter === 'All' ? alerts : alerts.filter((a) => a.category === filter);
+  const visible = useMemo(() => {
+    const byCategory = filter === 'All' ? alerts : alerts.filter((a) => a.category === filter);
+    const q = search.trim().toLowerCase();
+    if (!q) return byCategory;
+    return byCategory.filter((a) => a.title.toLowerCase().includes(q) || a.body.toLowerCase().includes(q));
+  }, [alerts, filter, search]);
 
   const handleDismiss = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -52,15 +61,31 @@ export const AlertsView: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {unreadCount > 0 ? (
+        <View style={styles.markAllRow}>
+          <Button
+            label="Mark all as read"
+            icon="CheckCircle2"
+            variant="outline"
+            size="sm"
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+              markAllRead();
+            }}
+          />
+        </View>
+      ) : null}
+
       <HeroBanner
         gradient={heroGradients.alerts}
         badge={{ icon: 'Bell', label: 'Finance Alerts & Notifications' }}
         title="Alerts & Highlights"
+        description="Real-time alerts on advances, compliance deadlines, approval queues, investment events, and budget exceptions across all active finance modules."
         decorative={false}
         right={
           <View style={styles.statChips}>
             <View style={styles.statChip}>
-              <Text style={styles.statChipValue}>{alerts.filter((a) => a.unread).length} unread</Text>
+              <Text style={styles.statChipValue}>{unreadCount} unread</Text>
             </View>
             <View style={styles.statChip}>
               <Text style={styles.statChipValue}>{alerts.length} total</Text>
@@ -108,6 +133,8 @@ export const AlertsView: React.FC = () => {
         })}
       </ScrollView>
 
+      <TextField value={search} onChangeText={setSearch} placeholder="Search alerts…" />
+
       <View style={styles.list}>
         {visible.length === 0 ? (
           <EmptyState
@@ -142,6 +169,7 @@ export const AlertsView: React.FC = () => {
                     <View style={[styles.tag, { backgroundColor: `${meta.color}1A` }]}>
                       <Text style={[styles.tagText, { color: meta.color }]}>{alert.category}</Text>
                     </View>
+                    <Text style={[styles.dateText, { color: theme.colors.textMuted }]}>{alert.date}</Text>
                     <Pressable
                       onPress={() => handleDismiss(alert.id)}
                       accessibilityLabel={`Dismiss alert: ${alert.title}`}
@@ -166,6 +194,14 @@ export const AlertsView: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+  },
+  markAllRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  dateText: {
+    fontSize: 9.5,
+    fontWeight: '500',
   },
   statChips: {
     gap: 8,

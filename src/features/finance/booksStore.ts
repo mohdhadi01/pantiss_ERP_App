@@ -8,7 +8,13 @@ import {
 import { storage } from '../../utils/storage';
 
 const BOOKS_STORAGE_KEY = 'finance_books_entries_v2';
+const TALLY_SETTINGS_STORAGE_KEY = 'finance_tally_settings_v1';
 
+/**
+ * Persisted Books store. Entries keep the v2 key/loading behaviour; Tally
+ * settings persist separately (web booksStore `settings`) so the setup sheet
+ * survives reloads.
+ */
 export function useBooksStore() {
   const [entries, setEntries] = useState<BookEntry[]>(sampleBookEntries);
   const [settings, setSettings] = useState<TallySettings>(defaultTallySettings);
@@ -24,6 +30,13 @@ export function useBooksStore() {
         setEntries(savedEntries);
       } else {
         setEntries(sampleBookEntries);
+      }
+      const savedSettings = await storage.get<Partial<TallySettings> | null>(
+        TALLY_SETTINGS_STORAGE_KEY,
+        null
+      );
+      if (savedSettings && typeof savedSettings === 'object') {
+        setSettings({ ...defaultTallySettings, ...savedSettings });
       }
     } catch {
       setEntries(sampleBookEntries);
@@ -53,6 +66,11 @@ export function useBooksStore() {
     await storage.set(BOOKS_STORAGE_KEY, next);
   };
 
+  const saveSettings = async (next: TallySettings) => {
+    setSettings(next);
+    await storage.set(TALLY_SETTINGS_STORAGE_KEY, next);
+  };
+
   return {
     entries,
     settings,
@@ -60,5 +78,6 @@ export function useBooksStore() {
     addEntry,
     deleteEntry,
     setSettings,
+    saveSettings,
   };
 }

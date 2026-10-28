@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FinanceAlert, financeAlertSeeds } from './alertsData';
 import { storage } from '../../../utils/storage';
 
-const ALERTS_STORAGE_KEY = 'finance_alerts_v1';
+const ALERTS_STORAGE_KEY = 'finance_alerts_v2';
 
 /**
  * Persisted finance alerts store. The unread count feeds the header bell

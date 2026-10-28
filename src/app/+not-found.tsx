@@ -1,37 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { Link, Stack } from 'expo-router';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../hooks/useTheme';
-import { Button } from '../components/ui/Button';
+import { Icon } from '../components/ui/Icon';
 
+/** Web NotFoundPage parity: SearchX tile + "Workspace not found" + red-600 CTA. */
 export default function NotFoundScreen() {
   const { theme } = useTheme();
+  const router = useRouter();
 
   return (
-    <>
-      <Stack.Screen options={{ title: 'Page Not Found' }} />
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Image
-          source={require('@/assets/images/pantiss-mark.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={[styles.code, { color: theme.colors.brandPrimary }]}>404</Text>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Workspace Screen Not Found</Text>
-        <Text style={[styles.message, { color: theme.colors.textMuted }]}>
-          The requested module or screen route could not be located in Pantiss ERP.
-        </Text>
-        <Link href="/" asChild>
-          <Button
-            title="Return to Workspaces"
-            variant="primary"
-            iconName="ArrowLeft"
-            size="lg"
-            style={styles.button}
-          />
-        </Link>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.iconTile, { backgroundColor: theme.colors.dangerSoft }]}>
+        <Icon name="SearchX" size={26} color={theme.colors.redAccent} strokeWidth={1.8} />
       </View>
-    </>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Workspace not found</Text>
+      <Text style={[styles.body, { color: theme.colors.textMuted }]}>
+        This workspace may have moved, or you might not have access yet.
+      </Text>
+      <Pressable
+        onPress={() => router.replace('/')}
+        style={({ pressed }) => [
+          styles.button,
+          { backgroundColor: theme.colors.redAccent, opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        <Icon name="ArrowLeft" size={16} color="#ffffff" />
+        <Text style={styles.buttonText}>Back to home</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -40,34 +37,40 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: 32,
+    gap: 10,
   },
-  logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  code: {
-    fontSize: 48,
-    fontWeight: '800',
-    letterSpacing: -1,
+  iconTile: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.6,
   },
-  message: {
-    fontSize: 14,
+  body: {
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
-    marginBottom: 28,
+    maxWidth: 300,
   },
   button: {
-    minWidth: 220,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    height: 46,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

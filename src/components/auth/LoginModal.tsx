@@ -6,6 +6,7 @@ import { AuthUser } from '../../types/auth';
 import { ModuleItem } from '../../types/modules';
 import { LoginForm } from './LoginForm';
 import { Icon } from '../ui/Icon';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export interface LoginModalProps {
   visible: boolean;
@@ -73,6 +74,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, module, onClose
               accent={module.id === 'finance' ? 'emerald' : 'primary'}
               onSuccess={onSuccess}
             />
+
+            {/* Web LoginDialog right promo panel, condensed for the sheet */}
+            <View style={[styles.promo, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+              <LinearGradient
+                colors={module.accentColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.promoIcon}
+              >
+                <Icon name={module.iconName} size={20} color="#ffffff" strokeWidth={1.9} />
+              </LinearGradient>
+              <View style={styles.promoText}>
+                <Text style={[styles.promoTitle, { color: theme.colors.text }]}>{module.title}</Text>
+                <Text style={[styles.promoDesc, { color: theme.colors.textMuted }]} numberOfLines={2}>
+                  {module.description}
+                </Text>
+                <View style={styles.promoCta}>
+                  <Text style={[styles.promoCtaText, { color: theme.colors.brandPrimary }]}>Learn more</Text>
+                </View>
+              </View>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -137,5 +159,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
     marginBottom: 18,
+  },
+  promo: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 18,
+  },
+  promoIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  promoTitle: {
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  promoDesc: {
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  promoCta: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    marginTop: 4,
+  },
+  promoCtaText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

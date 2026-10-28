@@ -15,13 +15,15 @@ import { DataTable, DataColumn } from '../../../components/ui/DataTable';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { SelectField } from '../../../components/ui/SelectField';
 import { TextField } from '../../../components/ui/TextField';
+import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 import { LedgerSheet } from './ProjectsParts';
 
 type RegisterRow = FinanceArea['projects'][number];
 
-const corpusOf = (p: RegisterRow) => Math.round(p.approved * 0.055);
+/** Web ProjectsView.tsx:320 — corpus is an estimate from released funds. */
+const corpusOf = (p: RegisterRow) => Math.round(p.released * 0.5);
 
 export const ProjectsView: React.FC = () => {
   const { theme } = useTheme();
@@ -36,6 +38,8 @@ export const ProjectsView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [ledgerProject, setLedgerProject] = useState<RegisterRow | null>(null);
   const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [exportNotice, setExportNotice] = useState(false);
 
   const rows = useMemo(() => {
     if (!selectedArea) return [];
@@ -68,7 +72,7 @@ export const ProjectsView: React.FC = () => {
     { key: 'approved', label: 'Approved', flex: 1, align: 'right', wideOnly: true },
     { key: 'released', label: 'Released', flex: 1, align: 'right', wideOnly: true },
     { key: 'spent', label: 'Spent', flex: 1, align: 'right' },
-    { key: 'corpus', label: 'Corpus', flex: 0.9, align: 'right', wideOnly: true },
+    { key: 'corpus', label: 'Corpus · Estimated', flex: 0.9, align: 'right', wideOnly: true },
     { key: 'available', label: 'Available', flex: 1, align: 'right', wideOnly: true },
     { key: 'advances', label: 'Advances', flex: 0.9, align: 'right', wideOnly: true },
     { key: 'utilization', label: 'Utilization', flex: 1.3 },
@@ -93,8 +97,7 @@ export const ProjectsView: React.FC = () => {
       case 'spent':
         return <Text style={[styles.numText, { color: theme.colors.financeAccent }]}>{formatCurrency(p.spent)}</Text>;
       case 'corpus':
-        return <Text style={[styles.numText, { color: theme.colors.text }]}>{formatCurrency(corpusOf(p))}</Text>;
-      case 'available':
+        return <Text style={[styles.numText, { color: theme.colors.text }]}>{formatCurrency(corpusOf(p))}</Text>;      case 'available':
         return <Text style={[styles.numText, { color: theme.colors.text }]}>{formatCurrency(Math.max(0, p.approved - p.spent - p.committed))}</Text>;
       case 'advances':
         return <Text style={[styles.numText, { color: p.pendingAdvances > p.approved * 0.02 ? theme.colors.warningText : theme.colors.text }]}>{formatCurrency(p.pendingAdvances)}</Text>;
@@ -134,7 +137,7 @@ export const ProjectsView: React.FC = () => {
               <Text style={[theme.fontStyles.eyebrow, { color: theme.colors.brandPrimary }]}>Project financial portfolios</Text>
               <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Select a thematic area</Text>
             </View>
-            <Button label="Project Onboarding" variant="outline" size="sm" icon="Plus" />
+            <Button label="Project Onboarding" variant="outline" size="sm" icon="Plus" onPress={() => setOnboardingOpen(true)} />
           </View>
           <View style={[styles.grid, isMd && styles.gridWide]}>
             {financeAreas.map((area) => {
@@ -196,20 +199,40 @@ export const ProjectsView: React.FC = () => {
             gradient={heroGradients.projects}
             badge={{ icon: 'FolderKanban', label: 'Project Financial Portfolios' }}
             title={`${selectedArea.name} projects`}
-            description="Grant release, verified expenditure and ledger audits for every project in this portfolio."
-            actions={[{ label: 'Export Portfolio Report', icon: 'Download', variant: 'white' }]}
+            description={`Review ${selectedArea.projects.length} projects in ${selectedArea.name}. Track donor releases, burn rates, advance settlements, and utilization certificates.`}
+            actions={[
+              {
+                label: 'Export Portfolio Report',
+                icon: 'Download',
+                variant: 'white',
+                onPress: () => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  setExportNotice(true);
+                },
+              },
+            ]}
           />
 
+          {exportNotice ? (
+            <Pressable accessibilityRole="button" onPress={() => setExportNotice(false)} style={[styles.exportNotice, { backgroundColor: theme.colors.emeraldSoft, borderColor: theme.colors.successBorder }]}>
+              <Icon name="CheckCircle2" size={15} color={theme.colors.emerald} />
+              <Text style={[styles.exportNoticeText, { color: theme.colors.successText }]}>
+                Consolidated Project Financials Master Report (Excel) exported.
+              </Text>
+              <Icon name="X" size={13} color={theme.colors.successText} />
+            </Pressable>
+          ) : null}
+
           <View style={styles.metricsGrid}>
-            <MetricCard style={styles.metricCard} label="Total Approved Grant Budget" value={formatCurrency(areaKpis?.totals.approved ?? 0)} subtitle={`${selectedArea.projects.length} Projects`} icon="WalletCards" accentColor={theme.colors.emerald} arrow />
-            <MetricCard style={styles.metricCard} label="Donor Funds Received" value={formatCurrency(areaKpis?.totals.released ?? 0)} subtitle="Released" icon="CircleDollarSign" accentColor={theme.colors.info} arrow />
-            <MetricCard style={styles.metricCard} label="Verified Project Expenditure" value={formatCurrency(areaKpis?.totals.spent ?? 0)} subtitle="Disbursed" icon="TrendingUp" accentColor={theme.colors.violet} valueColor={theme.colors.financeAccent} arrow />
-            <MetricCard style={styles.metricCard} label="Portfolio Grant Burn Rate" value={`${areaKpis?.totals.utilization ?? 0}%`} subtitle="Average" icon="FileCheck" accentColor={theme.colors.teal} arrow />
+            <MetricCard style={styles.metricCard} label="Total Approved Grant Budget" value={formatCurrency(areaKpis?.totals.approved ?? 0)} subtitle="Combined donor grant allocations" icon="WalletCards" accentColor={theme.colors.emerald} arrow />
+            <MetricCard style={styles.metricCard} label="Donor Funds Received" value={formatCurrency(areaKpis?.totals.released ?? 0)} subtitle="Tranches cleared into designated escrow" icon="CircleDollarSign" accentColor={theme.colors.info} arrow />
+            <MetricCard style={styles.metricCard} label="Verified Project Expenditure" value={formatCurrency(areaKpis?.totals.spent ?? 0)} subtitle="Audited against payment vouchers" icon="TrendingUp" accentColor={theme.colors.violet} valueColor={theme.colors.financeAccent} arrow />
+            <MetricCard style={styles.metricCard} label="Portfolio Grant Burn Rate" value={`${areaKpis?.totals.utilization ?? 0}%`} subtitle="Utilization against approved envelope" icon="FileCheck" accentColor={theme.colors.teal} arrow />
           </View>
 
           <SectionCard
             title="Project Financial Register"
-            description="Search the portfolio and open a project expenditure ledger."
+            description={`Showing ${rows.length} of ${selectedArea.projects.length} projects · open a project expenditure ledger.`}
           >
             <View style={styles.filterRow}>
               <TextField value={search} onChangeText={setSearch} placeholder="Search project, donor, state..." containerStyle={styles.searchGrow} />
@@ -279,6 +302,46 @@ export const ProjectsView: React.FC = () => {
       )}
 
       <LedgerSheet project={ledgerProject} visible={ledgerOpen} onClose={() => setLedgerOpen(false)} />
+
+      <ModalSheet
+        visible={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        label="Project onboarding"
+        title="Onboard a project"
+        description="Bring the essentials together before your project gets underway."
+        size="md"
+        footer={<Button label="Close" variant="outline" onPress={() => setOnboardingOpen(false)} />}
+      >
+        <Text style={[styles.onboardNote, { color: theme.colors.textMuted }]}>
+          Static wizard summary — the interactive draft form lives in the web workspace.
+        </Text>
+        {[
+          {
+            title: 'Step 1 · Project charter',
+            body: 'Project name, thematic area, location, objective, project manager and the start / end dates.',
+          },
+          {
+            title: 'Step 2 · Funding',
+            body: 'Donor / funding partner and the proposed budget in INR.',
+          },
+          {
+            title: 'Step 3 · Work order',
+            body: 'Attach the signed work order (PDF, up to 20 MB) as the onboarding evidence.',
+          },
+          {
+            title: 'Step 4 · Payment tranches',
+            body: 'Pick the number of payment tranches, then set each percentage of total and tentative invoice date — percentages must total 100%.',
+          },
+        ].map((step) => (
+          <View key={step.title} style={[styles.onboardStep, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceSoft }]}>
+            <View style={styles.onboardStepHead}>
+              <Icon name="CheckCircle2" size={15} color={theme.colors.emerald} />
+              <Text style={[styles.onboardStepTitle, { color: theme.colors.text }]}>{step.title}</Text>
+            </View>
+            <Text style={[styles.onboardStepBody, { color: theme.colors.textMuted }]}>{step.body}</Text>
+          </View>
+        ))}
+      </ModalSheet>
     </View>
   );
 };
@@ -346,6 +409,13 @@ const styles = StyleSheet.create({
   projLedgerText: { fontSize: 12, fontWeight: '600' },
   searchGrow: { flexGrow: 1, flexBasis: 240 },
   filterSelect: { flexGrow: 1, flexBasis: 170 },
+  exportNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
+  exportNoticeText: { fontSize: 11.5, fontWeight: '600', flex: 1 },
+  onboardNote: { fontSize: 11.5, lineHeight: 16 },
+  onboardStep: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 6 },
+  onboardStepHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  onboardStepTitle: { fontSize: 12.5, fontWeight: '700' },
+  onboardStepBody: { fontSize: 11.5, lineHeight: 16 },
   cellMain: { fontSize: 12.5, fontWeight: '600' },
   cellSub: { fontSize: 11, marginTop: 1 },
   numText: { fontSize: 12.5, fontWeight: '600', fontVariant: ['tabular-nums'] },

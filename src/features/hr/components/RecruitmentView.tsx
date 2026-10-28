@@ -7,14 +7,16 @@ import { HRStore } from '../store';
 import { JobPosting, Candidate, Interview, OfferLetter, CandidateStage } from '../types';
 import { formatDate } from '../../../utils/formatDate';
 import {
+  areaName,
   onboardCandidateFromOffer,
+  releaseOfferLetter,
+  rupees,
   saveCandidate,
   saveJobPosting,
   scheduleInterview,
   submitInterviewFeedback,
   updateCandidateStage,
   updateOfferStatus,
-  releaseOfferLetter,
 } from '../helpers';
 import { funnelStages } from '../../../theme/gradients';
 import { MetricCard } from '../../../components/ui/MetricCard';
@@ -33,20 +35,19 @@ import { DataTable, DataColumn } from '../../../components/ui/DataTable';
 import {
   ApplicantModal,
   ApplicantRow,
-  AreaSelect,
   FeedbackModal,
   FieldRow,
   JobCard,
   OfferCandidateCard,
-  OfferLetterModal,
   PostingModal,
-  ProfileModal,
-  ReleaseOfferModal,
-  SalaryBandCard,
   ScheduleModal,
   Stars,
+  daysLeft,
   pipelineCounts,
+  urgencyLabel,
+  vacanciesLabel,
 } from './RecruitmentParts';
+import { OfferLetterModal, ProfileModal, ReleaseOfferModal, ReleaseOfferPayload } from './RecruitmentOfferParts';
 
 export interface RecruitmentViewProps {
   store: HRStore;
@@ -55,11 +56,13 @@ export interface RecruitmentViewProps {
 type TabKey = 'postings' | 'interviews' | 'offers' | 'ats';
 const HR_ACTOR = 'Ritika Sen (HR Manager)';
 const OFFER_STAGES: CandidateStage[] = ['Selected', 'Offer Released', 'Offer Accepted', 'Onboarded'];
+/** Stages visible in "Interview Schedule" — excludes Applied (web RecruitmentViews.tsx:109-114). */
+const INTERVIEW_STAGES: CandidateStage[] = ['Screening', 'Interview Scheduled', 'Technical Round', 'HR Round'];
 
 export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  const { data, commit } = store;
+  const { data, commit, setNotice } = store;
 
   const [activeTab, setActiveTab] = useState<TabKey>('postings');
   const [selectedJobId, setSelectedJobId] = useState<string>(data.jobPostings[0]?.id ?? '');
@@ -85,8 +88,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
         const count = data.candidates.filter((c) => {
           if (stage.key === 'applied') return c.stage === 'Applied';
           if (stage.key === 'shortlisted') return c.stage === 'Screening';
-          if (stage.key === 'interviews')
-            return ['Interview Scheduled', 'Technical Round', 'HR Round'].includes(c.stage);
+          if (stage.key === 'interviews') return INTERVIEW_STAGES.includes(c.stage);
           if (stage.key === 'selected') return c.stage === 'Selected';
           if (stage.key === 'offered') return c.stage === 'Offer Released' || c.stage === 'Offer Accepted';
           return c.stage === 'Onboarded';
@@ -97,10 +99,16 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
   );
 
   const pipelineCount = data.candidates.filter((c) => c.stage !== 'Rejected' && c.stage !== 'Onboarded').length;
+  const totalOpenings = data.jobPostings
+    .filter((j) => j.status === 'Active')
+    .reduce((sum, j) => sum + j.openings, 0);
   const activeRoles = data.jobPostings.filter((j) => j.status === 'Active').length;
   const pendingInterviews = data.interviews.filter((i) => i.status === 'Scheduled').length;
+  const completedInterviews = data.interviews.filter((i) => i.status === 'Completed').length;
   const onboardedCount = data.candidates.filter((c) => c.stage === 'Onboarded').length;
-  const offersInPlay = data.offerLetters.filter((o) => o.status !== 'Onboarded' && o.status !== 'Declined').length;
+  const offersInPlay = data.offerLetters.filter((o) => o.status === 'Released' || o.status === 'Accepted').length;
+  const acceptedOffers = data.offerLetters.filter((o) => o.status === 'Accepted').length;
+  const onboardedOffers = data.offerLetters.filter((o) => o.status === 'Onboarded').length;
 
   const jobApplicants = data.candidates.filter((c) => c.jobId === selectedJob?.id);
   const filteredApplicants = jobApplicants.filter((c) => {
@@ -111,19 +119,16 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
         ? true
         : applicantFilter === 'applied'
           ? c.stage === 'Applied'
-          : ['Screening', 'Interview Scheduled', 'Technical Round', 'HR Round'].includes(c.stage);
+          : INTERVIEW_STAGES.includes(c.stage);
     return matches && stageOK;
   });
 
-  const interviewCandidates = jobApplicants.filter((c) =>
-    ['Applied', 'Screening', 'Interview Scheduled', 'Technical Round', 'HR Round'].includes(c.stage),
-  );
-  const offerCandidates = data.candidates.filter((c) => OFFER_STAGES.includes(c.stage));
+  const interviewCandidates = jobApplicants.filter((c) => INTERVIEW_STAGES.includes(c.stage));
   const offerFor = (candidateId: string) => data.offerLetters.find((o) => o.candidateId === candidateId);
 
   const atsRows = data.candidates.filter((c) => {
     const q = atsSearch.trim().toLowerCase();
-    const matches = `${c.name} ${c.email} ${c.currentCompany ?? ''}`.toLowerCase().includes(q);
+    const matches = `${c.name} ${c.email} ${c.phone} ${c.currentCompany ?? ''}`.toLowerCase().includes(q);
     return matches && (atsStage === 'all' || c.stage === atsStage) && (atsJobId === 'all' || c.jobId === atsJobId);
   });
 
@@ -133,22 +138,23 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
   };
 
   const handleSavePosting = (posting: JobPosting) => {
-    commit((prev) => saveJobPosting(prev, posting), 'Job requisition saved.');
+    commit((prev) => saveJobPosting(prev, posting), `Job requisition ${posting.title} saved.`);
     setSelectedJobId(posting.id);
     setPostingModal({ open: false });
   };
 
   const handleSaveApplicant = (candidate: Candidate) => {
-    commit((prev) => saveCandidate(prev, candidate), 'Applicant added to the pipeline.');
+    commit((prev) => saveCandidate(prev, candidate), 'New candidate registered in ATS pipeline.');
     setApplicantModalOpen(false);
   };
 
   const handleStageChange = (candidateId: string, stage: CandidateStage, note?: string, message?: string) => {
-    commit((prev) => updateCandidateStage(prev, candidateId, stage, note), message ?? 'Candidate stage updated.');
+    commit((prev) => updateCandidateStage(prev, candidateId, stage, note), message ?? `Candidate moved to ${stage}.`);
   };
 
   const handleSchedule = (interview: Interview) => {
-    commit((prev) => scheduleInterview(prev, interview), `Interview scheduled for ${formatDate(interview.scheduledAt)}.`);
+    const candidate = data.candidates.find((c) => c.id === interview.candidateId);
+    commit((prev) => scheduleInterview(prev, interview), `Interview scheduled with ${candidate?.name ?? 'candidate'}.`);
     setScheduleCandidate(null);
   };
 
@@ -158,17 +164,19 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
     rating: number,
     recommendation: NonNullable<Interview['recommendation']>,
   ) => {
+    const interview = data.interviews.find((i) => i.id === interviewId);
+    const candidate = data.candidates.find((c) => c.id === interview?.candidateId);
     commit(
       (prev) => submitInterviewFeedback(prev, interviewId, feedback, rating, recommendation),
-      'Interview evaluation submitted.',
+      `Interview evaluation submitted for ${candidate?.name ?? 'candidate'}.`,
     );
     setFeedbackInterview(null);
   };
 
-  const handleReleaseOffer = (annualSalary: number, joiningDate: string) => {
-    if (!releaseTarget) return;
-    const { candidate, job } = releaseTarget;
-    const monthly = Math.round(annualSalary / 12);
+  const handleReleaseOffer = (payload: ReleaseOfferPayload) => {
+    const candidate = data.candidates.find((c) => c.id === payload.candidateId);
+    if (!candidate) return;
+    const basicHra = Math.round(payload.monthlySalary * 0.7);
     const offer: OfferLetter = {
       id: `OFR-2026-${Date.now().toString(36).slice(-4).toUpperCase()}`,
       candidateId: candidate.id,
@@ -176,21 +184,23 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
       candidateName: candidate.name,
       candidateEmail: candidate.email,
       candidatePhone: candidate.phone,
-      designationTitle: job?.title ?? 'Programme Officer',
-      areaId: job?.areaId ?? '',
-      joiningDate,
-      annualSalary,
-      monthlySalary: monthly,
-      basicHra: Math.round(monthly * 0.7),
-      allowance: Math.round(monthly * 0.3),
-      expiryDate: new Date(
-        new Date(`${joiningDate}T12:00:00`).getTime() - 21 * 86_400_000,
-      ).toISOString().slice(0, 10),
+      designationTitle: payload.designationTitle,
+      areaId: payload.areaId,
+      joiningDate: payload.joiningDate,
+      annualSalary: payload.annualSalary,
+      monthlySalary: payload.monthlySalary,
+      basicHra,
+      allowance: payload.monthlySalary - basicHra,
+      expiryDate: payload.expiryDate,
       status: 'Released',
       releasedAt: new Date().toISOString(),
       releasedBy: HR_ACTOR,
+      termsNotes: payload.termsNotes,
     };
-    commit((prev) => releaseOfferLetter(prev, offer), 'Offer letter released to the candidate.');
+    commit(
+      (prev) => releaseOfferLetter(prev, offer),
+      `Offer letter released for ${offer.candidateName} at ${rupees(offer.annualSalary)}/yr.`,
+    );
     setReleaseTarget(null);
   };
 
@@ -201,40 +211,33 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
 
   const tabs = [
     { key: 'postings', label: 'Job Postings', icon: 'Briefcase', count: data.jobPostings.length },
-    { key: 'interviews', label: 'Interviews', icon: 'CalendarClock', count: data.interviews.length },
-    { key: 'offers', label: 'Offers & Selection', icon: 'FileCheck', count: offerCandidates.length },
+    {
+      key: 'interviews',
+      label: 'Interviews',
+      icon: 'CalendarClock',
+      count: data.candidates.filter((c) => INTERVIEW_STAGES.includes(c.stage)).length,
+    },
+    { key: 'offers', label: 'Offers & Selection', icon: 'FileCheck', count: data.offerLetters.length },
     { key: 'ats', label: 'All Applicants (ATS)', icon: 'Users', count: data.candidates.length },
   ];
 
   const renderJobList = () => (
     <SectionCard
       title="Job Requisitions & Openings"
+      description="Select a job card to view applicants, review resumes, and shortlist candidates."
       action={<Button label="Post New Role" variant="primary" size="sm" icon="Plus" onPress={() => setPostingModal({ open: true })} />}
       style={isMd ? styles.leftCol : styles.fullWidth}
     >
       <View style={styles.stack}>
-        {data.jobPostings.map((job) => {
-          const applicants = data.candidates.filter((c) => c.jobId === job.id);
-          const interviewsForJob = data.interviews.filter((i) => i.jobId === job.id && i.status === 'Scheduled');
-          return (
-            <JobCard
-              key={job.id}
-              job={job}
-              applicants={applicants}
-              selected={job.id === selectedJob?.id}
-              extraBadge={
-                activeTab === 'interviews' && interviewsForJob.length ? (
-                  <View style={[styles.countPill, { backgroundColor: theme.colors.warningSoft }]}>
-                    <Text style={[styles.countPillText, { color: theme.colors.warningText }]}>
-                      {interviewsForJob.length} interviews
-                    </Text>
-                  </View>
-                ) : undefined
-              }
-              onPress={() => setSelectedJobId(job.id)}
-            />
-          );
-        })}
+        {data.jobPostings.map((job) => (
+          <JobCard
+            key={job.id}
+            job={job}
+            applicants={data.candidates.filter((c) => c.jobId === job.id)}
+            selected={job.id === selectedJob?.id}
+            onPress={() => setSelectedJobId(job.id)}
+          />
+        ))}
       </View>
     </SectionCard>
   );
@@ -242,18 +245,23 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
   const renderPostingDetail = () => {
     if (!selectedJob) return <EmptyState icon="Briefcase" title="No job requisitions" description="Post a new role to start hiring." />;
     const counts = pipelineCounts(jobApplicants);
+    const urgency = urgencyLabel(daysLeft(selectedJob.closingDate));
     return (
       <Card padding={20} style={isMd ? styles.rightCol : styles.fullWidth}>
         <View style={styles.tagRow}>
           <Badge label={selectedJob.status} tone={selectedJob.status === 'Active' ? 'success' : 'neutral'} size="sm" />
-          <Badge label={formatDate(selectedJob.closingDate)} tone="neutral" size="sm" />
+          <Badge
+            label={`Closes ${formatDate(selectedJob.closingDate)} · ${urgency.label}`}
+            tone={urgency.tone === 'ok' ? 'neutral' : urgency.tone === 'warn' ? 'warning' : 'danger'}
+            size="sm"
+          />
         </View>
         <Text style={[theme.fontStyles.h2, { color: theme.colors.text }]}>{selectedJob.title}</Text>
         <Text style={[styles.detailMeta, { color: theme.colors.textMuted }]}>
-          {selectedJob.department} · {selectedJob.location} · {selectedJob.experience} · {selectedJob.openings} vacancies
+          {selectedJob.department} · {selectedJob.location} · {selectedJob.experience} ·{' '}
+          {vacanciesLabel(selectedJob.openings)}
         </Text>
         <Button label="Edit Posting" variant="outline" size="sm" icon="Settings2" onPress={() => setPostingModal({ open: true, editing: selectedJob })} />
-        <SalaryBandCard job={selectedJob} />
         <Text style={[styles.detailBody, { color: theme.colors.textMuted }]}>{selectedJob.description}</Text>
         <View style={styles.stack}>
           {selectedJob.requirements.map((req) => (
@@ -280,7 +288,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
             {
               id: 'shortlisted',
               label: 'Shortlisted',
-              count: jobApplicants.filter((c) => ['Screening', 'Interview Scheduled', 'Technical Round', 'HR Round'].includes(c.stage)).length,
+              count: jobApplicants.filter((c) => c.stage !== 'Applied' && c.stage !== 'Rejected').length,
             },
           ]}
           activeFilter={applicantFilter}
@@ -294,7 +302,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
                 candidate={candidate}
                 onProfile={() => setProfileCandidate(candidate)}
                 onShortlist={() =>
-                  handleStageChange(candidate.id, 'Screening', 'Shortlisted by HR.', 'Candidate shortlisted.')
+                  handleStageChange(candidate.id, 'Screening', 'Shortlisted by HR.', `${candidate.name} shortlisted for interview scheduling.`)
                 }
               />
             ))}
@@ -325,7 +333,10 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
                     <View style={styles.applicantMain}>
                       <Text style={[styles.applicantName, { color: theme.colors.text }]}>{candidate.name}</Text>
                       <Text numberOfLines={1} style={[styles.detailMeta, { color: theme.colors.textSubtle }]}>
-                        {candidate.experienceYears} yrs exp · {formatDate(candidate.appliedDate)}
+                        {candidate.email} · {candidate.experienceYears} yrs exp
+                      </Text>
+                      <Text numberOfLines={1} style={[styles.detailMeta, { color: theme.colors.textSubtle }]}>
+                        Notice: {candidate.noticePeriod} · Expected: {rupees(candidate.expectedSalary)}/yr
                       </Text>
                     </View>
                     <StatusChip status={candidate.stage} />
@@ -359,14 +370,14 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
                       variant="outline"
                       size="sm"
                       icon="Check"
-                      onPress={() => handleStageChange(candidate.id, 'Selected', 'Cleared all interview rounds.', 'Candidate moved to Selected.')}
+                      onPress={() => handleStageChange(candidate.id, 'Selected', undefined, `${candidate.name} marked as Selected.`)}
                     />
                     <Button
                       label="Rejected"
                       variant="outline"
                       size="sm"
                       icon="XCircle"
-                      onPress={() => handleStageChange(candidate.id, 'Rejected', 'Rejected after interview rounds.', 'Candidate marked Rejected.')}
+                      onPress={() => handleStageChange(candidate.id, 'Rejected', undefined, `${candidate.name} marked as Rejected.`)}
                     />
                   </View>
                 </View>
@@ -374,7 +385,11 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
             })}
           </View>
         ) : (
-          <EmptyState icon="CalendarClock" title="No candidates in the interview pipeline" description="Shortlist applicants to schedule their interview rounds." />
+          <EmptyState
+            icon="CalendarClock"
+            title="No shortlisted candidates for this job yet."
+            description="Go to Job Postings and shortlist applicants first."
+          />
         )}
       </SectionCard>
     </View>
@@ -386,8 +401,8 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
     { key: 'exp', label: 'Experience & CTC', flex: 1.1 },
     { key: 'stage', label: 'Stage', flex: 1 },
     { key: 'rating', label: 'Rating', width: 110 },
-    { key: 'applied', label: 'Applied Date', width: 100 },
-    { key: 'actions', label: 'Actions', width: 132 },
+    { key: 'applied', label: 'Applied Date', width: 110 },
+    { key: 'actions', label: 'Action', width: 118 },
   ];
 
   return (
@@ -418,10 +433,30 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
       </SectionCard>
 
       <View style={styles.metricsGrid}>
-        <MetricCard label="Active Job Openings" value={activeRoles} style={styles.metric} />
-        <MetricCard label="Candidates in Pipeline" value={pipelineCount} style={styles.metric} />
-        <MetricCard label="Interviews Pending" value={pendingInterviews} style={styles.metric} />
-        <MetricCard label="Offers in Play" value={offersInPlay} style={styles.metric} />
+        <MetricCard
+          label="Active Job Openings"
+          value={activeRoles}
+          subtitle={`${totalOpenings} open positions across projects`}
+          style={styles.metric}
+        />
+        <MetricCard
+          label="Candidates in Pipeline"
+          value={pipelineCount}
+          subtitle={`${data.candidates.length} total applicants tracked`}
+          style={styles.metric}
+        />
+        <MetricCard
+          label="Interviews Pending"
+          value={pendingInterviews}
+          subtitle={`${completedInterviews} rounds completed`}
+          style={styles.metric}
+        />
+        <MetricCard
+          label="Offers in Play"
+          value={offersInPlay}
+          subtitle={`${acceptedOffers} accepted · ${onboardedOffers} onboarded`}
+          style={styles.metric}
+        />
       </View>
 
       <Tabs items={tabs} activeKey={activeTab} onChange={handleTab} accent={theme.colors.brandPrimary} />
@@ -438,34 +473,42 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
       ) : null}
 
       {activeTab === 'offers' ? (
-        <SectionCard title="Offers & Selection" description="Release, track and onboard accepted candidates">
-          {offerCandidates.length ? (
+        <SectionCard title="Offer Letters & Appointment Releases" description="Click a job card to see selected candidates. Release formal offer letters and onboard to ERP.">
+          {data.candidates.filter((c) => OFFER_STAGES.includes(c.stage)).length ? (
             <View style={styles.stack}>
-              {offerCandidates.map((candidate) => (
-                <OfferCandidateCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  offer={offerFor(candidate.id)}
-                  onViewLetter={() => {
-                    const offer = offerFor(candidate.id);
-                    if (offer) setLetterOffer(offer);
-                  }}
-                  onRelease={() => setReleaseTarget({ candidate, job: data.jobPostings.find((j) => j.id === candidate.jobId) })}
-                  onAccept={() =>
-                    commit((prev) => updateOfferStatus(prev, offerFor(candidate.id)!.id, 'Accepted'), 'Offer acceptance recorded.')
-                  }
-                  onDecline={() =>
-                    commit((prev) => updateOfferStatus(prev, offerFor(candidate.id)!.id, 'Declined'), 'Offer decline recorded.')
-                  }
-                  onOnboard={() => {
-                    const offer = offerFor(candidate.id);
-                    if (offer) handleOnboard(offer.id);
-                  }}
-                />
-              ))}
+              {data.candidates
+                .filter((c) => OFFER_STAGES.includes(c.stage))
+                .map((candidate) => (
+                  <OfferCandidateCard
+                    key={candidate.id}
+                    candidate={candidate}
+                    offer={offerFor(candidate.id)}
+                    onViewLetter={() => {
+                      const offer = offerFor(candidate.id);
+                      if (offer) setLetterOffer(offer);
+                    }}
+                    onRelease={() => setReleaseTarget({ candidate, job: data.jobPostings.find((j) => j.id === candidate.jobId) })}
+                    onAccept={() =>
+                      commit(
+                        (prev) => updateOfferStatus(prev, offerFor(candidate.id)!.id, 'Accepted'),
+                        `Offer accepted by ${candidate.name}.`,
+                      )
+                    }
+                    onDecline={() =>
+                      commit(
+                        (prev) => updateOfferStatus(prev, offerFor(candidate.id)!.id, 'Declined'),
+                        `Offer declined by ${candidate.name}.`,
+                      )
+                    }
+                    onOnboard={() => {
+                      const offer = offerFor(candidate.id);
+                      if (offer) handleOnboard(offer.id);
+                    }}
+                  />
+                ))}
             </View>
           ) : (
-            <EmptyState icon="FileCheck" title="No candidates at offer stage" description="Select candidates from interviews to release offer letters." />
+            <EmptyState icon="FileCheck" title="No selected candidates yet for this job." description="Mark candidates as Selected in Interview Schedule first." />
           )}
         </SectionCard>
       ) : null}
@@ -477,12 +520,12 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
           action={<Button label="Add Candidate" variant="primary" size="sm" icon="UserPlus" onPress={() => setApplicantModalOpen(true)} />}
         >
           <FieldRow>
-            <SearchFilterBar searchQuery={atsSearch} onSearchChange={setAtsSearch} placeholder="Search candidates…" style={styles.flex1Search} />
+            <SearchFilterBar searchQuery={atsSearch} onSearchChange={setAtsSearch} placeholder="Search employee, email or ID" style={styles.flex1Search} />
           </FieldRow>
           <FieldRow>
             <View style={styles.selectHalf}>
               <SelectField
-                label="Stage"
+                label="Stage filter"
                 value={atsStage}
                 onChange={setAtsStage}
                 options={[
@@ -507,10 +550,10 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
             </View>
             <View style={styles.selectHalf}>
               <SelectField
-                label="Job requisition"
+                label="Job filter"
                 value={atsJobId}
                 onChange={setAtsJobId}
-                options={[{ value: 'all', label: 'All requisitions' }, ...data.jobPostings.map((j) => ({ value: j.id, label: j.title }))]}
+                options={[{ value: 'all', label: 'All job openings' }, ...data.jobPostings.map((j) => ({ value: j.id, label: j.title }))]}
               />
             </View>
           </FieldRow>
@@ -522,45 +565,71 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
             emptyDescription="Adjust the filters or add candidates to the pipeline."
             emptyIcon="Users"
             renderCell={(row, column) => {
+              const stage = row.stage;
               switch (column.key) {
                 case 'candidate':
                   return (
-                    <View style={styles.cellPerson}>
+                    <Pressable onPress={() => setProfileCandidate(row)} style={styles.cellPerson}>
                       <Avatar name={row.name} size={30} />
                       <View style={styles.cellPersonText}>
                         <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{row.name}</Text>
                         <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textMuted }]}>{row.email}</Text>
                       </View>
-                    </View>
+                    </Pressable>
                   );
                 case 'role':
-                  return <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>{data.jobPostings.find((j) => j.id === row.jobId)?.title ?? '—'}</Text>;
+                  return (
+                    <View>
+                      <Text style={[styles.cellText, { color: theme.colors.text }]}>
+                        {data.jobPostings.find((j) => j.id === row.jobId)?.title ?? 'General Application'}
+                      </Text>
+                      <Text style={[styles.cellSub, { color: theme.colors.textMuted }]}>
+                        {areaName(data.jobPostings.find((j) => j.id === row.jobId)?.areaId ?? '')}
+                      </Text>
+                    </View>
+                  );
                 case 'exp':
                   return (
-                    <Text style={[styles.cellText, { color: theme.colors.text }]}>
-                      {row.experienceYears} yrs · ₹{row.expectedSalary.toLocaleString('en-IN')}/yr
-                    </Text>
+                    <View>
+                      <Text style={[styles.cellText, { color: theme.colors.text }]}>{row.experienceYears} yrs exp</Text>
+                      <Text style={[styles.cellSub, { color: theme.colors.textMuted }]}>Exp: {rupees(row.expectedSalary)} / yr</Text>
+                    </View>
                   );
                 case 'stage':
                   return <StatusChip status={row.stage} />;
                 case 'rating':
-                  return <Stars rating={row.rating} />;
+                  return row.rating ? <Stars rating={row.rating} /> : <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>Unrated</Text>;
                 case 'applied':
-                  return <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>{formatDate(row.appliedDate)}</Text>;
-                default:
                   return (
-                    <View style={styles.cellActions}>
-                      <Pressable onPress={() => setProfileCandidate(row)} hitSlop={6}>
-                        <Icon name="Eye" size={16} color={theme.colors.textMuted} />
-                      </Pressable>
-                      <Pressable onPress={() => setScheduleCandidate(row)} hitSlop={6}>
-                        <Icon name="CalendarPlus" size={16} color={theme.colors.textMuted} />
-                      </Pressable>
-                      <Pressable onPress={() => setReleaseTarget({ candidate: row, job: data.jobPostings.find((j) => j.id === row.jobId) })} hitSlop={6}>
-                        <Icon name="Sparkles" size={16} color={theme.colors.brandPrimary} />
-                      </Pressable>
+                    <View>
+                      <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>{formatDate(row.appliedDate)}</Text>
+                      <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{row.noticePeriod} notice</Text>
                     </View>
                   );
+                default: {
+                  const gated = stage !== 'Rejected' && stage !== 'Onboarded';
+                  return (
+                    <View style={styles.cellActions}>
+                      <Pressable onPress={() => setProfileCandidate(row)} hitSlop={6} accessibilityLabel="View candidate profile">
+                        <Icon name="Eye" size={16} color={theme.colors.textMuted} />
+                      </Pressable>
+                      {gated ? (
+                        <Pressable onPress={() => setScheduleCandidate(row)} hitSlop={6} accessibilityLabel="Schedule interview round">
+                          <Icon name="CalendarPlus" size={16} color={theme.colors.textMuted} />
+                        </Pressable>
+                      ) : null}
+                      {stage === 'Selected' ? (
+                        <Pressable
+                          onPress={() => setReleaseTarget({ candidate: row, job: data.jobPostings.find((j) => j.id === row.jobId) })}
+                          hitSlop={6}
+                          accessibilityLabel="Release offer"
+                        >
+                          <Icon name="Sparkles" size={16} color={theme.colors.brandPrimary} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                }
               }
             }}
             renderMobileCard={(row) => (
@@ -571,12 +640,15 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
                     <Text style={[styles.applicantName, { color: theme.colors.text }]}>{row.name}</Text>
                     <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textMuted }]}>{row.email}</Text>
                     <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
-                      {row.experienceYears} yrs · ₹{row.expectedSalary.toLocaleString('en-IN')}/yr · {formatDate(row.appliedDate)}
+                      {row.experienceYears} yrs · {rupees(row.expectedSalary)}/yr · {formatDate(row.appliedDate)}
                     </Text>
                   </View>
                   <StatusChip status={row.stage} />
                 </View>
-                <Stars rating={row.rating} />
+                <View style={styles.cellActions}>
+                  {row.rating ? <Stars rating={row.rating} /> : <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>Unrated</Text>}
+                  <Button label="View" variant="outline" size="sm" icon="Eye" onPress={() => setProfileCandidate(row)} />
+                </View>
               </View>
             )}
           />
@@ -600,6 +672,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
           onClose={() => setApplicantModalOpen(false)}
           jobs={data.jobPostings}
           defaultJobId={activeTab === 'ats' ? undefined : selectedJob?.id}
+          error={store.error}
           onSave={handleSaveApplicant}
         />
       ) : null}
@@ -608,11 +681,23 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
           key={profileCandidate.id}
           visible
           onClose={() => setProfileCandidate(null)}
-          candidate={profileCandidate}
+          candidate={data.candidates.find((c) => c.id === profileCandidate.id) ?? profileCandidate}
+          job={data.jobPostings.find((j) => j.id === profileCandidate.jobId)}
+          offer={offerFor(profileCandidate.id)}
           interviews={data.interviews.filter((i) => i.candidateId === profileCandidate.id)}
           onStageChange={(stage) => {
-            handleStageChange(profileCandidate.id, stage);
+            handleStageChange(profileCandidate.id, stage, undefined, `Candidate moved to ${stage}.`);
+          }}
+          onSchedule={() => {
+            setScheduleCandidate(profileCandidate);
             setProfileCandidate(null);
+          }}
+          onMakeOffer={() => {
+            setReleaseTarget({ candidate: profileCandidate, job: data.jobPostings.find((j) => j.id === profileCandidate.jobId) });
+            setProfileCandidate(null);
+          }}
+          onReject={() => {
+            handleStageChange(profileCandidate.id, 'Rejected', 'Rejected after panel review.', `${profileCandidate.name} marked as Rejected.`);
           }}
         />
       ) : null}
@@ -631,6 +716,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
           visible
           onClose={() => setFeedbackInterview(null)}
           interview={feedbackInterview}
+          candidateName={data.candidates.find((c) => c.id === feedbackInterview.candidateId)?.name}
           onSubmit={(feedback, rating, recommendation) =>
             handleSubmitFeedback(feedbackInterview.id, feedback, rating, recommendation)
           }
@@ -641,12 +727,28 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
           key={releaseTarget.candidate.id}
           visible
           onClose={() => setReleaseTarget(null)}
+          candidates={data.candidates}
+          jobs={data.jobPostings}
           candidate={releaseTarget.candidate}
-          job={releaseTarget.job}
+          error={store.error}
           onRelease={handleReleaseOffer}
         />
       ) : null}
-      {letterOffer ? <OfferLetterModal visible onClose={() => setLetterOffer(null)} offer={letterOffer} /> : null}
+      {letterOffer ? (
+        <OfferLetterModal
+          visible
+          onClose={() => setLetterOffer(null)}
+          offer={letterOffer}
+          onNotice={(message) => setNotice(message)}
+          onAccept={() =>
+            commit((prev) => updateOfferStatus(prev, letterOffer.id, 'Accepted'), `Offer marked as Accepted by ${letterOffer.candidateName}.`)
+          }
+          onDecline={() =>
+            commit((prev) => updateOfferStatus(prev, letterOffer.id, 'Declined'), `Offer marked as Declined by ${letterOffer.candidateName}.`)
+          }
+          onOnboard={() => handleOnboard(letterOffer.id)}
+        />
+      ) : null}
     </View>
   );
 };
@@ -726,15 +828,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
-  },
-  countPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-  },
-  countPillText: {
-    fontSize: 10,
-    fontWeight: '600',
   },
   detailMeta: {
     fontSize: 11.5,

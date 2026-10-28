@@ -16,6 +16,7 @@ export default function FinanceLayout() {
         }}
       >
       <Stack.Screen name="dashboard" />
+      <Stack.Screen name="area/[areaId]" />
       <Stack.Screen name="budget" />
       <Stack.Screen name="books" />
       <Stack.Screen name="banking" />

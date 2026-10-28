@@ -5,6 +5,7 @@ import { formatCurrency, formatRupees } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
 import { heroGradients } from '../../../theme/gradients';
 import { HeroBanner } from './HeroBanner';
+import { TransferSheet } from './BankingParts';
 import { MetricCard } from '../../../components/ui/MetricCard';
 import { Card, SectionCard } from '../../../components/ui/Card';
 import { StatusChip } from '../../../components/ui/StatusChip';
@@ -12,53 +13,8 @@ import { DataTable, DataColumn } from '../../../components/ui/DataTable';
 import { TextField } from '../../../components/ui/TextField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
-import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
-
-/** Web bank logo identity colors (SBI sky / HDFC blue / ICICI orange / Axis purple). */
-const BANK_COLORS = {
-  sbi: '#0284c7',
-  hdfc: '#2563eb',
-  icici: '#ea580c',
-  axis: '#9333ea',
-} as const;
-
-interface BankAccount {
-  id: string;
-  bankName: string;
-  maskedNo: string;
-  ifsc: string;
-  type: string;
-  balance: number;
-  color: string;
-}
-
-const BANK_ACCOUNTS: BankAccount[] = [
-  { id: 'sbi-op', bankName: 'State Bank of India', maskedNo: '•••• 8210', ifsc: 'SBIN0001042', type: 'Operational', balance: 184200000, color: BANK_COLORS.sbi },
-  { id: 'hdfc-disb', bankName: 'HDFC Bank', maskedNo: '•••• 8412', ifsc: 'HDFC0000284', type: 'Disbursement', balance: 84500000, color: BANK_COLORS.hdfc },
-  { id: 'icici-escrow', bankName: 'ICICI Bank', maskedNo: '•••• 1923', ifsc: 'ICIC0000042', type: 'Grant Escrow', balance: 68300000, color: BANK_COLORS.icici },
-  { id: 'axis-imprest', bankName: 'Axis Bank', maskedNo: '•••• 8102', ifsc: 'UTIB0000142', type: 'Field Imprest', balance: 47500000, color: BANK_COLORS.axis },
-];
-
-interface BankTx {
-  id: string;
-  date: string;
-  description: string;
-  account: string;
-  category: string;
-  amount: number;
-  type: 'credit' | 'debit';
-  ref: string;
-  status: 'Reconciled' | 'Pending Clearance';
-}
-
-/** Existing inline transaction data, extended with ledger display fields. */
-const BANK_TRANSACTIONS: BankTx[] = [
-  { id: 'TXN-01', date: '2026-10-08', description: 'Tata Trusts Q3 Grant Inflow — Odisha Skills', account: 'HDFC Bank', category: 'Grant Inflow', amount: 4500000, type: 'credit', ref: 'NEFT/CMS/9941829', status: 'Reconciled' },
-  { id: 'TXN-02', date: '2026-10-06', description: 'Bulk Payroll Rollout — September 2026', account: 'ICICI Bank', category: 'Payroll', amount: 1845000, type: 'debit', ref: 'CMS/PAY/0926', status: 'Reconciled' },
-  { id: 'TXN-03', date: '2026-10-05', description: 'Apex Tooling Systems — Lab Workshop Settlement', account: 'State Bank of India', category: 'Vendor Settlement', amount: 148500, type: 'debit', ref: 'RTGS/001042/88', status: 'Pending Clearance' },
-  { id: 'TXN-04', date: '2026-10-02', description: 'Quarterly Fixed Deposit Interest Credit', account: 'State Bank of India', category: 'Interest', amount: 285400, type: 'credit', ref: 'INT/AUTO/Q2', status: 'Reconciled' },
-];
+import { BANK_ACCOUNTS, BANK_TRANSACTIONS, BankAccount, BankTx } from '../data/bankingData';
 
 const LEDGER_COLUMNS: Array<DataColumn<BankTx>> = [
   { key: 'date', label: 'Date & ID', flex: 1.1 },
@@ -71,43 +27,90 @@ const LEDGER_COLUMNS: Array<DataColumn<BankTx>> = [
 
 export const BankingView: React.FC = () => {
   const { theme } = useTheme();
+  // Live state — the transfer sheet mutates balances and prepends a Treasury Transfer txn.
+  const [accounts, setAccounts] = useState<BankAccount[]>(BANK_ACCOUNTS);
+  const [transactions, setTransactions] = useState<BankTx[]>(BANK_TRANSACTIONS);
   const [selectedAccountId, setSelectedAccountId] = useState(BANK_ACCOUNTS[0].id);
   const [sheetAccount, setSheetAccount] = useState<BankAccount | null>(null);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done'>('idle');
   const [transferOpen, setTransferOpen] = useState(false);
+  const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
   const [accountFilter, setAccountFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  // Transfer form
-  const [fromAccount, setFromAccount] = useState(BANK_ACCOUNTS[0].id);
-  const [toAccount, setToAccount] = useState(BANK_ACCOUNTS[1].id);
-  const [transferAmount, setTransferAmount] = useState('');
-  const [transferPurpose, setTransferPurpose] = useState('');
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const totals = useMemo(() => {
-    const balance = BANK_ACCOUNTS.reduce((sum, a) => sum + a.balance, 0);
+    const balance = accounts.reduce((sum, a) => sum + a.balance, 0);
+    // Web: disbursement float = SBI + HDFC operational accounts.
+    const sbi = accounts.find((a) => a.id === 'sbi-op')?.balance ?? 0;
+    const hdfc = accounts.find((a) => a.id === 'hdfc-disb')?.balance ?? 0;
+    // Web-parity KPI: uncleared value = in-transit (Pending Clearance) transactions.
+    const uncleared = transactions
+      .filter((tx) => tx.status === 'Pending Clearance')
+      .reduce((sum, tx) => sum + tx.amount, 0);
     return {
       balance,
       balanceLabel: formatCurrency(balance / 100000, true),
-      float: formatCurrency(BANK_ACCOUNTS[1].balance / 100000),
+      floatLabel: formatCurrency((sbi + hdfc) / 100000, true),
+      unclearedLabel: formatCurrency(uncleared / 100000, true),
     };
-  }, []);
+  }, [accounts, transactions]);
+
+  /** Web handleExecuteTransfer — moves real balances and appends the audit txn. */
+  const handleExecuteTransfer = (fromId: string, toId: string, amountLakhs: number, purpose: string) => {
+    const amount = amountLakhs * 100000;
+    const source = accounts.find((a) => a.id === fromId);
+    const destination = accounts.find((a) => a.id === toId);
+    if (!source || !destination) return;
+    setAccounts((prev) =>
+      prev.map((account) => {
+        if (account.id === fromId) return { ...account, balance: account.balance - amount };
+        if (account.id === toId) return { ...account, balance: account.balance + amount };
+        return account;
+      }),
+    );
+    const newTxn: BankTx = {
+      id: `TXN-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      date: new Date().toISOString().slice(0, 10),
+      party: `Internal Transfer to ${destination.bankName} (${destination.type})`,
+      description: purpose || 'Inter-account float replenishment',
+      account: source.bankName,
+      category: 'Treasury Transfer',
+      amount,
+      type: 'debit',
+      ref: `INT${Date.now().toString().slice(-8)}`,
+      status: 'Reconciled',
+    };
+    setTransactions((prev) => [newTxn, ...prev]);
+    setNotice(
+      `Transfer executed — ${formatCurrency(amountLakhs, true)} moved from ${source.bankName} to ${destination.bankName}. A Treasury Transfer entry was added to the ledger.`,
+    );
+  };
 
   const filteredTx = useMemo(
     () =>
-      BANK_TRANSACTIONS.filter((tx) => {
+      transactions.filter((tx) => {
         const q = search.toLowerCase();
-        const matchesSearch = tx.description.toLowerCase().includes(q) || tx.ref.toLowerCase().includes(q);
+        const matchesSearch =
+          tx.party.toLowerCase().includes(q) ||
+          tx.description.toLowerCase().includes(q) ||
+          tx.ref.toLowerCase().includes(q);
         const matchesAccount = accountFilter === 'all' || tx.account === accountFilter;
         const matchesType = typeFilter === 'all' || tx.type === typeFilter;
         const matchesStatus = statusFilter === 'all' || tx.status === statusFilter;
         return matchesSearch && matchesAccount && matchesType && matchesStatus;
       }),
-    [search, accountFilter, typeFilter, statusFilter],
+    [transactions, search, accountFilter, typeFilter, statusFilter],
   );
 
   const handleSync = () => {
@@ -118,8 +121,8 @@ export const BankingView: React.FC = () => {
   };
 
   const accountOptions = [
-    { value: 'all', label: 'All accounts' },
-    ...BANK_ACCOUNTS.map((a) => ({ value: a.bankName, label: a.bankName })),
+    { value: 'all', label: 'All Bank Accounts' },
+    ...accounts.map((a) => ({ value: a.bankName, label: `${a.bankName} (${a.maskedNo})` })),
   ];
 
   const renderLedgerCell = (tx: BankTx, col: DataColumn<BankTx>) => {
@@ -132,7 +135,12 @@ export const BankingView: React.FC = () => {
           </View>
         );
       case 'beneficiary':
-        return <Text style={[styles.cellMain, { color: theme.colors.text }]} numberOfLines={2}>{tx.description}</Text>;
+        return (
+          <View>
+            <Text style={[styles.cellMain, { color: theme.colors.text }]} numberOfLines={2}>{tx.party}</Text>
+            <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]} numberOfLines={1}>{tx.description}</Text>
+          </View>
+        );
       case 'account':
         return (
           <View>
@@ -158,7 +166,7 @@ export const BankingView: React.FC = () => {
               ]}
             >
               {tx.type === 'credit' ? '+' : '−'}
-              {formatRupees(tx.amount)}
+              {formatCurrency(tx.amount / 100000, true)}
             </Text>
           </View>
         );
@@ -187,11 +195,17 @@ export const BankingView: React.FC = () => {
         ]}
       />
 
+      {notice ? (
+        <Card padding={12} flat style={styles.noticeBar}>
+          <Text style={[styles.noticeText, { color: theme.colors.successText }]}>{notice}</Text>
+        </Card>
+      ) : null}
+
       <View style={styles.metricsGrid}>
-        <MetricCard style={styles.metricCard} label="Total Liquid Balance" value={totals.balanceLabel} subtitle="4 Active A/Cs" icon="Landmark" accentColor={theme.colors.emerald} arrow />
-        <MetricCard style={styles.metricCard} label="Available Disbursement Float" value={totals.float} subtitle="Operational" icon="CreditCard" accentColor={theme.colors.info} arrow />
-        <MetricCard style={styles.metricCard} label="Uncleared / In-Transit Checks" value="₹4.20 L" subtitle="In-Transit" icon="Clock" accentColor={theme.colors.warning} arrow />
-        <MetricCard style={styles.metricCard} label="Ledger vs Bank Variance" value="₹0.00" subtitle="Reconciled 99.4%" icon="ShieldCheck" accentColor={theme.colors.violet} arrow />
+        <MetricCard style={styles.metricCard} label="Total Liquid Balance" value={totals.balanceLabel} subtitle="Aggregated live across 4 institutional banks" icon="Landmark" accentColor={theme.colors.emerald} arrow />
+        <MetricCard style={styles.metricCard} label="Available Disbursement Float" value={totals.floatLabel} subtitle="SBI & HDFC operational accounts" icon="CreditCard" accentColor={theme.colors.info} arrow />
+        <MetricCard style={styles.metricCard} label="Uncleared / In-Transit Checks" value={totals.unclearedLabel} subtitle="Expected credit clearing within 24-48 hrs" icon="Clock" accentColor={theme.colors.warning} arrow />
+        <MetricCard style={styles.metricCard} label="Ledger vs Bank Variance" value="₹0.00" subtitle="Automated EOD bank reconciliation verified" icon="ShieldCheck" accentColor={theme.colors.violet} arrow />
       </View>
 
       <View style={styles.section}>
@@ -246,30 +260,30 @@ export const BankingView: React.FC = () => {
           <TextField
             value={search}
             onChangeText={setSearch}
-            placeholder="Search beneficiary or UTR…"
+            placeholder="Search UTR, party, narration..."
             containerStyle={styles.filterSearch}
           />
-          <SelectField value={accountFilter} onChange={setAccountFilter} options={accountOptions} placeholder="All accounts" containerStyle={styles.filterSelect} />
+          <SelectField value={accountFilter} onChange={setAccountFilter} options={accountOptions} placeholder="All Bank Accounts" containerStyle={styles.filterSelect} />
           <SelectField
             value={typeFilter}
             onChange={setTypeFilter}
             options={[
-              { value: 'all', label: 'All types' },
-              { value: 'credit', label: 'Credits' },
-              { value: 'debit', label: 'Debits' },
+              { value: 'all', label: 'All Types' },
+              { value: 'credit', label: 'Credit (Inflow)' },
+              { value: 'debit', label: 'Debit (Disbursement)' },
             ]}
-            placeholder="All types"
+            placeholder="All Types"
             containerStyle={styles.filterSelect}
           />
           <SelectField
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: 'all', label: 'All statuses' },
+              { value: 'all', label: 'All Status' },
               { value: 'Reconciled', label: 'Reconciled' },
               { value: 'Pending Clearance', label: 'Pending Clearance' },
             ]}
-            placeholder="All statuses"
+            placeholder="All Status"
             containerStyle={styles.filterSelect}
           />
         </View>
@@ -302,39 +316,17 @@ export const BankingView: React.FC = () => {
       <ModalSheet
         visible={transferOpen}
         onClose={() => setTransferOpen(false)}
-        label="Treasury operations"
-        title="Inter-Bank Transfer"
-        description="Log an internal movement between institutional accounts."
+        label="Treasury Float"
+        title="Inter-Bank Float Transfer"
+        description="Move funds between operational and project escrow accounts with dual authorization."
         size="md"
-        footer={
-          <>
-            <Button label="Cancel" variant="outline" onPress={() => setTransferOpen(false)} />
-            <Button
-              label="Record Transfer"
-              variant="emerald"
-              onPress={() => {
-                setTransferOpen(false);
-                setTransferAmount('');
-                setTransferPurpose('');
-              }}
-            />
-          </>
-        }
       >
-        <SelectField
-          label="From account"
-          value={fromAccount}
-          onChange={setFromAccount}
-          options={BANK_ACCOUNTS.map((a) => ({ value: a.id, label: `${a.bankName} ${a.maskedNo}` }))}
+        <TransferSheet
+          visible={transferOpen}
+          onClose={() => setTransferOpen(false)}
+          accounts={accounts}
+          onExecute={handleExecuteTransfer}
         />
-        <SelectField
-          label="To account"
-          value={toAccount}
-          onChange={setToAccount}
-          options={BANK_ACCOUNTS.map((a) => ({ value: a.id, label: `${a.bankName} ${a.maskedNo}` }))}
-        />
-        <TextField label="Amount (₹)" value={transferAmount} onChangeText={setTransferAmount} keyboardType="numeric" placeholder="e.g. 2500000" />
-        <TextField label="Purpose" value={transferPurpose} onChangeText={setTransferPurpose} placeholder="e.g. Field imprest top-up" />
       </ModalSheet>
 
       <ModalSheet
@@ -355,26 +347,29 @@ export const BankingView: React.FC = () => {
               <StatusChip status="Reconciled" />
             </View>
             <SectionCard title="Recent activity" description={`Latest statement lines for ${sheetAccount.bankName}.`}>
-              {BANK_TRANSACTIONS
-                .filter((tx: BankTx) => tx.account === sheetAccount.bankName)
+              {transactions
+                .filter((tx) => tx.account === sheetAccount.bankName)
                 .map((tx) => (
                   <View key={tx.id} style={styles.sheetTxRow}>
                     <View style={styles.sheetTxMain}>
                       <Text numberOfLines={2} style={[styles.sheetTxTitle, { color: theme.colors.text }]}>
+                        {tx.party}
+                      </Text>
+                      <Text style={[styles.sheetTxMeta, { color: theme.colors.textSubtle }]} numberOfLines={1}>
                         {tx.description}
                       </Text>
                       <Text style={[styles.sheetTxMeta, { color: theme.colors.textSubtle }]}>
-                        {tx.date} · {tx.ref}
+                        {formatDate(tx.date)} · {tx.id} · {tx.ref}
                       </Text>
                     </View>
                     <Text
                       style={[
                         styles.sheetTxAmount,
-                        { color: tx.type === 'credit' ? theme.colors.financeAccent : theme.colors.text },
+                        { color: tx.type === 'credit' ? theme.colors.emerald : theme.colors.text },
                       ]}
                     >
                       {tx.type === 'credit' ? '+' : '−'}
-                      {formatRupees(tx.amount)}
+                      {formatCurrency(tx.amount / 100000, true)}
                     </Text>
                   </View>
                 ))}
@@ -388,6 +383,13 @@ export const BankingView: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
+  noticeBar: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  noticeText: { fontSize: 12, fontWeight: '500', lineHeight: 17 },
   sheetSummary: {
     alignItems: 'center',
     gap: 6,

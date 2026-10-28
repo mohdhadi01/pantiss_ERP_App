@@ -13,6 +13,7 @@ import {
 } from '../data';
 import { useFinanceAlerts } from '../data/alertsStore';
 import { HeroBanner, HeroGlassCard } from './HeroBanner';
+import { SectionHeading, TrancheSection } from './FinanceDashboardParts';
 import { MetricCard } from '../../../components/ui/MetricCard';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { Donut } from '../../../components/ui/Donut';
@@ -20,20 +21,20 @@ import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { Card } from '../../../components/ui/Card';
 import { Icon, IconSource } from '../../../components/ui/Icon';
 
-/** Web compliance checklist (FinanceDashboard: donut 88% + 6 rows). */
+/** Web compliance checklist (web FinanceDashboard — donut 88% + 6 rows, done/warn icons). */
 const COMPLIANCE_ROWS = [
-  { label: 'Bank reconciliation statements', value: 100 },
-  { label: 'Voucher & supporting documents', value: 93 },
-  { label: 'Advance settlement compliance', value: 72 },
-  { label: 'Statutory TDS / GST filings', value: 100 },
-  { label: 'Donor utilisation certificates', value: 61 },
-  { label: 'Audit action-taken reports', value: 88 },
+  { label: 'Bank reconciliation statements', value: 100, done: true },
+  { label: 'Voucher & supporting documents', value: 93, done: true },
+  { label: 'Advance settlement compliance', value: 72, done: false },
+  { label: 'Statutory TDS / GST filings', value: 100, done: true },
+  { label: 'Donor utilisation certificates', value: 61, done: false },
+  { label: 'Audit action-taken reports', value: 88, done: true },
 ];
 
 const TAX_SHORTCUTS = [
-  { label: 'GST filing', desc: 'GSTR-1 & 3B compliance' },
-  { label: 'Input tax credit tracking', desc: 'Eligible ITC claims' },
-  { label: 'TDS filing (total)', desc: 'Quarterly deduction desk' },
+  { label: 'GST filing', desc: 'Update returns & upload acknowledgements' },
+  { label: 'Input tax credit tracking', desc: 'Review claimed and proposed credits' },
+  { label: 'TDS filing (total)', desc: 'Monitor totals & record completed filings' },
 ];
 
 export const FinanceDashboard: React.FC = () => {
@@ -44,6 +45,12 @@ export const FinanceDashboard: React.FC = () => {
 
   const utilization = useMemo(
     () => (portfolioTotals.approved ? Math.round((portfolioTotals.spent / portfolioTotals.approved) * 100) : 0),
+    [],
+  );
+
+  /** Web: `${releaseRate}% of sanctioned donor allocations received in bank`. */
+  const releaseRate = useMemo(
+    () => (portfolioTotals.approved ? Math.round((portfolioTotals.released / portfolioTotals.approved) * 100) : 0),
     [],
   );
 
@@ -88,7 +95,7 @@ export const FinanceDashboard: React.FC = () => {
         gradient={heroGradients.finance}
         badge={{ icon: 'CircleDollarSign', label: 'Finance portfolio control' }}
         title="Every rupee, from grant to impact."
-        description="Full visibility into approved donor budgets, fund releases, verified expenditure and audit compliance across all portfolios."
+        description="Organization-wide visibility into approved budgets, fund releases, verified expenditure, commitments, advances and financial compliance across all thematic portfolios."
         right={
           <HeroGlassCard label="Portfolio utilization">
             <AnimatedNumber value={utilization} suffix="%" style={styles.glassValue} />
@@ -102,9 +109,13 @@ export const FinanceDashboard: React.FC = () => {
         }
       />
 
-      {/* Treasury & Reserves (web: Total Balance / Investments / Liabilities) */}
+      {/* Cumulative financials (web: Total Balance / Investments / Liabilities) */}
       <View style={styles.section}>
-        <SectionLabel>Treasury &amp; Reserves</SectionLabel>
+        <SectionHeading
+          title="Cumulative financials"
+          sub="Consolidated liquid reserves, institutional investments, and obligations"
+          eyebrow="Treasury & Reserves"
+        />
         <View style={styles.grid2}>
           {/* Sizing lives on the wrapper: Pressable is a column-flex container,
               so flexBasis on the Card itself would set its height. */}
@@ -117,7 +128,7 @@ export const FinanceDashboard: React.FC = () => {
                 <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
                 <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Balance</Text>
                 <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-                  Across 4 institutional accounts
+                  Across 4 institutional bank accounts · Click to view Banking ledger
                 </Text>
               </View>
               <View style={[styles.linkPill, { backgroundColor: theme.colors.successSoft }]}>
@@ -135,7 +146,7 @@ export const FinanceDashboard: React.FC = () => {
                 <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
                 <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Investments</Text>
                 <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-                  Fixed deposits &amp; liquid funds
+                  Fixed deposits (₹2.85 Cr) &amp; liquid mutual funds (₹1.42 Cr) · Click to view portfolio
                 </Text>
               </View>
               <View style={[styles.linkPill, { backgroundColor: theme.colors.infoSoft }]}>
@@ -154,20 +165,25 @@ export const FinanceDashboard: React.FC = () => {
               </Text>
               <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Liabilities</Text>
               <Text style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-                Committed POs &amp; contracts
+                Approved purchase orders, contractor retentions &amp; statutory payables
               </Text>
             </View>
           </Card>
         </View>
       </View>
 
-      {/* FY performance (web: Sanctions / Received / Expenditure / Corpus) */}
+      {/* Annual Financials (web: Sanctions / Received / Expenditure / Corpus) */}
       <View style={styles.section}>
-        <SectionLabel>FY 2026–27 Performance</SectionLabel>
+        <SectionHeading
+          title="Annual Financials"
+          sub="FY 2026–27 budgetary sanctions, fund receipts, expenditure, and corpus"
+          eyebrow="FY 2026–27 Performance"
+        />
         <View style={styles.metricsGrid}>
           <MetricCard
             label="Total Sanctions"
             value={formatCurrency(portfolioTotals.approved)}
+            subtitle={`${portfolioTotals.projects} approved projects across 7 thematic areas`}
             icon="FileCheck2"
             accentColor={theme.colors.financeAccent}
             arrow
@@ -175,6 +191,7 @@ export const FinanceDashboard: React.FC = () => {
           <MetricCard
             label="Total Received"
             value={formatCurrency(portfolioTotals.released)}
+            subtitle={`${releaseRate}% of sanctioned donor allocations received in bank`}
             icon="WalletCards"
             accentColor={theme.colors.info}
             arrow
@@ -182,6 +199,7 @@ export const FinanceDashboard: React.FC = () => {
           <MetricCard
             label="Total Expenditure"
             value={formatCurrency(portfolioTotals.spent)}
+            subtitle={`${utilization}% verified portfolio utilization against sanctioned funds`}
             valueColor={theme.colors.financeAccent}
             icon="Receipt"
             accentColor={theme.colors.warning}
@@ -190,12 +208,16 @@ export const FinanceDashboard: React.FC = () => {
           <MetricCard
             label="Total Corpus"
             value="₹5.60 Cr"
+            subtitle="Unrestricted core endowment and capital foundation reserves"
             icon="CircleDollarSign"
             accentColor={theme.colors.teal}
             arrow
           />
         </View>
       </View>
+
+      {/* Tranche Fund Allocation (web FinanceDashboard.tsx:633-741) */}
+      <TrancheSection />
 
       {/* Compliance donut + Highlights (web 2-col xl, stacked below) */}
       <View style={[styles.complianceRow, isMd && styles.complianceRowWide]}>
@@ -226,9 +248,17 @@ export const FinanceDashboard: React.FC = () => {
           <View style={styles.checklist}>
             {COMPLIANCE_ROWS.map((row) => (
               <View key={row.label} style={styles.checkRow}>
-                <Text numberOfLines={1} style={[styles.checkLabel, { color: theme.colors.textMuted }]}>
-                  {row.label}
-                </Text>
+                <View style={styles.checkLabelRow}>
+                  <Icon
+                    name={row.done ? 'CheckCircle2' : 'AlertTriangle'}
+                    size={12}
+                    color={row.done ? theme.colors.success : theme.colors.warning}
+                    strokeWidth={2}
+                  />
+                  <Text numberOfLines={1} style={[styles.checkLabel, { color: theme.colors.textMuted }]}>
+                    {row.label}
+                  </Text>
+                </View>
                 <View style={styles.checkBarTrack}>
                   <View
                     style={[
@@ -241,7 +271,21 @@ export const FinanceDashboard: React.FC = () => {
                     ]}
                   />
                 </View>
-                <Text style={[styles.checkValue, { color: theme.colors.text }]}>{row.value}</Text>
+                <Text
+                  style={[
+                    styles.checkValue,
+                    {
+                      color:
+                        row.value >= 90
+                          ? theme.colors.successText
+                          : row.value >= 70
+                            ? theme.colors.warningText
+                            : theme.colors.dangerText,
+                    },
+                  ]}
+                >
+                  {row.value}%
+                </Text>
               </View>
             ))}
           </View>
@@ -338,7 +382,7 @@ export const FinanceDashboard: React.FC = () => {
             return (
               <Pressable
                 key={area.id}
-                onPress={() => handleNav(`/(finance)/projects?area=${area.id}`)}
+                onPress={() => handleNav(`/(finance)/area/${area.id}`)}
                 style={[styles.areaWrap, !isMd && styles.areaWrapMobile]}
               >
                 <Card padding={18} style={styles.areaCard}>
@@ -411,13 +455,6 @@ const HIGHLIGHT_TAG_COLORS: Record<string, string> = {
   Budget: '#f59e0b',
   Salary: '#14b8a6',
   Completed: '#10b981',
-};
-
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { theme } = useTheme();
-  return (
-    <Text style={[styles.sectionLabel, { color: theme.colors.textMuted }]}>{children}</Text>
-  );
 };
 
 const LegendDot: React.FC<{ color: string; label: string; theme: ReturnType<typeof useTheme>['theme'] }> = ({
@@ -627,9 +664,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  checkLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    width: 190,
+    flexShrink: 1,
+  },
   checkLabel: {
     fontSize: 11.5,
-    width: 190,
     flexShrink: 1,
   },
   checkBarTrack: {
@@ -646,7 +689,7 @@ const styles = StyleSheet.create({
   checkValue: {
     fontSize: 11,
     fontWeight: '600',
-    width: 28,
+    width: 34,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },

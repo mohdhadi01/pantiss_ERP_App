@@ -9,7 +9,6 @@ import { projects, projectCenters } from '../seed';
 import { financeAreas } from '../../finance/data';
 import { annualFromMonthly, areaName, monthlyFromAnnual, saveEmployee } from '../helpers';
 import { formatRupees } from '../../../utils/formatCurrency';
-import { hrSectionDescriptions } from '../constants';
 import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
 import { Card, SectionCard } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -21,7 +20,7 @@ import { TextField } from '../../../components/ui/TextField';
 import { SelectField } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { DataTable, DataColumn } from '../../../components/ui/DataTable';
-import { EmptyState } from '../../../components/ui/EmptyState';
+import { SalaryPanel } from './SalaryPanel';
 
 export interface OnboardingViewProps {
   store: HRStore;
@@ -58,16 +57,13 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
   const router = useRouter();
   const { data, commit } = store;
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'Onboarding' | 'Active'>('all');
+  const [areaFilter, setAreaFilter] = useState('all');
   const [form, setForm] = useState<FormState | null>(null);
 
   const filtered = data.employees.filter((emp) => {
     const q = search.trim().toLowerCase();
-    const matches =
-      emp.name.toLowerCase().includes(q) ||
-      emp.email.toLowerCase().includes(q) ||
-      emp.id.toLowerCase().includes(q);
-    return matches && (filter === 'all' || emp.status === filter);
+    const matches = `${emp.name} ${emp.id} ${emp.email}`.toLowerCase().includes(q);
+    return matches && (areaFilter === 'all' || emp.areaId === areaFilter);
   });
 
   const openEdit = (emp: Employee) => {
@@ -113,12 +109,20 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
       (prev) => ({
         ...prev,
         employees: prev.employees.map((e) =>
-          e.id === empId ? { ...e, loginId: e.loginId || `PNT-${e.id.slice(-4)}` } : e,
+          e.id === empId ? { ...e, loginId: e.loginId || `PNT-${e.id}` } : e,
         ),
       }),
-      'Demo access profile generated.',
+      'Demo access profile prepared. Secure account activation must be completed in the employee platform.',
     );
   };
+
+  /** Web-parity onboarding draft mailto (web PeopleViews.tsx:30). */
+  const draftMailto = (emp: Employee) =>
+    `mailto:${encodeURIComponent(emp.email)}?subject=${encodeURIComponent(
+      'Pantiss employee onboarding',
+    )}&body=${encodeURIComponent(
+      `Hello ${emp.name},\n\nYour employee reference is ${emp.id} and your proposed login ID is ${emp.loginId}. HR will share secure activation instructions once your employee platform account is created.\n\nThis is an onboarding draft, not an account activation email.`,
+    )}`;
 
   const assignmentFor = (empId: string) => data.assignments.find((a) => a.employeeId === empId);
   const designationFor = (emp: Employee) => data.designations.find((d) => d.id === emp.designationId);
@@ -145,7 +149,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
             One employee record, from joining to year-end review.
           </Text>
           <Text style={[styles.bannerSub, { color: theme.colors.textMuted }]}>
-            {hrSectionDescriptions['employee-onboarding']}
+            Register employees, choose their designation and prepare their project and access details.
           </Text>
         </View>
       </Card>
@@ -160,15 +164,21 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
         <SearchFilterBar
           searchQuery={search}
           onSearchChange={setSearch}
-          placeholder="Search employee by name, ID or email…"
-          filters={[
-            { id: 'all', label: 'All Staff', count: data.employees.length },
-            { id: 'Onboarding', label: 'Onboarding', count: data.employees.filter((e) => e.status === 'Onboarding').length },
-            { id: 'Active', label: 'Active', count: data.employees.filter((e) => e.status === 'Active').length },
-          ]}
-          activeFilter={filter}
-          onFilterChange={(f) => setFilter(f as 'all' | 'Onboarding' | 'Active')}
+          placeholder="Search employee, email or ID"
         />
+        <View style={styles.filterRow}>
+          <View style={styles.filterCell}>
+            <SelectField
+              label="Thematic area"
+              value={areaFilter}
+              onChange={setAreaFilter}
+              options={[
+                { value: 'all', label: 'All thematic areas' },
+                ...financeAreas.map((a) => ({ value: a.id, label: a.name })),
+              ]}
+            />
+          </View>
+        </View>
         <DataTable
           columns={columns}
           rows={filtered}
@@ -178,7 +188,8 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
           emptyIcon="Users"
           footer={
             <Text style={[styles.footnote, { color: theme.colors.textSubtle }]}>
-              Generate prepares a demo access profile only — production accounts are provisioned by IT after joining.
+              Generate prepares a demo access profile only. It does not create a working login or a
+              password. Draft email opens your mail app; no email is sent automatically.
             </Text>
           }
           renderCell={(emp, column) => {
@@ -199,23 +210,23 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
                 return (
                   <View>
                     <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>
-                      {designation?.title ?? 'Staff Role'}
+                      {designation?.title ?? 'Not assigned'}
                     </Text>
                     <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{designation?.level ?? '—'}</Text>
                   </View>
                 );
               case 'salary':
-                return (
+                return emp.annualSalary ? (
                   <View>
                     <Text style={[styles.moneyBold, { color: theme.colors.text }]}>
-                      {emp.annualSalary ? `${formatRupees(emp.annualSalary)} / yr` : '—'}
+                      {formatRupees(emp.annualSalary)} / yr
                     </Text>
-                    {emp.annualSalary ? (
-                      <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
-                        {formatRupees(monthlyFromAnnual(emp.annualSalary))} / month
-                      </Text>
-                    ) : null}
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {formatRupees(monthlyFromAnnual(emp.annualSalary))} / month
+                    </Text>
                   </View>
+                ) : (
+                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>Not recorded</Text>
                 );
               case 'contact':
                 return (
@@ -243,17 +254,31 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
                 return (
                   <View style={styles.stack6}>
                     <Text numberOfLines={1} style={[styles.accessCode, { color: theme.colors.text }]}>
-                      {emp.loginId ?? 'Not prepared'}
+                      {emp.loginId ?? `PNT-${emp.id}`}
+                    </Text>
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {emp.loginId ? 'Activation pending · Demo' : 'Access not prepared'}
                     </Text>
                     <View style={styles.accessRow}>
-                      <Button label="Generate" variant="outline" size="sm" icon="RefreshCw" onPress={() => handleGenerate(emp.id)} />
                       <Button
-                        label="Draft email"
+                        label="Generate"
                         variant="outline"
                         size="sm"
-                        icon="Mail"
-                        onPress={() => Linking.openURL(`mailto:${emp.email}`).catch(() => {})}
+                        icon="RefreshCw"
+                        disabled={Boolean(emp.loginId)}
+                        onPress={() => handleGenerate(emp.id)}
                       />
+                      {emp.loginId ? (
+                        <Button
+                          label="Draft email"
+                          variant="outline"
+                          size="sm"
+                          icon="Mail"
+                          onPress={() => Linking.openURL(draftMailto(emp)).catch(() => {})}
+                        />
+                      ) : (
+                        <Button label="Draft email" variant="outline" size="sm" icon="Mail" disabled />
+                      )}
                     </View>
                   </View>
                 );
@@ -284,8 +309,31 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
                   <StatusChip status={emp.status} />
                 </View>
                 <View style={styles.accessRow}>
-                  <Text style={[styles.accessCode, { color: theme.colors.text }]}>{emp.loginId ?? 'No access profile'}</Text>
-                  <Button label="Generate" variant="outline" size="sm" icon="RefreshCw" onPress={() => handleGenerate(emp.id)} />
+                  <Text style={[styles.accessCode, { color: theme.colors.text }]}>
+                    {emp.loginId ?? `PNT-${emp.id}`}
+                  </Text>
+                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                    {emp.loginId ? 'Activation pending · Demo' : 'Access not prepared'}
+                  </Text>
+                  <Button
+                    label="Generate"
+                    variant="outline"
+                    size="sm"
+                    icon="RefreshCw"
+                    disabled={Boolean(emp.loginId)}
+                    onPress={() => handleGenerate(emp.id)}
+                  />
+                  {emp.loginId ? (
+                    <Button
+                      label="Draft email"
+                      variant="outline"
+                      size="sm"
+                      icon="Mail"
+                      onPress={() => Linking.openURL(draftMailto(emp)).catch(() => {})}
+                    />
+                  ) : (
+                    <Button label="Draft email" variant="outline" size="sm" icon="Mail" disabled />
+                  )}
                 </View>
               </View>
             );
@@ -376,6 +424,18 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
               />
             </View>
           </View>
+          <SalaryPanel
+            label="Offered salary"
+            annual={Number(form.annual) > 0 ? Number(form.annual) : undefined}
+            caption="Monthly = annual ÷ 12"
+          />
+          {data.employees.find((e) => e.id === form.id)?.areaId !== form.areaId &&
+          data.assignments.some((a) => a.employeeId === form.id) ? (
+            <Text style={[styles.areaWarning, { color: theme.colors.warningText }]}>
+              Changing the thematic area removes the existing project assignment. Assign a project in the
+              new area after saving.
+            </Text>
+          ) : null}
           <Text style={[styles.areaCaption, { color: theme.colors.textSubtle }]}>
             {form.areaId ? areaName(form.areaId) : 'Thematic area drives the available designations.'}
           </Text>
@@ -388,6 +448,15 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
 const styles = StyleSheet.create({
   container: {
     gap: 16,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  filterCell: {
+    flexGrow: 1,
+    flexBasis: 220,
   },
   banner: {
     flexDirection: 'row',
@@ -480,5 +549,10 @@ const styles = StyleSheet.create({
   },
   areaCaption: {
     fontSize: 11,
+  },
+  areaWarning: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
   },
 });

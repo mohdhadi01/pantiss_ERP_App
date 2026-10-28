@@ -183,7 +183,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           >
             <Icon name="Bell" size={17} color={theme.colors.textMuted} />
             {unreadAlertsCount > 0 && (
-              <View style={[styles.alertDot, { backgroundColor: theme.colors.warning }]} />
+              <View style={[styles.alertDot, { backgroundColor: theme.colors.warning, borderColor: theme.colors.background }]} />
             )}
           </Pressable>
         )}
@@ -280,14 +280,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   alertDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     position: 'absolute',
-    top: 9,
-    right: 9,
+    top: 8,
+    right: 8,
     borderWidth: 2,
-    borderColor: 'rgba(9, 9, 11, 0.9)',
   },
   avatarTile: {
     width: 40,

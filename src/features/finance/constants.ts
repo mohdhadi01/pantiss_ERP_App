@@ -15,7 +15,6 @@ export const financeNavItems: NavItem[] = [
   { id: 'audit-trails', label: 'Audit Trails', route: '/(finance)/audit-trails', iconName: 'ShieldCheck' },
   { id: 'projects', label: 'Projects', route: '/(finance)/projects', iconName: 'FolderKanban' },
   { id: 'invoices', label: 'Invoices', route: '/(finance)/invoices', iconName: 'FileText' },
-  { id: 'investments', label: 'Investments', route: '/(finance)/investments', iconName: 'TrendingUp' },
 ];
 
 /** Web header H1 per section (`/finance/:section`). */
@@ -28,13 +27,13 @@ export const financeSectionTitles: Record<string, string> = {
   procurement: 'Procurement & requisitions',
   salary: 'Salary register & payroll rollout',
   reimbursement: 'Staff expense claims & advances',
-  payments: 'Disbursement & payment desk',
-  taxation: 'Statutory taxation & GST / TDS',
-  'audit-trails': 'Employee invoice audit trail',
+  payments: 'Payments',
+  taxation: 'Filings, credits & tax deducted',
+  'audit-trails': 'Audit trail',
   projects: 'Project finances & grant utilization',
-  invoices: 'Internal & client invoices',
-  investments: 'Investments & treasury yields',
-  alerts: 'Alerts & notifications',
+  invoices: 'Client Invoices',
+  investments: 'Mutual Funds & Fixed Deposits Portfolio',
+  alerts: 'Alerts & Highlights',
 };
 
 export const financeSectionDescriptions: Record<string, string> = {
@@ -43,14 +42,14 @@ export const financeSectionDescriptions: Record<string, string> = {
   books: 'Every expenditure, against the right project and budget.',
   banking: 'Real-time liquidity and bank feeds across institutional accounts.',
   'vendor-management': 'Empaneled vendor master directory and compliance.',
-  procurement: 'Requisitions, quotations and purchase orders across projects.',
+  procurement: 'Manage requests by project or review the history of all procurement requests.',
   salary: 'Salary approvals and payment forwarding for the payroll month.',
   reimbursement: 'Centre operating expenses and staff travel claims.',
   payments: 'Pay approved requests or look up a previous payment.',
-  taxation: 'Filings, credits and tax deducted at source.',
+  taxation: 'Monitor GST filing, track input tax credit, and review total TDS with payment and return-filing status in one place.',
   'audit-trails': 'Follow every employee invoice, from submission to disbursement.',
   projects: 'Grant utilization across thematic project portfolios.',
-  invoices: 'Tranche amounts, tentative dates and approval status before raising.',
-  investments: 'Fixed deposits and mutual-fund holdings of the treasury.',
-  alerts: 'Compliance triggers, budget variances and payment highlights.',
+  invoices: 'Select a thematic area and project to review tranche amounts, tentative dates and approval status before raising an invoice.',
+  investments: 'Capital preservation and yield optimization across institutional fixed deposits and SEBI-regulated liquid mutual funds compliant with trust investment regulations.',
+  alerts: 'Real-time alerts on advances, compliance deadlines, approval queues, investment events, and budget exceptions across all active finance modules.',
 };

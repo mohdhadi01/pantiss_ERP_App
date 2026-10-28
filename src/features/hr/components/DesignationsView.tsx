@@ -49,17 +49,28 @@ export const DesignationsView: React.FC<DesignationsViewProps> = ({ store }) => 
     if (!activeArea) return;
     const ok = await commit(
       (prev) => {
-        if (!title.trim()) throw new Error('Designation title is required.');
+        if (!title.trim() || !description.trim()) {
+          throw new Error('Enter a title and responsibilities.');
+        }
+        if (
+          prev.designations.some(
+            (d) =>
+              d.areaId === activeArea &&
+              d.title.trim().toLowerCase() === title.trim().toLowerCase(),
+          )
+        ) {
+          throw new Error('This designation already exists in the thematic area.');
+        }
         const designation: Designation = {
           id: `${activeArea}:role:${Date.now().toString(36).slice(-4)}`,
           areaId: activeArea,
           title: title.trim(),
           level,
-          description: description.trim() || 'Responsibilities to be added.',
+          description: description.trim(),
         };
         return { ...prev, designations: [...prev.designations, designation] };
       },
-      'Designation created.',
+      'Designation created and available for employee onboarding.',
     );
     if (ok) {
       setFormOpen(false);
@@ -138,7 +149,7 @@ export const DesignationsView: React.FC<DesignationsViewProps> = ({ store }) => 
             visible
             onClose={() => setFormOpen(false)}
             label="Role design"
-            title="Create designation"
+            title="Create job designation"
             description={area.name}
             size="md"
             footer={
@@ -148,15 +159,19 @@ export const DesignationsView: React.FC<DesignationsViewProps> = ({ store }) => 
               </>
             }
           >
-            <TextField label="Designation title" value={title} onChangeText={setTitle} placeholder="e.g. Field Coordinator" />
+            <TextField label="Designation title" value={title} onChangeText={setTitle} maxLength={100} placeholder="e.g. Field Coordinator" />
             <SelectField label="Level" value={level} onChange={setLevel} options={LEVEL_OPTIONS} />
             <TextField
               label="Responsibilities"
               value={description}
               onChangeText={setDescription}
               multiline
+              maxLength={1000}
               placeholder="Core responsibilities and expectations…"
             />
+            {store.error ? (
+              <Text style={[styles.errorText, { color: theme.colors.dangerText }]}>{store.error}</Text>
+            ) : null}
           </ModalSheet>
         ) : null}
       </View>
@@ -276,5 +291,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 3,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
   },
 });

@@ -7,7 +7,9 @@ import { financeAreas, areaTotals, formatCurrency, FinanceArea, FinanceProject }
 import { budgetCategories, allocationShares } from '../budgetCategories';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { heroGradients } from '../../../theme/gradients';
+import { useBudgetDrafts } from '../data/budgetDraftsStore';
 import { HeroBanner } from './HeroBanner';
+import { BudgetWorkflowSection } from './BudgetParts';
 import { MetricCard } from '../../../components/ui/MetricCard';
 import { Card } from '../../../components/ui/Card';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
@@ -35,17 +37,19 @@ const budgetVersion = (project: FinanceProject): { label: string; tone: 'neutral
 export const BudgetsView: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
+  const { drafts, addDraft, submitForApproval, returnForRevision, approveBudget } = useBudgetDrafts();
   const [selectedArea, setSelectedArea] = useState<FinanceArea | null>(null);
   const [selectedProject, setSelectedProject] = useState<FinanceProject | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [notice, setNotice] = useState('');
   // New budget form
   const [areaId, setAreaId] = useState(financeAreas[0].id);
   const [projectId, setProjectId] = useState(financeAreas[0].projects[0].id);
   const [title, setTitle] = useState('');
   const [funding, setFunding] = useState('NSDC');
   const [fy, setFy] = useState('FY 2026–27');
-  const [currency, setCurrency] = useState('INR');
-  const [tracking, setTracking] = useState('Cost-head tracking');
+  const [currency, setCurrency] = useState('INR - Indian Rupee');
+  const [tracking, setTracking] = useState('Based on project amount');
   const [threshold, setThreshold] = useState('85');
   const [notes, setNotes] = useState('');
   const [costHeads, setCostHeads] = useState<CostHeadRow[]>([
@@ -56,12 +60,20 @@ export const BudgetsView: React.FC = () => {
     const approved = financeAreas.reduce((sum, area) => sum + area.approved, 0);
     const spent = financeAreas.reduce((sum, area) => sum + areaTotals(area).spent, 0);
     const projects = financeAreas.reduce((sum, area) => sum + area.projects.length, 0);
-    const revisions = financeAreas.reduce(
-      (sum, area) => sum + area.projects.filter((p) => budgetVersion(p).label !== 'Approved').length,
-      0,
-    );
+    // Web: "Budget revisions" counts 6 pipeline revisions + saved drafts.
+    const revisions = 6 + drafts.length;
     return { approved, spent, projects, revisions, utilization: Math.round((spent / approved) * 100) };
+  }, [drafts.length]);
+
+  /** Notice toast — auto-clears like the web status line. */
+  const showNotice = React.useCallback((message: string) => {
+    setNotice(message);
   }, []);
+  React.useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(''), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const areaOptions = financeAreas.map((a) => ({ value: a.id, label: a.name }));
   const projectOptions = (financeAreas.find((a) => a.id === areaId) ?? financeAreas[0]).projects.map((p) => ({
@@ -80,6 +92,37 @@ export const BudgetsView: React.FC = () => {
     setSelectedProject(project);
   };
 
+  /** "Save as draft" — persists to the drafts store and drills into the project workflow. */
+  const handleSaveDraft = async () => {
+    const area = financeAreas.find((a) => a.id === areaId);
+    const project = area?.projects.find((p) => p.id === projectId);
+    if (!area || !project) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const draft = await addDraft({
+      areaId,
+      projectId,
+      title: title.trim() || 'Annual operating budget · Version 2.0',
+      fiscalYear: fy,
+      fundingSource: funding.trim() || project.donor,
+      created: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      currency,
+      trackingMethod: tracking,
+      threshold,
+      notes,
+      lines: costHeads.map((row) => ({
+        name: row.name.trim() || 'Cost head',
+        quantity: parseFloat(row.qty) || 0,
+        rate: parseFloat(row.rate) || 0,
+      })),
+    });
+    setCreateOpen(false);
+    setTitle('');
+    setNotes('');
+    setSelectedArea(area);
+    setSelectedProject(project);
+    showNotice(`Draft "${draft.title}" saved — move it through approval in Budget documents and workflow.`);
+  };
+
   const goBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (selectedProject) setSelectedProject(null);
@@ -92,10 +135,16 @@ export const BudgetsView: React.FC = () => {
         <Pressable onPress={goBack} style={styles.backBtn}>
           <Icon name="ChevronLeft" size={16} color={theme.colors.textMuted} />
           <Text style={[styles.backBtnText, { color: theme.colors.textMuted }]}>
-            {selectedProject ? `Back to ${selectedArea?.name}` : 'All Thematic Budgets'}
+            {selectedProject ? `${selectedArea?.name} projects` : 'All thematic budgets'}
           </Text>
         </Pressable>
       )}
+
+      {notice ? (
+        <Card padding={12} flat style={styles.noticeBar}>
+          <Text style={[styles.noticeText, { color: theme.colors.successText }]}>{notice}</Text>
+        </Card>
+      ) : null}
 
       <HeroBanner
         gradient={heroGradients.finance}
@@ -149,7 +198,31 @@ export const BudgetsView: React.FC = () => {
 
       {selectedArea && !selectedProject && (
         <View style={styles.section}>
-          <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Projects in {selectedArea.name}</Text>
+          {(() => {
+            const areaTotalsLocal = areaTotals(selectedArea);
+            return (
+              <>
+                <HeroBanner
+                  gradient={heroGradients.finance}
+                  badge={{ icon: 'WalletCards', label: 'Thematic project budgets' }}
+                  title={selectedArea.name}
+                  description={`${selectedArea.projects.length} projects · ${formatCurrency(areaTotalsLocal.approved)} approved`}
+                  actions={[{ label: 'Create project budget', icon: 'Plus', variant: 'white', onPress: () => setCreateOpen(true) }]}
+                />
+                <View style={styles.metricsGrid}>
+                  <MetricCard style={styles.metricCard} label="Approved" value={formatCurrency(areaTotalsLocal.approved)} icon="WalletCards" accentColor={theme.colors.financeAccent} />
+                  <MetricCard style={styles.metricCard} label="Spent" value={formatCurrency(areaTotalsLocal.spent)} icon="Receipt" accentColor={theme.colors.info} />
+                  <MetricCard style={styles.metricCard} label="Available" value={formatCurrency(areaTotalsLocal.available)} icon="CircleDollarSign" accentColor={theme.colors.violet} />
+                </View>
+              </>
+            );
+          })()}
+          <View style={styles.listSectionHead}>
+            <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Projects</Text>
+            <Text style={[styles.listSectionSub, { color: theme.colors.textSubtle }]}>
+              Select a project to inspect detailed budget lines
+            </Text>
+          </View>
           <View style={styles.list}>
             {selectedArea.projects.map((proj) => {
               const version = budgetVersion(proj);
@@ -212,6 +285,18 @@ export const BudgetsView: React.FC = () => {
         </Card>
       )}
 
+      {selectedProject && (
+        <BudgetWorkflowSection
+          area={financeAreas.find((a) => a.id === selectedProject.areaId) ?? selectedArea ?? financeAreas[0]}
+          project={selectedProject}
+          drafts={drafts.filter((draft) => draft.projectId === selectedProject.id)}
+          onSubmit={submitForApproval}
+          onReturn={(id) => returnForRevision(id)}
+          onApprove={approveBudget}
+          onNotify={showNotice}
+        />
+      )}
+
       <ModalSheet
         visible={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -222,15 +307,7 @@ export const BudgetsView: React.FC = () => {
         footer={
           <>
             <Button label="Cancel" variant="outline" onPress={() => setCreateOpen(false)} />
-            <Button
-              label="Save as draft"
-              variant="emerald"
-              onPress={() => {
-                setCreateOpen(false);
-                setTitle('');
-                setNotes('');
-              }}
-            />
+            <Button label="Save as draft" variant="emerald" onPress={handleSaveDraft} />
           </>
         }
       >
@@ -242,7 +319,7 @@ export const BudgetsView: React.FC = () => {
         <TextField label="Funding source" value={funding} onChangeText={setFunding} placeholder="Donor / CSR partner" />
         <View style={isMd ? styles.formRow : undefined}>
           <SelectField label="Financial year" value={fy} onChange={setFy} options={[{ value: 'FY 2026–27', label: 'FY 2026–27' }, { value: 'FY 2027–28', label: 'FY 2027–28' }]} containerStyle={isMd ? styles.formRowItem : undefined} />
-          <SelectField label="Currency" value={currency} onChange={setCurrency} options={[{ value: 'INR', label: 'INR ₹' }, { value: 'USD', label: 'USD $' }]} containerStyle={isMd ? styles.formRowItem : undefined} />
+          <SelectField label="Currency" value={currency} onChange={setCurrency} options={[{ value: 'INR - Indian Rupee', label: 'INR - Indian Rupee' }, { value: 'USD - US Dollar', label: 'USD - US Dollar' }]} containerStyle={isMd ? styles.formRowItem : undefined} />
         </View>
         <View style={isMd ? styles.formRow : undefined}>
           <SelectField
@@ -250,9 +327,9 @@ export const BudgetsView: React.FC = () => {
             value={tracking}
             onChange={setTracking}
             options={[
-              { value: 'Cost-head tracking', label: 'Cost-head tracking' },
-              { value: 'Milestone tracking', label: 'Milestone tracking' },
-              { value: 'Lump-sum tracking', label: 'Lump-sum tracking' },
+              { value: 'Based on project amount', label: 'Based on project amount' },
+              { value: 'Based on phases', label: 'Based on phases' },
+              { value: 'Based on cost heads', label: 'Based on cost heads' },
             ]}
             containerStyle={isMd ? styles.formRowItem : undefined}
           />
@@ -310,6 +387,10 @@ const styles = StyleSheet.create({
   container: { gap: 16 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
   backBtnText: { fontSize: 13, fontWeight: '600' },
+  noticeBar: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.25)', backgroundColor: 'rgba(16, 185, 129, 0.08)' },
+  noticeText: { fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  listSectionHead: { gap: 3, marginTop: 4 },
+  listSectionSub: { fontSize: 12, lineHeight: 16 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },
   section: { gap: 12 },

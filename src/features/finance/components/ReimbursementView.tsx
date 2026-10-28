@@ -16,54 +16,32 @@ import { SelectField } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
-import { CentreExpenseCard, ClaimReviewSheet, ClaimMobileCard, CentreExpense, Claim } from './ReimbursementParts';
+import {
+  CentreExpenseCard,
+  ClaimReviewSheet,
+  ClaimMobileCard,
+  SheetStat,
+  CentreExpense,
+  Claim,
+  ExpenseType,
+  EXPENSE_TYPES,
+  billsForCenterMonth,
+} from './ReimbursementParts';
+import { TaDaReviewSheet, ExpenseBillReviewSheet } from './ReimbursementSheets';
 
 const CENTRE_EXPENSES: CentreExpense[] = [
-  {
-    id: 'CTR-2026-301',
-    center: 'Keonjhar Center',
-    project: 'PMKVY 4.0 Odisha Skills',
-    month: 'September 2026',
-    type: 'TA/DA',
-    amount: 46800,
-    submittedBy: 'Subhashree Ray',
-    status: 'Ready',
-    employees: [
-      { name: 'Ranjan Kumar Jena', days: 4, amount: 9600, bills: 3 },
-      { name: 'Bikram Nayak', days: 3, amount: 7200, bills: 2 },
-      { name: 'Sunil Patnaik', days: 6, amount: 14400, bills: 4 },
-      { name: 'Manas Rout', days: 6, amount: 15600, bills: 5 },
-    ],
-  },
-  {
-    id: 'CTR-2026-302',
-    center: 'Mayurbhanj District',
-    project: 'Poshan Community Network',
-    month: 'September 2026',
-    type: 'TA/DA',
-    amount: 32400,
-    submittedBy: 'Kavita Soren',
-    status: 'Clarification',
-    employees: [
-      { name: 'Sunita Majhi', days: 5, amount: 11500, bills: 4 },
-      { name: 'Bishnu Charan Das', days: 4, amount: 9800, bills: 3 },
-      { name: 'Pooja Barik', days: 4, amount: 11100, bills: 3 },
-    ],
-  },
-  {
-    id: 'CTR-2026-303',
-    center: 'Bhubaneswar HQ',
-    project: 'Household Welfare Survey',
-    month: 'September 2026',
-    type: 'Office Ops',
-    amount: 18600,
-    submittedBy: 'Kiran Pradhan',
-    status: 'Ready',
-    employees: [
-      { name: 'Kiran Pradhan', days: 0, amount: 9200, bills: 6 },
-      { name: 'Debashis Nayak', days: 0, amount: 9400, bills: 5 },
-    ],
-  },
+  { id: 'CTR-RENT-0182', center: 'Angul Skill Development Center', centerId: 'CEN-ANG-01', project: 'PMKVY 4.0 Odisha Skills', month: 'August 2026', type: 'Rental', amount: 142000, submitted: '02 Aug 2026', documents: 3, status: 'Ready' },
+  { id: 'CTR-FOOD-0181', center: 'Angul Skill Development Center', centerId: 'CEN-ANG-01', project: 'PMKVY 4.0 Odisha Skills', month: 'July 2026', type: 'Food', amount: 96000, submitted: '02 Aug 2026', documents: 4, status: 'Ready' },
+  { id: 'CTR-ELEC-0178', center: 'Angul Skill Development Center', centerId: 'CEN-ANG-01', project: 'PMKVY 4.0 Odisha Skills', month: 'July 2026', type: 'Electricity', amount: 28000, submitted: '01 Aug 2026', documents: 2, status: 'Clarification' },
+  { id: 'CTR-TADA-0175', center: 'Angul Skill Development Center', centerId: 'CEN-ANG-01', project: 'PMKVY 4.0 Odisha Skills', month: 'July 2026', type: 'TA/DA', amount: 64000, submitted: '31 Jul 2026', documents: 6, status: 'Ready' },
+  { id: 'CTR-RENT-0191', center: 'Bhubaneswar Technical Center', centerId: 'CEN-BBS-02', project: 'PMKVY 4.0 Odisha Skills', month: 'August 2026', type: 'Rental', amount: 162000, submitted: '03 Aug 2026', documents: 3, status: 'Ready' },
+  { id: 'CTR-TADA-0186', center: 'Bhubaneswar Technical Center', centerId: 'CEN-BBS-02', project: 'PMKVY 4.0 Odisha Skills', month: 'August 2026', type: 'TA/DA', amount: 78000, submitted: '02 Aug 2026', documents: 8, status: 'Ready' },
+  { id: 'CTR-RENT-0174', center: 'Keonjhar Skills Center', centerId: 'CEN-KEO-01', project: 'Project Udaan', month: 'August 2026', type: 'Rental', amount: 118000, submitted: '01 Aug 2026', documents: 3, status: 'Ready' },
+  { id: 'CTR-TADA-0167', center: 'Keonjhar Skills Center', centerId: 'CEN-KEO-01', project: 'Project Udaan', month: 'July 2026', type: 'TA/DA', amount: 48000, submitted: '30 Jul 2026', documents: 4, status: 'Ready' },
+  { id: 'CTR-RENT-0168', center: 'Dibrugarh Health Training Unit', centerId: 'CEN-DIB-01', project: 'Swasthya Mobile Clinics', month: 'August 2026', type: 'Rental', amount: 136000, submitted: '30 Jul 2026', documents: 3, status: 'Ready' },
+  { id: 'CTR-TADA-0158', center: 'Dibrugarh Health Training Unit', centerId: 'CEN-DIB-01', project: 'Swasthya Mobile Clinics', month: 'July 2026', type: 'TA/DA', amount: 88000, submitted: '28 Jul 2026', documents: 7, status: 'Clarification' },
+  { id: 'CTR-RENT-0159', center: 'Ranchi Enterprise Hub', centerId: 'CEN-RAN-01', project: 'Saksham Women Enterprise', month: 'August 2026', type: 'Rental', amount: 124000, submitted: '29 Jul 2026', documents: 3, status: 'Ready' },
+  { id: 'CTR-TADA-0151', center: 'Ranchi Enterprise Hub', centerId: 'CEN-RAN-01', project: 'Saksham Women Enterprise', month: 'July 2026', type: 'TA/DA', amount: 56000, submitted: '27 Jul 2026', documents: 5, status: 'Ready' },
 ];
 
 const CENTRE_PROCUREMENT = [
@@ -77,14 +55,14 @@ const CENTRE_SALARY = [
 ];
 
 const SAMPLE_CLAIMS: Claim[] = [
-  { id: 'CLM-2026-401', claimant: 'Sunita Majhi', employeeId: 'PAN-EMP-0104', project: 'Samriddhi Livelihoods Programme', center: 'Koraput District', category: 'Travel & TA/DA', purpose: 'Koraput Field Cluster Tribal SHG Mobilization Travel', date: '2026-10-06', amount: 14200, billsCount: 5, status: 'Pending approval' },
-  { id: 'CLM-2026-402', claimant: 'Ranjan Kumar Jena', employeeId: 'PAN-EMP-0103', project: 'PMKVY 4.0 Odisha Skills', center: 'Angul Center', category: 'Training & Certification', purpose: 'NSDC Trainer of Trainers Certification Workshop — Cuttack', date: '2026-09-29', amount: 22800, billsCount: 7, status: 'Approved' },
-  { id: 'CLM-2026-403', claimant: 'Bishnu Charan Das', employeeId: 'PAN-EMP-0105', project: 'Household Welfare Survey', center: 'Bhubaneswar HQ', category: 'Fuel & Vehicle', purpose: 'District Monitoring Survey Vehicle Fuel & Per Diem', date: '2026-09-22', amount: 18500, billsCount: 4, status: 'Settled', bankRef: 'UTR-20260925-1049' },
+  { id: 'CLM-2026-401', claimant: 'Sunita Majhi', employeeId: 'PAN-EMP-0104', project: 'Samriddhi Livelihoods Programme', center: 'Koraput District', category: 'Inter-District Travel', purpose: 'Koraput Field Cluster Tribal SHG Mobilization Travel', date: '2026-10-06', amount: 14200, billsCount: 5, status: 'Pending Verification' },
+  { id: 'CLM-2026-402', claimant: 'Ranjan Kumar Jena', employeeId: 'PAN-EMP-0103', project: 'PMKVY 4.0 Odisha Skills', center: 'Angul Center', category: 'Field Mobilization', purpose: 'NSDC Trainer of Trainers Certification Workshop — Cuttack', date: '2026-09-29', amount: 22800, billsCount: 7, status: 'Finance Approved' },
+  { id: 'CLM-2026-403', claimant: 'Bishnu Charan Das', employeeId: 'PAN-EMP-0105', project: 'Household Welfare Survey', center: 'Bhubaneswar HQ', category: 'Accommodation & Food', purpose: 'District Monitoring Survey Accommodation & Per Diem', date: '2026-09-22', amount: 18500, billsCount: 4, status: 'Disbursed', bankUtr: 'HDFCR5104925', payoutDate: '25 Sep 2026' },
 ];
 
 const STEPS = ['1 · Project', '2 · Center', '3 · Expense review'];
 const CENTRE_TABS = ['Center approvals', 'Procurement approvals', 'Salary approvals'];
-
+const CLAIM_CATEGORIES = ['Inter-District Travel', 'Field Mobilization', 'Accommodation & Food', 'Printing & Supplies', 'Emergency Float'];
 const CLAIM_COLUMNS: Array<DataColumn<Claim>> = [
   { key: 'id', label: 'Claim ID & Date', flex: 1.4 },
   { key: 'claimant', label: 'Claimant', flex: 1.4 },
@@ -101,8 +79,8 @@ export const ReimbursementView: React.FC = () => {
   const { isMd } = useBreakpoint();
   const [topTab, setTopTab] = useState('centre');
   const [centreTab, setCentreTab] = useState(CENTRE_TABS[0]);
-  const [monthFilter, setMonthFilter] = useState('September 2026');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('All months');
+  const [typeFilter, setTypeFilter] = useState<'All' | ExpenseType>('All');
   const [reviewExpense, setReviewExpense] = useState<CentreExpense | null>(null);
   const [claims, setClaims] = useState(SAMPLE_CLAIMS);
   const [search, setSearch] = useState('');
@@ -113,33 +91,45 @@ export const ReimbursementView: React.FC = () => {
   // Submit claim form
   const [formOpen, setFormOpen] = useState(false);
   const [claimant, setClaimant] = useState('');
+  const [empId, setEmpId] = useState('');
+  const [costCenter, setCostCenter] = useState('');
   const [purpose, setPurpose] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('Travel & TA/DA');
+  const [category, setCategory] = useState('Inter-District Travel');
+  const [billsAttached, setBillsAttached] = useState(false);
 
   const kpis = useMemo(() => {
-    const pending = claims.filter((c) => c.status === 'Pending approval');
-    const approved = claims.filter((c) => c.status === 'Approved');
-    const settled = claims.filter((c) => c.status === 'Settled');
+    const pending = claims.filter((c) => c.status === 'Pending Verification');
+    const approved = claims.filter((c) => c.status === 'Finance Approved');
+    const disbursed = claims.filter((c) => c.status === 'Disbursed');
     return {
       pendingCount: pending.length,
       approvedTotal: approved.reduce((sum, c) => sum + c.amount, 0),
       approvedCount: approved.length,
-      settledTotal: settled.reduce((sum, c) => sum + c.amount, 0),
+      disbursedTotal: disbursed.reduce((sum, c) => sum + c.amount, 0),
     };
   }, [claims]);
 
+  const centreStats = useMemo(() => {
+    const projects = new Set(CENTRE_EXPENSES.map((e) => e.project)).size;
+    const centers = new Set(CENTRE_EXPENSES.map((e) => e.centerId)).size;
+    const value = CENTRE_EXPENSES.reduce((sum, e) => sum + e.amount, 0);
+    const tadaBills = CENTRE_EXPENSES.reduce((sum, e) => (e.type === 'TA/DA' ? sum + billsForCenterMonth(e.centerId, e.month).length : sum), 0);
+    return { projects, centers, value, tadaBills };
+  }, []);
+
   const filteredExpenses = CENTRE_EXPENSES.filter((e) => {
-    const matchesMonth = e.month === monthFilter;
-    const matchesType = typeFilter === 'all' || e.type === typeFilter;
+    const matchesMonth = monthFilter === 'All months' || e.month === monthFilter;
+    const matchesType = typeFilter === 'All' || e.type === typeFilter;
     return matchesMonth && matchesType;
   });
+  const months = useMemo(() => ['All months', ...Array.from(new Set(CENTRE_EXPENSES.map((e) => e.month)))], []);
 
   const filteredClaims = useMemo(
     () =>
       claims.filter((c) => {
         const q = search.toLowerCase();
-        const matchesSearch = c.claimant.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.purpose.toLowerCase().includes(q);
+        const matchesSearch = c.claimant.toLowerCase().includes(q) || c.employeeId.toLowerCase().includes(q) || c.project.toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
         const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
         const matchesCategory = categoryFilter === 'all' || c.category === categoryFilter;
         return matchesSearch && matchesStatus && matchesCategory;
@@ -149,12 +139,18 @@ export const ReimbursementView: React.FC = () => {
 
   const handleApprove = (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setClaims((prev) => prev.map((c) => (c.id === id ? { ...c, status: 'Approved' as const } : c)));
+    setClaims((prev) => prev.map((c) => (c.id === id ? { ...c, status: 'Finance Approved' as const } : c)));
   };
 
-  const handleSettle = (id: string) => {
+  const handleDisburse = (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setClaims((prev) => prev.map((c) => (c.id === id ? { ...c, status: 'Settled' as const, bankRef: `UTR-${Date.now().toString().slice(-8)}` } : c)));
+    setClaims((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? { ...c, status: 'Disbursed' as const, bankUtr: `HDFCR5${Date.now().toString().slice(-8)}`, payoutDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) }
+          : c,
+      ),
+    );
   };
 
   const handleSubmitClaim = () => {
@@ -164,22 +160,27 @@ export const ReimbursementView: React.FC = () => {
     const next: Claim = {
       id: `CLM-2026-${404 + claims.length - 3}`,
       claimant: claimant.trim(),
-      employeeId: 'PAN-EMP-NEW',
+      employeeId: empId.trim() || 'PAN-EMP-TEMP',
       project: 'PMKVY 4.0 Odisha Skills',
-      center: 'Keonjhar Center',
+      center: costCenter.trim() || 'Keonjhar Center',
       category,
-      purpose: purpose.trim() || 'Field expense claim',
+      purpose: purpose.trim() || 'Out-of-pocket field operational expenses',
       date: new Date().toISOString().slice(0, 10),
       amount: numAmount,
-      billsCount: 0,
-      status: 'Pending approval',
+      billsCount: billsAttached ? 2 : 0,
+      status: 'Pending Verification',
     };
     setClaims((prev) => [next, ...prev]);
     setClaimant('');
+    setEmpId('');
+    setCostCenter('');
     setPurpose('');
     setAmount('');
+    setBillsAttached(false);
     setFormOpen(false);
   };
+
+  const claimTone = (status: Claim['status']) => (status === 'Disbursed' ? 'success' : status === 'Finance Approved' ? 'info' : 'warning');
 
   const renderClaimCell = (claim: Claim, col: DataColumn<Claim>) => {
     switch (col.key) {
@@ -209,9 +210,9 @@ export const ReimbursementView: React.FC = () => {
       case 'amount':
         return <Text style={[styles.amountText, { color: theme.colors.financeAccent }]}>{formatRupees(claim.amount)}</Text>;
       case 'receipts':
-        return <Text style={[styles.cellMain, { color: theme.colors.text }]}>{claim.billsCount}</Text>;
+        return <Text style={[styles.cellMain, { color: theme.colors.text }]}>{claim.billsCount} files</Text>;
       case 'status':
-        return <StatusChip status={claim.status} />;
+        return <StatusChip status={claim.status} tone={claimTone(claim.status)} />;
       case 'actions':
         return (
           <Pressable
@@ -220,7 +221,7 @@ export const ReimbursementView: React.FC = () => {
               setClaimOpen(true);
             }}
             accessibilityRole="button"
-            accessibilityLabel={`View claim ${claim.id}`}
+            accessibilityLabel={`Review claim ${claim.id}`}
             style={styles.viewBtn}
           >
             <Icon name="Eye" size={15} color={theme.colors.financeAccent} />
@@ -265,29 +266,54 @@ export const ReimbursementView: React.FC = () => {
             })}
           </View>
 
-          <View style={styles.stepRow}>
-            {STEPS.map((label, index) => {
-              const active = index === 2;
-              return (
-                <View key={label} style={[styles.stepPill, { backgroundColor: active ? theme.colors.brandPrimary : theme.colors.surfaceMuted, borderColor: active ? theme.colors.brandPrimary : theme.colors.border }]}>
-                  <Text style={[styles.stepText, { color: active ? '#ffffff' : theme.colors.textMuted }]}>{label}</Text>
-                </View>
-              );
-            })}
-          </View>
-
           {centreTab === CENTRE_TABS[0] ? (
             <>
+              <View style={styles.statGrid}>
+                <SheetStat label="Projects with requests" value={String(centreStats.projects)} />
+                <SheetStat label="Operating centers" value={String(centreStats.centers)} />
+                <SheetStat label="Value awaiting review" value={formatRupees(centreStats.value)} />
+                <SheetStat label="Employee TA/DA bills" value={String(centreStats.tadaBills)} />
+              </View>
+              <View style={styles.stepRow}>
+                {STEPS.map((label, index) => {
+                  const active = index === 2;
+                  return (
+                    <View key={label} style={[styles.stepPill, { backgroundColor: active ? theme.colors.brandPrimary : theme.colors.surfaceMuted, borderColor: active ? theme.colors.brandPrimary : theme.colors.border }]}>
+                      <Text style={[styles.stepText, { color: active ? '#ffffff' : theme.colors.textMuted }]}>{label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
               <View style={styles.filterRow}>
-                <SelectField value={monthFilter} onChange={setMonthFilter} options={[{ value: 'September 2026', label: 'September 2026' }, { value: 'August 2026', label: 'August 2026' }]} containerStyle={styles.filterSelect} />
-                <SelectField value={typeFilter} onChange={setTypeFilter} options={[{ value: 'all', label: 'All types' }, { value: 'TA/DA', label: 'TA/DA' }, { value: 'Office Ops', label: 'Office Ops' }, { value: 'Utilities', label: 'Utilities' }]} containerStyle={styles.filterSelect} />
+                <SelectField value={monthFilter} onChange={setMonthFilter} options={months.map((m) => ({ value: m, label: m }))} containerStyle={styles.filterSelect} />
+                <View style={styles.typeChips}>
+                  {(['All', ...EXPENSE_TYPES] as const).map((type) => {
+                    const active = typeFilter === type;
+                    return (
+                      <Pressable
+                        key={type}
+                        onPress={() => setTypeFilter(type)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        style={[styles.typeChip, { backgroundColor: active ? theme.colors.financeAccent : theme.colors.surfaceSoft, borderColor: active ? theme.colors.financeAccent : theme.colors.border }]}
+                      >
+                        <Text style={[styles.typeChipText, { color: active ? '#ffffff' : theme.colors.textMuted }]}>{type}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
               {filteredExpenses.length === 0 ? (
-                <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>No center expense batches for this month.</Text>
+                <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>No expense requests found. Change the month or expense filter.</Text>
               ) : (
-                <View style={styles.list}>
+                <View style={[styles.list, isMd && styles.listWide]}>
                   {filteredExpenses.map((expense) => (
-                    <CentreExpenseCard key={expense.id} expense={expense} onReview={() => setReviewExpense(expense)} />
+                    <CentreExpenseCard
+                      key={expense.id}
+                      expense={expense}
+                      employeeCount={billsForCenterMonth(expense.centerId, expense.month).length}
+                      onReview={() => setReviewExpense(expense)}
+                    />
                   ))}
                 </View>
               )}
@@ -339,22 +365,25 @@ export const ReimbursementView: React.FC = () => {
             gradient={heroGradients.vendor}
             badge={{ icon: 'Receipt', label: 'Staff Expense Reimbursement & Travel Advance' }}
             title="Staff Expense Claims"
-            description="Verify bills, approve payouts and settle travel advances against projects."
+            description="Audited employee claims reimbursement pipeline with receipt verification, reporting manager pre-clearance, and automated bank disbursement."
             actions={[{ label: 'Submit Expense Claim', icon: 'Plus', variant: 'white', onPress: () => setFormOpen(true) }]}
           />
 
           <View style={styles.metricsGrid}>
-            <MetricCard style={styles.metricCard} label="Pending Finance Verification" value={String(kpis.pendingCount)} subtitle="In Review" icon="Clock" accentColor={theme.colors.warning} arrow />
-            <MetricCard style={styles.metricCard} label={`Approved for Payout (${kpis.approvedCount})`} value={formatRupees(kpis.approvedTotal)} subtitle="Approved" icon="CheckCircle2" accentColor={theme.colors.info} arrow />
-            <MetricCard style={styles.metricCard} label="Disbursed This Month" value={formatRupees(kpis.settledTotal)} subtitle="Settled" icon="CreditCard" accentColor={theme.colors.emerald} arrow />
-            <MetricCard style={styles.metricCard} label="Avg Settlement Turnaround" value="2.8 Days" subtitle="SLA Met" icon="ShieldCheck" accentColor={theme.colors.violet} arrow />
+            <MetricCard style={styles.metricCard} label="Pending Finance Verification" value={`${kpis.pendingCount} Claims`} subtitle="Manager-approved; awaiting voucher audit" icon="Clock" accentColor={theme.colors.warning} arrow />
+            <MetricCard style={styles.metricCard} label={`Approved for Payout (${kpis.approvedCount})`} value={formatRupees(kpis.approvedTotal)} subtitle="Scheduled for weekly Thursday batch NEFT" icon="CheckCircle2" accentColor={theme.colors.info} arrow />
+            <MetricCard style={styles.metricCard} label="Disbursed This Month" value={formatRupees(kpis.disbursedTotal)} subtitle="100% reconciled against bank vouchers" icon="CreditCard" accentColor={theme.colors.emerald} arrow />
+            <MetricCard style={styles.metricCard} label="Avg Settlement Turnaround" value="2.8 Days" subtitle="From receipt submission to bank credit" icon="ShieldCheck" accentColor={theme.colors.violet} arrow />
           </View>
 
-          <SectionCard title="Claims queue" description="Every staff claim with receipts, verification status and settlement trail.">
+          <SectionCard
+            title="Staff Reimbursement Claims Queue"
+            description={`Showing ${filteredClaims.length} of ${claims.length} claims`}
+          >
             <View style={styles.filterRow}>
-              <TextField value={search} onChangeText={setSearch} placeholder="Search claims…" containerStyle={styles.searchGrow} />
-              <SelectField value={statusFilter} onChange={setStatusFilter} options={[{ value: 'all', label: 'All statuses' }, { value: 'Pending approval', label: 'Pending approval' }, { value: 'Approved', label: 'Approved' }, { value: 'Settled', label: 'Settled' }]} containerStyle={styles.filterSelect} />
-              <SelectField value={categoryFilter} onChange={setCategoryFilter} options={[{ value: 'all', label: 'All categories' }, { value: 'Travel & TA/DA', label: 'Travel & TA/DA' }, { value: 'Training & Certification', label: 'Training & Certification' }, { value: 'Fuel & Vehicle', label: 'Fuel & Vehicle' }]} containerStyle={styles.filterSelect} />
+              <TextField value={search} onChangeText={setSearch} placeholder="Search staff, ID, project..." containerStyle={styles.searchGrow} />
+              <SelectField value={statusFilter} onChange={setStatusFilter} options={[{ value: 'all', label: 'All Status' }, { value: 'Pending Verification', label: 'Pending Verification' }, { value: 'Finance Approved', label: 'Finance Approved' }, { value: 'Disbursed', label: 'Disbursed' }]} containerStyle={styles.filterSelect} />
+              <SelectField value={categoryFilter} onChange={setCategoryFilter} options={[{ value: 'all', label: 'All Expense Categories' }, ...CLAIM_CATEGORIES.map((c) => ({ value: c, label: c }))]} containerStyle={styles.filterSelect} />
             </View>
             <DataTable
               columns={CLAIM_COLUMNS}
@@ -371,43 +400,28 @@ export const ReimbursementView: React.FC = () => {
                 />
               )}
               emptyIcon="Receipt"
-              emptyTitle="No claims match"
-              emptyDescription="Adjust the search or filters to see staff reimbursement claims."
+              emptyTitle="No claims match your filters"
+              emptyDescription="Try another search or clear your filters."
             />
           </SectionCard>
         </View>
       )}
 
-      <ModalSheet
-        visible={Boolean(reviewExpense)}
-        onClose={() => setReviewExpense(null)}
-        label="Center approvals"
-        title={reviewExpense ? `${reviewExpense.type} review · ${reviewExpense.center}` : ''}
-        description={reviewExpense ? `${reviewExpense.project} · ${reviewExpense.month} · ${formatRupees(reviewExpense.amount)}` : undefined}
-        size="md"
-        footer={
-          <>
-            <Button label="Return for clarification" variant="outline" onPress={() => setReviewExpense(null)} />
-            <Button label="Approve batch" variant="emerald" onPress={() => setReviewExpense(null)} />
-          </>
-        }
-      >
-        {reviewExpense ? (
-          <View style={styles.billList}>
-            {reviewExpense.employees.map((employee) => (
-              <View key={employee.name} style={[styles.billRow, { borderColor: theme.colors.border }]}>
-                <View style={styles.billBody}>
-                  <Text style={[styles.cellMain, { color: theme.colors.text }]}>{employee.name}</Text>
-                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
-                    {employee.days ? `${employee.days} days on duty · ` : ''}{employee.bills} bills attached
-                  </Text>
-                </View>
-                <Text style={[styles.amountText, { color: theme.colors.text }]}>{formatRupees(employee.amount)}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </ModalSheet>
+      {reviewExpense && reviewExpense.type === 'TA/DA' ? (
+        <TaDaReviewSheet
+          key={reviewExpense.id}
+          expense={reviewExpense}
+          visible={Boolean(reviewExpense)}
+          onClose={() => setReviewExpense(null)}
+        />
+      ) : (
+        <ExpenseBillReviewSheet
+          key={reviewExpense?.id ?? 'none'}
+          expense={reviewExpense}
+          visible={Boolean(reviewExpense)}
+          onClose={() => setReviewExpense(null)}
+        />
+      )}
 
       <ClaimReviewSheet
         claim={reviewClaim}
@@ -417,8 +431,8 @@ export const ReimbursementView: React.FC = () => {
           handleApprove(id);
           setClaimOpen(false);
         }}
-        onSettle={(id) => {
-          handleSettle(id);
+        onDisburse={(id) => {
+          handleDisburse(id);
           setClaimOpen(false);
         }}
       />
@@ -426,35 +440,50 @@ export const ReimbursementView: React.FC = () => {
       <ModalSheet
         visible={formOpen}
         onClose={() => setFormOpen(false)}
-        label="Staff reimbursement"
-        title="Submit Expense Claim"
+        label="Expense Claim"
+        title="Submit Staff Expense Reimbursement"
+        description="Submit out-of-pocket expenses incurred during field operations with verified bills."
         size="md"
         footer={
           <>
             <Button label="Cancel" variant="outline" onPress={() => setFormOpen(false)} />
-            <Button label="Submit claim" variant="emerald" onPress={handleSubmitClaim} />
+            <Button label="Submit for Approval" variant="emerald" onPress={handleSubmitClaim} />
           </>
         }
       >
-        <TextField label="Claimant" value={claimant} onChangeText={setClaimant} placeholder="Employee name" />
-        <TextField label="Expense purpose" value={purpose} onChangeText={setPurpose} multiline placeholder="Describe the travel or expense…" />
-        <TextField label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="e.g. 14200" />
+        <TextField label="Employee Name *" value={claimant} onChangeText={setClaimant} placeholder="e.g. Sunita Majhi" />
+        <TextField label="Employee ID" value={empId} onChangeText={setEmpId} placeholder="e.g. PAN-EMP-0104" />
+        <TextField label="Cost Center" value={costCenter} onChangeText={setCostCenter} placeholder="e.g. Koraput Regional Office" />
+        <TextField label="Purpose & Expense Details" value={purpose} onChangeText={setPurpose} multiline placeholder="Describe trip details, dates, attendees or materials purchased..." />
+        <TextField label="Claim Amount (₹) *" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="e.g. 8450" />
         <SelectField
-          label="Category"
+          label="Expense Category"
           value={category}
           onChange={setCategory}
-          options={[
-            { value: 'Travel & TA/DA', label: 'Travel & TA/DA' },
-            { value: 'Training & Certification', label: 'Training & Certification' },
-            { value: 'Fuel & Vehicle', label: 'Fuel & Vehicle' },
-          ]}
+          options={CLAIM_CATEGORIES.map((c) => ({ value: c, label: c }))}
         />
+        <Text style={[styles.attachLabel, { color: theme.colors.textMuted }]}>Attach Bills / Receipts (PDF or Images)</Text>
+        <Pressable
+          onPress={() => setBillsAttached((prev) => !prev)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: billsAttached }}
+          style={[styles.dropzone, { borderColor: theme.colors.emerald, backgroundColor: theme.colors.emeraldSoft }]}
+        >
+          <Icon name="Upload" size={17} color={theme.colors.emerald} />
+          <View style={styles.dropzoneText}>
+            <Text style={[styles.dropzoneTitle, { color: theme.colors.text }]}>
+              {billsAttached ? '2 bills attached · Add more' : 'Upload invoice/voucher scans'}
+            </Text>
+            <Text style={[styles.dropzoneSub, { color: theme.colors.textSubtle }]}>PDF, JPG, PNG · up to 10 MB per bill</Text>
+          </View>
+        </Pressable>
+        <Text style={[styles.attachNote, { color: theme.colors.textSubtle }]}>
+          Demo build — attaching simulates taxi-invoice.pdf and hotel-invoice.pdf against this claim.
+        </Text>
       </ModalSheet>
     </View>
   );
 };
-
-import { Icon as Icon2 } from '../../../components/ui/Icon';
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
@@ -462,13 +491,18 @@ const styles = StyleSheet.create({
   bigPillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   bigPill: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11 },
   bigPillText: { fontSize: 13, fontWeight: '700' },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   stepRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stepPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   stepText: { fontSize: 11, fontWeight: '600' },
-  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
+  typeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  typeChip: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 12, paddingVertical: 8 },
+  typeChipText: { fontSize: 10.5, fontWeight: '700' },
   filterSelect: { flexGrow: 1, flexBasis: 170 },
   searchGrow: { flexGrow: 2, flexBasis: 220 },
   list: { gap: 12 },
+  listWide: { flexDirection: 'row', flexWrap: 'wrap' },
   centreCard: { gap: 12 },
   centreTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   centreTitleCol: { flex: 1, minWidth: 0 },
@@ -484,7 +518,10 @@ const styles = StyleSheet.create({
   cellSub: { fontSize: 11, marginTop: 1 },
   amountText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   viewBtn: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: undefined },
-  billList: { gap: 10 },
-  billRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12 },
-  billBody: { flex: 1, minWidth: 0 },
+  attachLabel: { fontSize: 11.5, fontWeight: '700', marginTop: 4 },
+  dropzone: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', padding: 14 },
+  dropzoneText: { flex: 1, minWidth: 0, gap: 2 },
+  dropzoneTitle: { fontSize: 12, fontWeight: '700' },
+  dropzoneSub: { fontSize: 10 },
+  attachNote: { fontSize: 10.5, lineHeight: 15 },
 });

@@ -2,9 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { HRStore } from '../store';
-import { AttendanceRecord, Punch } from '../types';
+import { AttendanceRecord, Employee } from '../types';
 import { attendanceIssue } from '../helpers';
-import { formatDate } from '../../../utils/formatDate';
+import { exportCsv } from '../csv';
 import { SearchFilterBar } from '../../../components/ui/SearchFilterBar';
 import { Card, SectionCard } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
@@ -15,92 +15,134 @@ import { MetricCard } from '../../../components/ui/MetricCard';
 import { TextField } from '../../../components/ui/TextField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { DataTable, DataColumn } from '../../../components/ui/DataTable';
+import {
+  ImportFormatSheet,
+  ImportSheet,
+  PunchEvidenceCard,
+  parseAttendance,
+  timestampLabel,
+} from './AttendanceParts';
 
 export interface AttendanceViewProps {
   store: HRStore;
 }
 
-const timeLabel = (value?: string) =>
-  value
-    ? new Date(value).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    : '—';
+interface RegisterRow {
+  employee: Employee;
+  record?: AttendanceRecord;
+}
 
-const elapsedLabel = (record: AttendanceRecord): string => {
-  if (!record.punchIn || !record.punchOut) return '—';
+const elapsedLabel = (record?: AttendanceRecord): string => {
+  if (!record?.punchIn || !record.punchOut) return '—';
   const minutes = Math.round(
     (new Date(record.punchOut.time).getTime() - new Date(record.punchIn.time).getTime()) / 60000,
   );
   if (minutes < 0) return '—';
-  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
-};
-
-const EvidenceCard: React.FC<{ title: string; punch?: Punch }> = ({ title, punch }) => {
-  const { theme } = useTheme();
-  return (
-    <View style={[styles.evidenceCard, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
-      <Text style={[styles.evidenceTitle, { color: theme.colors.textSubtle }]}>{title}</Text>
-      <Text style={[styles.evidenceTime, { color: theme.colors.text }]}>
-        {punch ? new Date(punch.time).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Not received'}
-      </Text>
-      <View
-        style={[
-          styles.photoBox,
-          { borderColor: theme.colors.borderStrong, backgroundColor: theme.colors.visualBg },
-        ]}
-      >
-        <Icon name="Camera" size={22} color={theme.colors.textSubtle} strokeWidth={1.6} />
-        <Text style={[styles.photoText, { color: theme.colors.textSubtle }]}>Live photo not received</Text>
-      </View>
-      <View style={styles.gpsRow}>
-        <Icon name="MapPin" size={13} color={theme.colors.textSubtle} />
-        <Text style={[styles.gpsText, { color: theme.colors.textMuted }]}>
-          {punch ? `${punch.latitude.toFixed(4)}, ${punch.longitude.toFixed(4)}` : 'No GPS fix'}
-        </Text>
-      </View>
-      <Text style={[styles.accuracyText, { color: theme.colors.textSubtle }]}>
-        GPS accuracy: ±{punch ? punch.accuracy : '—'} m
-      </Text>
-    </View>
-  );
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
 
 export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
   const { theme } = useTheme();
-  const { data } = store;
+  const { data, commit } = store;
   const [search, setSearch] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [date, setDate] = useState(data.attendance.map((r) => r.date).sort().at(-1) || '2026-10-09');
   const [exceptionsOnly, setExceptionsOnly] = useState(false);
   const [evidenceId, setEvidenceId] = useState<string | null>(null);
+  const [showFormat, setShowFormat] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
 
-  const latestDate = data.attendance.map((r) => r.date).sort().at(-1) ?? '—';
-  const daily = useMemo(
-    () => data.attendance.filter((r) => r.date === latestDate),
-    [data.attendance, latestDate],
+  const daily = useMemo(() => data.attendance.filter((r) => r.date === date), [data.attendance, date]);
+  const entries = useMemo<RegisterRow[]>(
+    () =>
+      data.employees
+        .filter((e) => e.joiningDate <= date)
+        .map((employee) => ({ employee, record: daily.find((r) => r.employeeId === employee.id) })),
+    [data.employees, daily, date],
   );
+
+  const visible = entries.filter(({ employee, record }) => {
+    const q = search.trim().toLowerCase();
+    const matches = `${employee.name} ${employee.id}`.toLowerCase().includes(q);
+    return matches && (!exceptionsOnly || attendanceIssue(record) !== 'Evidence received');
+  });
 
   const punchedIn = daily.filter((r) => r.punchIn).length;
   const missingOut = daily.filter((r) => r.punchIn && !r.punchOut).length;
   const evidenceComplete = daily.filter((r) => attendanceIssue(r) === 'Evidence received').length;
-  const noPunchIn = daily.filter((r) => !r.punchIn).length;
-
-  const filtered = data.attendance.filter((rec) => {
-    const emp = data.employees.find((e) => e.id === rec.employeeId);
-    const q = search.trim().toLowerCase();
-    const matches =
-      rec.employeeId.toLowerCase().includes(q) ||
-      (emp ? emp.name.toLowerCase().includes(q) : false) ||
-      rec.date.includes(search.trim());
-    const matchesDate = !dateFilter.trim() || rec.date === dateFilter.trim();
-    const matchesExceptions = !exceptionsOnly || attendanceIssue(rec) !== 'Evidence received';
-    return matches && matchesDate && matchesExceptions;
-  });
+  const noPunchIn = entries.filter((e) => !e.record?.punchIn).length;
 
   const evidenceRecord = evidenceId ? data.attendance.find((r) => r.id === evidenceId) : undefined;
 
-  const columns: Array<DataColumn<AttendanceRecord>> = [
+  const handleExport = () => {
+    exportCsv(`attendance-${date}`, [
+      ['Employee ID', 'Employee', 'Date', 'Punch-in', 'Punch-out', 'Elapsed', 'Evidence'],
+      ...visible.map(({ employee, record }) => [
+        employee.id,
+        employee.name,
+        date,
+        record?.punchIn?.time || '',
+        record?.punchOut?.time || '',
+        elapsedLabel(record),
+        attendanceIssue(record),
+      ]),
+    ]).catch(() => {});
+  };
+
+  const handleImport = async () => {
+    setImporting(true);
+    setImportError('');
+    try {
+      const rows = parseAttendance(
+        JSON.stringify([
+          {
+            id: 'PUNCH-001',
+            employeeId: data.employees[0]?.id,
+            date: '2026-10-09',
+            punchIn: {
+              time: '2026-10-09T09:20:00+05:30',
+              latitude: 20.844,
+              longitude: 85.151,
+              accuracy: 15,
+              photoUrl: 'https://your-platform.example/punch-in.jpg',
+            },
+            punchOut: {
+              time: '2026-10-09T18:00:00+05:30',
+              latitude: 20.844,
+              longitude: 85.151,
+              accuracy: 12,
+              photoUrl: 'https://your-platform.example/punch-out.jpg',
+            },
+          },
+        ]),
+        data.employees,
+      );
+      const ok = await commit(
+        (prev) => {
+          const keys = new Set(rows.map((r) => `${r.employeeId}:${r.date}`));
+          const existing = prev.attendanceImportedAt
+            ? prev.attendance.filter((r) => !keys.has(`${r.employeeId}:${r.date}`))
+            : [];
+          return { ...prev, attendance: [...existing, ...rows], attendanceImportedAt: new Date().toISOString() };
+        },
+        `${rows.length} attendance records imported. Evidence remains read-only.`,
+      );
+      if (ok) {
+        setDate(rows.map((r) => r.date).sort().at(-1)!);
+        setShowImport(false);
+      }
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'The attendance file could not be read.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const columns: Array<DataColumn<RegisterRow>> = [
     { key: 'employee', label: 'Employee', flex: 1.3 },
-    { key: 'in', label: 'Punch-in', width: 86 },
-    { key: 'out', label: 'Punch-out', width: 86 },
+    { key: 'in', label: 'Punch-in', width: 118 },
+    { key: 'out', label: 'Punch-out', width: 118 },
     { key: 'elapsed', label: 'Elapsed', width: 80 },
     { key: 'evidence', label: 'Evidence', flex: 1.2 },
     { key: 'action', label: 'Action', width: 122 },
@@ -113,18 +155,22 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
           <Icon name="Camera" size={20} color={theme.colors.brandPrimary} strokeWidth={1.9} />
         </View>
         <View style={styles.bannerText}>
-          <View style={styles.bannerTitleRow}>
-            <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Camera punch platform</Text>
-            <StatusChip status="Connected" tone="success" />
-          </View>
+          <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>
+            {data.attendanceImportedAt
+              ? 'Platform export imported · Read-only evidence'
+              : 'Employee attendance platform · Connection pending'}
+          </Text>
           <Text style={[styles.bannerSub, { color: theme.colors.textMuted }]}>
-            Punch-in and punch-out records stream live from the employee platform · Latest record {formatDate(latestDate)}
+            {data.attendanceImportedAt
+              ? `Last import: ${timestampLabel(data.attendanceImportedAt)} IST. Records are from an uploaded export, not a live feed.`
+              : 'Sample punch records are shown below. Live photos are not supplied in the sample. Connect the employee platform or import its export to review actual evidence.'}
           </Text>
         </View>
+        <Button label="Import format" variant="outline" size="sm" onPress={() => setShowFormat(true)} />
       </Card>
 
       <View style={styles.metricsGrid}>
-        <MetricCard label="Employees punched in" value={punchedIn} subtitle={`${punchedIn} of ${daily.length} latest-day records`} style={styles.metric} />
+        <MetricCard label="Employees punched in" value={punchedIn} subtitle={`${entries.length} employees joined by this date`} style={styles.metric} />
         <MetricCard label="Missing punch-out" value={missingOut} subtitle="Requires employee follow-up" style={styles.metric} />
         <MetricCard label="Evidence complete" value={evidenceComplete} subtitle="Both punches include photo and GPS" style={styles.metric} />
         <MetricCard label="No punch-in" value={noPunchIn} subtitle="Not automatically classified as absent" style={styles.metric} />
@@ -132,18 +178,28 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
 
       <SectionCard
         title="Punch attendance"
-        description="Punch-in and punch-out from the employee platform · Times in IST"
+        description="Punch-in and punch-out from the employee platform · Times in IST · Elapsed time excludes no breaks"
         action={
           <View style={styles.headerActions}>
-            <Button label="Import export" variant="outline" size="sm" icon="Upload" />
-            <Button label="Export" variant="outline" size="sm" icon="Download" />
+            <Button
+              label={importing ? 'Importing…' : 'Import export'}
+              variant="outline"
+              size="sm"
+              icon="Upload"
+              disabled={importing}
+              onPress={() => {
+                setImportError('');
+                setShowImport(true);
+              }}
+            />
+            <Button label="Export" variant="outline" size="sm" icon="Download" onPress={handleExport} />
           </View>
         }
       >
-        <SearchFilterBar searchQuery={search} onSearchChange={setSearch} placeholder="Search attendance by staff name or date…" />
+        <SearchFilterBar searchQuery={search} onSearchChange={setSearch} placeholder="Search employee, email or ID" />
         <View style={styles.filterRow}>
           <View style={styles.dateCell}>
-            <TextField label="Date" value={dateFilter} onChangeText={setDateFilter} placeholder="YYYY-MM-DD" />
+            <TextField label="Attendance date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
           </View>
           <Pressable
             onPress={() => setExceptionsOnly((v) => !v)}
@@ -169,76 +225,85 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
         </View>
         <DataTable
           columns={columns}
-          rows={filtered}
-          keyExtractor={(row) => row.id}
-          emptyTitle="No attendance records match"
-          emptyDescription="Adjust the search, date or exceptions filter."
+          rows={visible}
+          keyExtractor={(row) => row.employee.id}
+          emptyTitle="No records match this view"
+          emptyDescription="Try another search or filter."
           emptyIcon="CalendarCheck"
-          renderCell={(rec, column) => {
-            const emp = data.employees.find((e) => e.id === rec.employeeId);
+          renderCell={({ employee, record }, column) => {
             switch (column.key) {
               case 'employee':
                 return (
                   <View style={styles.personRow}>
-                    <Avatar name={emp?.name ?? rec.employeeId} size={32} />
+                    <Avatar name={employee.name} size={32} />
                     <View style={styles.personMain}>
                       <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>
-                        {emp?.name ?? rec.employeeId}
+                        {employee.name}
                       </Text>
-                      <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{rec.employeeId}</Text>
+                      <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{employee.id}</Text>
                     </View>
                   </View>
                 );
               case 'in':
                 return (
-                  <Text style={[styles.time, { color: rec.punchIn ? theme.colors.successText : theme.colors.dangerText }]}>
-                    {timeLabel(rec.punchIn?.time)}
+                  <Text style={[styles.time, { color: record?.punchIn ? theme.colors.successText : theme.colors.dangerText }]}>
+                    {timestampLabel(record?.punchIn?.time)}
                   </Text>
                 );
               case 'out':
                 return (
-                  <Text style={[styles.time, { color: rec.punchOut ? theme.colors.brandPrimary : theme.colors.warningText }]}>
-                    {timeLabel(rec.punchOut?.time)}
+                  <Text style={[styles.time, { color: record?.punchOut ? theme.colors.brandPrimary : theme.colors.warningText }]}>
+                    {timestampLabel(record?.punchOut?.time)}
                   </Text>
                 );
               case 'elapsed':
-                return <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>{elapsedLabel(rec)}</Text>;
+                return <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>{elapsedLabel(record)}</Text>;
               case 'evidence':
                 return (
                   <View style={styles.stack4}>
-                    <StatusChip status={attendanceIssue(rec)} />
-                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{rec.source}</Text>
+                    <StatusChip status={attendanceIssue(record)} />
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {record?.source ?? 'No platform record'}
+                    </Text>
                   </View>
                 );
               default:
                 return (
-                  <Button label="View evidence" variant="outline" size="sm" onPress={() => setEvidenceId(rec.id)} />
+                  <Button
+                    label="View evidence"
+                    variant="outline"
+                    size="sm"
+                    disabled={!record}
+                    onPress={() => record && setEvidenceId(record.id)}
+                  />
                 );
             }
           }}
-          renderMobileCard={(rec) => {
-            const emp = data.employees.find((e) => e.id === rec.employeeId);
-            return (
-              <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
-                <View style={styles.personRow}>
-                  <Avatar name={emp?.name ?? rec.employeeId} size={36} />
-                  <View style={styles.personMain}>
-                    <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{emp?.name ?? rec.employeeId}</Text>
-                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
-                      {rec.employeeId} · {formatDate(rec.date)}
-                    </Text>
-                  </View>
-                  <StatusChip status={attendanceIssue(rec)} />
+          renderMobileCard={({ employee, record }) => (
+            <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
+              <View style={styles.personRow}>
+                <Avatar name={employee.name} size={36} />
+                <View style={styles.personMain}>
+                  <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{employee.name}</Text>
+                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{employee.id}</Text>
                 </View>
-                <View style={styles.mobileTimes}>
-                  <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>
-                    In {timeLabel(rec.punchIn?.time)} · Out {timeLabel(rec.punchOut?.time)} · {elapsedLabel(rec)}
-                  </Text>
-                  <Button label="View evidence" variant="outline" size="sm" onPress={() => setEvidenceId(rec.id)} />
-                </View>
+                <StatusChip status={attendanceIssue(record)} />
               </View>
-            );
-          }}
+              <View style={styles.mobileTimes}>
+                <Text style={[styles.cellText, { color: theme.colors.textMuted }]} numberOfLines={2}>
+                  In {timestampLabel(record?.punchIn?.time)} · Out {timestampLabel(record?.punchOut?.time)} ·{' '}
+                  {elapsedLabel(record)}
+                </Text>
+                <Button
+                  label="View evidence"
+                  variant="outline"
+                  size="sm"
+                  disabled={!record}
+                  onPress={() => record && setEvidenceId(record.id)}
+                />
+              </View>
+            </View>
+          )}
         />
       </SectionCard>
 
@@ -247,17 +312,33 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
           key={evidenceRecord.id}
           visible
           onClose={() => setEvidenceId(null)}
-          label={`${formatDate(evidenceRecord.date)} · ${evidenceRecord.source}`}
+          label={`Punch evidence · ${evidenceRecord.date} · IST`}
           title={data.employees.find((e) => e.id === evidenceRecord.employeeId)?.name ?? evidenceRecord.employeeId}
-          description="Live photo and GPS evidence per punch"
           size="xl"
         >
+          <Text style={[styles.sheetDescription, { color: theme.colors.textMuted }]}>
+            {evidenceRecord.source}. Photos and GPS evidence are supplied by the employee platform. HR cannot
+            capture, replace or alter a punch here.
+          </Text>
           <View style={styles.evidenceGrid}>
-            <EvidenceCard title="Punch-in" punch={evidenceRecord.punchIn} />
-            <EvidenceCard title="Punch-out" punch={evidenceRecord.punchOut} />
+            <PunchEvidenceCard title="Punch-in" punch={evidenceRecord.punchIn} />
+            <PunchEvidenceCard title="Punch-out" punch={evidenceRecord.punchOut} />
           </View>
         </ModalSheet>
       ) : null}
+
+      <ImportFormatSheet
+        visible={showFormat}
+        onClose={() => setShowFormat(false)}
+        employeeId={data.employees[0]?.id}
+      />
+      <ImportSheet
+        visible={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={handleImport}
+        importing={importing}
+        error={importError}
+      />
     </View>
   );
 };
@@ -270,6 +351,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    flexWrap: 'wrap',
   },
   bannerTile: {
     width: 44,
@@ -280,14 +362,8 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 200,
     gap: 4,
-  },
-  bannerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
   },
   bannerSub: {
     fontSize: 12,
@@ -351,7 +427,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
   },
   time: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
@@ -370,51 +446,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  sheetDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
   evidenceGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-  },
-  evidenceCard: {
-    flexGrow: 1,
-    flexBasis: 260,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 8,
-  },
-  evidenceTitle: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  evidenceTime: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-  },
-  photoBox: {
-    height: 180,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  photoText: {
-    fontSize: 11,
-  },
-  gpsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  gpsText: {
-    fontSize: 11.5,
-  },
-  accuracyText: {
-    fontSize: 10.5,
   },
 });

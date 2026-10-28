@@ -45,14 +45,11 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
       (prev) =>
         decideLeave(prev, req.id, {
           status,
-          reason:
-            status === 'Approved'
-              ? 'HR clearance approved based on leave balance.'
-              : note.trim() || 'Operational coverage required.',
+          reason: note.trim(),
           actor: 'Ritika Sen (HR Manager)',
           at: new Date().toISOString(),
         }),
-      `Leave request marked as ${status}.`,
+      `Leave request ${status.toLowerCase()}.`,
     );
     if (ok) {
       setReviewId(null);
@@ -111,10 +108,10 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
               value={adminFilter}
               onChange={(v) => setAdminFilter(v as AdminFilter)}
               options={[
-                { value: 'all', label: `All requests (${leaves.length})` },
-                { value: 'Pending', label: `Pending (${leaves.filter((l) => l.adminStatus === 'Pending').length})` },
-                { value: 'Approved', label: `Approved (${leaves.filter((l) => l.adminStatus === 'Approved').length})` },
-                { value: 'Rejected', label: `Rejected (${leaves.filter((l) => l.adminStatus === 'Rejected').length})` },
+                { value: 'all', label: 'All Admin decisions' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Approved', label: 'Approved' },
+                { value: 'Rejected', label: 'Rejected' },
               ]}
             />
           </View>
@@ -156,7 +153,11 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
                   </Text>
                 );
               case 'balance':
-                return <Text style={[styles.balance, { color: theme.colors.text }]}>{req.balance} days</Text>;
+                return (
+                  <Text style={[styles.balance, { color: theme.colors.text }]}>
+                    {req.balance - (decision?.status === 'Approved' ? req.days : 0)} days
+                  </Text>
+                );
               case 'admin':
                 return (
                   <StatusChip
@@ -207,7 +208,9 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
                   </View>
                 </View>
                 <View style={styles.mobileFooter}>
-                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>Balance: {req.balance} days</Text>
+                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                    Balance: {req.balance - (decision?.status === 'Approved' ? req.days : 0)} days
+                  </Text>
                   <Button
                     label="Review"
                     variant="outline"
@@ -318,9 +321,15 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
             </Card>
           ) : null}
 
+          {reviewRequest.adminStatus === 'Approved' && reviewDecision ? (
+            <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>
+              {reviewDecision.reason || 'HR decision recorded.'}
+            </Text>
+          ) : null}
+
           {reviewRequest.adminStatus === 'Approved' && !reviewDecision ? (
             <TextField
-              label="HR note"
+              label="HR note / reason for rejection"
               value={note}
               onChangeText={setNote}
               multiline
