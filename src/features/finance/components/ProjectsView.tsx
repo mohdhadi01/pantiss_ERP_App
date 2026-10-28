@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { financeAreas, areaTotals, formatCurrency, FinanceArea } from '../data';
@@ -25,7 +26,11 @@ const corpusOf = (p: RegisterRow) => Math.round(p.approved * 0.055);
 export const ProjectsView: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  const [selectedArea, setSelectedArea] = useState<FinanceArea | null>(null);
+  // Deep link: /(finance)/projects?area={areaId} — used by the dashboard
+  // thematic scorecards (web navigates to /finance/{areaId}).
+  const { area: areaParam } = useLocalSearchParams<{ area?: string }>();
+  const initialArea = areaParam ? financeAreas.find((a) => a.id === areaParam) ?? null : null;
+  const [selectedArea, setSelectedArea] = useState<FinanceArea | null>(initialArea);
   const [search, setSearch] = useState('');
   const [donorFilter, setDonorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');

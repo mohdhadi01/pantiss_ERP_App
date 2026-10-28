@@ -102,31 +102,36 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           />
         ) : null}
 
-        <View style={styles.titleColumn}>
-          {eyebrow ? (
-            <Text
-              style={[
-                theme.fontStyles.eyebrow,
-                styles.eyebrow,
-                { color: eyebrowColor ?? theme.colors.brandPrimary },
-              ]}
-              numberOfLines={1}
-            >
-              {eyebrow}
+        {isMd ? (
+          <View style={styles.titleColumn}>
+            {eyebrow ? (
+              <Text
+                style={[
+                  theme.fontStyles.eyebrow,
+                  styles.eyebrow,
+                  { color: eyebrowColor ?? theme.colors.brandPrimary },
+                ]}
+                numberOfLines={1}
+              >
+                {eyebrow}
+              </Text>
+            ) : null}
+            <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
+              {title}
             </Text>
-          ) : null}
-          <Text
-            style={[styles.title, !isMd && styles.titleMobile, { color: theme.colors.text }]}
-            numberOfLines={isMd ? 1 : 2}
-          >
+            {subtitle ? (
+              <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          // Phones: compact native-style bar — the workspace heading below
+          // already shows eyebrow, title and description in full.
+          <Text style={[styles.titleMobile, { color: theme.colors.text }]} numberOfLines={2}>
             {title}
           </Text>
-          {subtitle ? (
-            <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </View>
+        )}
       </View>
 
       <View style={styles.actionsContainer}>
@@ -237,9 +242,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   titleMobile: {
-    fontSize: 17,
-    lineHeight: 22,
-    letterSpacing: -0.4,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    flex: 1,
   },
   subtitle: {
     fontSize: 11,

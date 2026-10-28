@@ -249,51 +249,66 @@ export const FinanceDashboard: React.FC = () => {
 
         <Card padding={20} style={isMd ? { flex: 1.4 } : styles.fullWidth}>
           <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Highlights</Text>
+          <Text style={[styles.highlightsSub, { color: theme.colors.textMuted }]}>
+            Recent activity, alerts &amp; reminders across all finance modules
+          </Text>
           <View style={styles.highlights}>
-            {alerts.slice(0, 7).map((alert) => (
-              <View key={alert.id} style={styles.highlightRow}>
+            {alerts.slice(0, 7).map((alert, index) => {
+              const tagColor = HIGHLIGHT_TAG_COLORS[alert.category] ?? theme.colors.info;
+              return (
                 <View
+                  key={alert.id}
                   style={[
-                    styles.highlightIcon,
-                    {
-                      backgroundColor:
-                        alert.category === 'Action Required'
-                          ? theme.colors.dangerSoft
-                          : alert.category === 'Completed'
-                            ? theme.colors.successSoft
-                            : theme.colors.infoSoft,
+                    styles.highlightRow,
+                    index < Math.min(alerts.length, 7) - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: 'rgba(128, 144, 168, 0.14)',
+                      paddingBottom: 12,
                     },
                   ]}
                 >
-                  <Icon
-                    name={
-                      alert.category === 'Action Required'
-                        ? 'AlertTriangle'
-                        : alert.category === 'Completed'
-                          ? 'CheckCircle'
-                          : 'Bell'
-                    }
-                    size={14}
-                    color={
-                      alert.category === 'Action Required'
-                        ? theme.colors.dangerText
-                        : alert.category === 'Completed'
-                          ? theme.colors.successText
-                          : theme.colors.infoText
-                    }
-                  />
+                  <View
+                    style={[
+                      styles.highlightIcon,
+                      { backgroundColor: `${tagColor}1A`, borderColor: `${tagColor}33` },
+                    ]}
+                  >
+                    <Icon
+                      name={
+                        alert.category === 'Action Required'
+                          ? 'AlertTriangle'
+                          : alert.category === 'Completed'
+                            ? 'CheckCircle'
+                            : alert.category === 'Compliance'
+                              ? 'ShieldCheck'
+                              : 'Bell'
+                      }
+                      size={15}
+                      color={tagColor}
+                      strokeWidth={1.9}
+                    />
+                  </View>
+                  <View style={styles.highlightBody}>
+                    <View style={styles.highlightTitleRow}>
+                      <Text style={[styles.highlightTitle, { color: theme.colors.text }]}>
+                        {alert.title}
+                      </Text>
+                      <View style={[styles.highlightTag, { backgroundColor: `${tagColor}1A` }]}>
+                        <Text style={[styles.highlightTagText, { color: tagColor }]}>
+                          {alert.category}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.highlightDetail, { color: theme.colors.textMuted }]}>
+                      {alert.body}
+                    </Text>
+                    <Text style={[styles.highlightTime, { color: theme.colors.textSubtle }]}>
+                      {alert.time}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.highlightBody}>
-                  <Text numberOfLines={1} style={[styles.highlightTitle, { color: theme.colors.text }]}>
-                    {alert.title}
-                  </Text>
-                  <Text numberOfLines={2} style={[styles.highlightDetail, { color: theme.colors.textMuted }]}>
-                    {alert.body}
-                  </Text>
-                </View>
-                <Text style={[styles.highlightTime, { color: theme.colors.textSubtle }]}>{alert.time}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
           <Pressable onPress={() => handleNav('/(finance)/alerts')} style={styles.viewAll}>
             <Text style={[styles.viewAllText, { color: theme.colors.financeAccent }]}>
@@ -304,36 +319,74 @@ export const FinanceDashboard: React.FC = () => {
         </Card>
       </View>
 
-      {/* Thematic financial scorecards (web: 8 area cards, 2 per row) */}
+      {/* Thematic financial scorecards (web: 8 area cards, 2-up ≥md, full-width below) */}
       <View style={styles.section}>
-        <SectionLabel>Thematic financial scorecards</SectionLabel>
+        <View style={styles.scorecardHeader}>
+          <View style={styles.scorecardHeaderText}>
+            <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>
+              Thematic financial scorecards
+            </Text>
+            <Text style={[styles.scorecardSub, { color: theme.colors.textMuted }]}>
+              Select a thematic area to review every project and transaction-level control
+            </Text>
+          </View>
+          <View style={[styles.fyPill, { borderColor: `${theme.colors.financeAccent}55` }]}>
+            <Text style={[styles.fyPillText, { color: theme.colors.financeAccent }]}>
+              FY 2026–27 · Updated 03 Aug
+            </Text>
+          </View>
+        </View>
         <View style={styles.grid2}>
           {financeAreas.map((area) => {
             const totals = areaTotals(area);
             return (
-              <Pressable key={area.id} onPress={() => handleNav('/(finance)/projects')} style={styles.areaWrap}>
+              <Pressable
+                key={area.id}
+                onPress={() => handleNav(`/(finance)/projects?area=${area.id}`)}
+                style={[styles.areaWrap, !isMd && styles.areaWrapMobile]}
+              >
                 <Card padding={18} style={styles.areaCard}>
-                  <View style={styles.areaTop}>
-                    <View style={styles.areaTitleRow}>
-                      <View style={[styles.areaDot, { backgroundColor: area.color }]} />
+                  <View style={styles.areaHeader}>
+                    <View style={[styles.areaTile, { backgroundColor: area.color }]}>
+                      <Icon name="Landmark" size={20} color="#ffffff" strokeWidth={1.9} />
+                    </View>
+                    <View style={styles.areaHeaderText}>
                       <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>
                         {area.name}
                       </Text>
+                      <Text style={[styles.areaProjects, { color: theme.colors.textSubtle }]}>
+                        {area.projects.length} active projects
+                      </Text>
                     </View>
-                    <Text style={[styles.areaProjects, { color: theme.colors.textSubtle }]}>
-                      {area.projects.length} projects
-                    </Text>
+                    <Icon name="ArrowUpRight" size={15} color={theme.colors.textSubtle} />
                   </View>
                   <View style={styles.areaMetrics}>
-                    <AreaMetric label="Approved" value={formatCurrency(totals.approved)} theme={theme} />
-                    <AreaMetric label="Released" value={formatCurrency(totals.released)} theme={theme} />
-                    <AreaMetric label="Spent" value={formatCurrency(totals.spent)} theme={theme} />
-                    <AreaMetric label="Available" value={formatCurrency(totals.available)} theme={theme} />
+                    <AreaMetricBox
+                      value={formatCurrency(totals.approved)}
+                      label="Approved"
+                      theme={theme}
+                    />
+                    <AreaMetricBox
+                      value={formatCurrency(totals.released)}
+                      label="Released"
+                      sub={`/ ${formatCurrency(totals.approved)} target`}
+                      theme={theme}
+                    />
+                    <AreaMetricBox value={formatCurrency(totals.spent)} label="Spent" theme={theme} />
+                    <AreaMetricBox
+                      value={formatCurrency(totals.available)}
+                      label="Available"
+                      theme={theme}
+                    />
                   </View>
-                  <ProgressBar value={totals.utilization} color={area.color} height={6} />
-                  <Text style={[styles.areaUtilized, { color: theme.colors.textMuted }]}>
-                    {totals.utilization}% utilized
-                  </Text>
+                  <View style={styles.areaBarRow}>
+                    <View style={styles.areaBarTrack}>
+                      <ProgressBar value={totals.utilization} color={area.color} height={6} />
+                    </View>
+                    <Text style={[styles.areaUtilized, { color: theme.colors.textMuted }]}>
+                      {totals.utilization}% utilized
+                    </Text>
+                  </View>
                 </Card>
               </Pressable>
             );
@@ -342,6 +395,16 @@ export const FinanceDashboard: React.FC = () => {
       </View>
     </View>
   );
+};
+
+const HIGHLIGHT_TAG_COLORS: Record<string, string> = {
+  'Action Required': '#ef4444',
+  Compliance: '#f59e0b',
+  Approvals: '#3b82f6',
+  Investments: '#3b82f6',
+  Budget: '#f59e0b',
+  Salary: '#14b8a6',
+  Completed: '#10b981',
 };
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -362,18 +425,22 @@ const LegendDot: React.FC<{ color: string; label: string; theme: ReturnType<type
   </View>
 );
 
-const AreaMetric: React.FC<{ label: string; value: string; theme: ReturnType<typeof useTheme>['theme'] }> = ({
-  label,
-  value,
-  theme,
-}) => (
-  <View style={styles.areaMetric}>
+const AreaMetricBox: React.FC<{
+  label: string;
+  value: string;
+  sub?: string;
+  theme: ReturnType<typeof useTheme>['theme'];
+}> = ({ label, value, sub, theme }) => (
+  <View style={[styles.areaMetric, { borderColor: theme.colors.border }]}>
     <Text numberOfLines={1} style={[styles.areaMetricValue, { color: theme.colors.text }]}>
       {value}
     </Text>
-    <Text numberOfLines={1} style={[styles.areaMetricLabel, { color: theme.colors.textSubtle }]}>
-      {label}
-    </Text>
+    {sub ? (
+      <Text numberOfLines={1} style={[styles.areaMetricSub, { color: theme.colors.textSubtle }]}>
+        {sub}
+      </Text>
+    ) : null}
+    <Text style={[styles.areaMetricLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
   </View>
 );
 
@@ -563,37 +630,59 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
+  highlightsSub: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+  },
   highlights: {
     gap: 12,
     marginTop: 14,
   },
   highlightRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'flex-start',
   },
   highlightIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   highlightBody: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 4,
+  },
+  highlightTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   highlightTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  highlightTag: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  highlightTagText: {
+    fontSize: 9.5,
     fontWeight: '600',
   },
   highlightDetail: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   highlightTime: {
-    fontSize: 10,
+    fontSize: 10.5,
   },
   viewAll: {
     flexDirection: 'row',
@@ -612,34 +701,61 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '46%',
   },
-  areaCard: {
-    gap: 10,
+  areaWrapMobile: {
+    flexBasis: '100%',
   },
-  areaTop: {
+  scorecardHeader: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  areaTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  scorecardHeaderText: {
     flex: 1,
     minWidth: 0,
+    gap: 4,
   },
-  areaDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  scorecardSub: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  fyPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  fyPillText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  areaCard: {
+    gap: 14,
+  },
+  areaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  areaTile: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  areaHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   areaName: {
-    fontSize: 13.5,
+    fontSize: 15.5,
     fontWeight: '600',
-    flexShrink: 1,
+    letterSpacing: -0.3,
   },
   areaProjects: {
-    fontSize: 10.5,
+    fontSize: 11,
   },
   areaMetrics: {
     flexDirection: 'row',
@@ -648,19 +764,39 @@ const styles = StyleSheet.create({
   },
   areaMetric: {
     flexGrow: 1,
-    flexBasis: '44%',
-    minWidth: 72,
-    gap: 1,
+    flexBasis: '46%',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
   },
   areaMetricValue: {
-    fontSize: 12.5,
+    fontSize: 14.5,
     fontWeight: '600',
+    letterSpacing: -0.3,
+    fontVariant: ['tabular-nums'],
+  },
+  areaMetricSub: {
+    fontSize: 10.5,
     fontVariant: ['tabular-nums'],
   },
   areaMetricLabel: {
-    fontSize: 9.5,
+    fontSize: 9,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  areaBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  areaBarTrack: {
+    flex: 1,
   },
   areaUtilized: {
-    fontSize: 10.5,
+    fontSize: 11.5,
+    fontWeight: '500',
   },
 });
