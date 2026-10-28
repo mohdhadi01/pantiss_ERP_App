@@ -26,9 +26,11 @@ import { Icon } from '../ui/Icon';
 
 export interface WelcomeSplashProps {
   onComplete: () => void;
+  /** Renders loader-only chrome (no entry CTA) — used while fonts/hydration load. */
+  loading?: boolean;
 }
 
-export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete }) => {
+export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, loading = false }) => {
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
@@ -382,6 +384,7 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete }) => {
         </Animated.View>
 
         {/* Entry Action Button */}
+        {!loading && (
         <Animated.View
           entering={FadeInUp.delay(450).duration(450)}
           style={styles.actionColumn}
@@ -410,6 +413,7 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete }) => {
             <Text style={styles.secureText}>SECURE ORGANIZATIONAL ACCESS</Text>
           </View>
         </Animated.View>
+        )}
       </Animated.View>
 
       {/* ── Footnote Bottom ── */}

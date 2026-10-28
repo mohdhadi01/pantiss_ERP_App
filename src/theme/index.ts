@@ -1,10 +1,37 @@
 import { lightColors, darkColors, ColorTokens } from './colors';
 import { spacing, radii, layout } from './spacing';
 import { typography, fontStyles } from './typography';
-import { shadows } from './shadows';
+import { createShadows, ThemeShadows } from './shadows';
+import {
+  heroGradients,
+  accentGradients,
+  avatarGradients,
+  barGradients,
+  cardGradients,
+  funnelStages,
+  areaColors,
+  GradientPreset,
+} from './gradients';
+import { breakpoints, Breakpoint } from './breakpoints';
 
-export { lightColors, darkColors, spacing, radii, layout, typography, fontStyles, shadows };
-export type { ColorTokens };
+export {
+  lightColors,
+  darkColors,
+  spacing,
+  radii,
+  layout,
+  typography,
+  fontStyles,
+  breakpoints,
+  heroGradients,
+  accentGradients,
+  avatarGradients,
+  barGradients,
+  cardGradients,
+  funnelStages,
+  areaColors,
+};
+export type { ColorTokens, ThemeShadows, GradientPreset, Breakpoint };
 
 export interface AppTheme {
   isDark: boolean;
@@ -14,7 +41,8 @@ export interface AppTheme {
   layout: typeof layout;
   typography: typeof typography;
   fontStyles: typeof fontStyles;
-  shadows: typeof shadows;
+  shadows: ThemeShadows;
+  cardGradient: GradientPreset;
 }
 
 export function createTheme(isDark: boolean): AppTheme {
@@ -26,6 +54,7 @@ export function createTheme(isDark: boolean): AppTheme {
     layout,
     typography,
     fontStyles,
-    shadows,
+    shadows: createShadows(isDark),
+    cardGradient: cardGradients[isDark ? 'dark' : 'light'],
   };
 }
