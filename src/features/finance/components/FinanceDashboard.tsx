@@ -106,7 +106,9 @@ export const FinanceDashboard: React.FC = () => {
       <View style={styles.section}>
         <SectionLabel>Treasury &amp; Reserves</SectionLabel>
         <View style={styles.grid2}>
-          <Pressable onPress={() => handleNav('/(finance)/banking')}>
+          {/* Sizing lives on the wrapper: Pressable is a column-flex container,
+              so flexBasis on the Card itself would set its height. */}
+          <Pressable onPress={() => handleNav('/(finance)/banking')} style={styles.reserveWrap}>
             <Card padding={20} style={styles.reserveCard}>
               <View style={styles.reserveTop}>
                 <View style={[styles.iconTile, { backgroundColor: theme.colors.successSoft }]}>
@@ -124,7 +126,7 @@ export const FinanceDashboard: React.FC = () => {
             </Card>
           </Pressable>
 
-          <Pressable onPress={() => handleNav('/(finance)/investments')}>
+          <Pressable onPress={() => handleNav('/(finance)/investments')} style={styles.reserveWrap}>
             <Card padding={20} style={styles.reserveCard}>
               <View style={styles.reserveTop}>
                 <View style={[styles.iconTile, { backgroundColor: theme.colors.infoSoft }]}>
@@ -302,14 +304,14 @@ export const FinanceDashboard: React.FC = () => {
         </Card>
       </View>
 
-      {/* Thematic financial scorecards (web: 8 area cards with 4 mini-metrics) */}
+      {/* Thematic financial scorecards (web: 8 area cards, 2 per row) */}
       <View style={styles.section}>
         <SectionLabel>Thematic financial scorecards</SectionLabel>
-        <View style={[styles.grid2, isMd && styles.grid2Columns]}>
+        <View style={styles.grid2}>
           {financeAreas.map((area) => {
             const totals = areaTotals(area);
             return (
-              <Pressable key={area.id} onPress={() => handleNav('/(finance)/projects')}>
+              <Pressable key={area.id} onPress={() => handleNav('/(finance)/projects')} style={styles.areaWrap}>
                 <Card padding={18} style={styles.areaCard}>
                   <View style={styles.areaTop}>
                     <View style={styles.areaTitleRow}>
@@ -443,12 +445,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  grid2Columns: {
-    flexWrap: 'nowrap',
+  reserveWrap: {
+    flexGrow: 1,
+    flexBasis: '46%',
   },
   reserveCard: {
-    flexGrow: 1,
-    flexBasis: 220,
     gap: 4,
   },
   reserveTop: {
@@ -607,9 +608,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  areaCard: {
+  areaWrap: {
     flexGrow: 1,
-    flexBasis: 300,
+    flexBasis: '46%',
+  },
+  areaCard: {
     gap: 10,
   },
   areaTop: {
@@ -640,11 +643,13 @@ const styles = StyleSheet.create({
   },
   areaMetrics: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   areaMetric: {
-    flex: 1,
-    minWidth: 0,
+    flexGrow: 1,
+    flexBasis: '44%',
+    minWidth: 72,
     gap: 1,
   },
   areaMetricValue: {

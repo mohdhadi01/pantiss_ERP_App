@@ -20,7 +20,7 @@ export const ProcAreaCard: React.FC<{
   const { theme } = useTheme();
   const pct = total ? Math.round((done / total) * 100) : 0;
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} style={styles.areaCardWrap}>
       <Card padding={16} style={styles.areaCard}>
         <View style={styles.areaTop}>
           <View style={[styles.areaTile, { backgroundColor: `${color}1A` }]}>
@@ -107,7 +107,8 @@ export const QuoteCard: React.FC<{
 };
 
 const styles = StyleSheet.create({
-  areaCard: { flexGrow: 1, flexBasis: 280, gap: 10 },
+  areaCard: { gap: 10 },
+  areaCardWrap: { flexGrow: 1, flexBasis: 280 },
   areaTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   areaTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   areaTileText: { fontSize: 16, fontWeight: '700' },

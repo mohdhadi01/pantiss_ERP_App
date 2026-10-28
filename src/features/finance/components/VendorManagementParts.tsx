@@ -13,7 +13,7 @@ export const VendorCard: React.FC<{ vendor: Vendor; onPress: () => void }> = ({ 
   const { theme } = useTheme();
   const last4 = vendor.bankAccount.slice(-4);
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={onPress} style={styles.cardWrap}>
       <Card padding={16} style={styles.card}>
         <View style={styles.topRow}>
           <StatusChip status={vendor.category} tone="brand" dot={false} />
@@ -118,7 +118,8 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value })
 };
 
 const styles = StyleSheet.create({
-  card: { flexGrow: 1, flexBasis: 320, gap: 10 },
+  card: { gap: 10 },
+  cardWrap: { flexGrow: 1, flexBasis: 320 },
   topRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   titleBlock: { gap: 2 },
   name: { fontSize: 14, fontWeight: '700', lineHeight: 19 },

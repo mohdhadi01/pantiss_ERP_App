@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../hooks/useTheme';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { ModuleItem } from '../../types/modules';
 import { Icon } from '../ui/Icon';
 import { Badge } from '../ui/Badge';
@@ -19,6 +20,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   onSelect,
 }) => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -33,6 +35,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
       disabled={isSoon}
       style={({ pressed }) => [
         styles.card,
+        !isMd && styles.cardMobile,
         {
           backgroundColor: theme.colors.moduleBg,
           borderColor: theme.colors.border,
@@ -111,6 +114,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     minHeight: 220,
+  },
+  /** Phones: drop the desktop min-height — content defines the card. */
+  cardMobile: {
+    minHeight: 0,
   },
   cardInner: {
     padding: 20,

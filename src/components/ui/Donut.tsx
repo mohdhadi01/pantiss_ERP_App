@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 
 export interface DonutSegment {
   value: number;
@@ -43,8 +43,8 @@ export const Donut: React.FC<DonutProps> = ({
 
   return (
     <View style={[styles.container, { width: size, height: size }, style]}>
-      <Svg width={size} height={size}>
-        <G rotation="-90" originX={size / 2} originY={size / 2}>
+      <View style={[styles.svgBox, { width: size, height: size, transform: [{ rotate: '-90deg' }] }]}>
+        <Svg width={size} height={size}>
           {arcs.map((arc, index) => (
             <Circle
               key={index}
@@ -59,8 +59,8 @@ export const Donut: React.FC<DonutProps> = ({
               strokeLinecap="butt"
             />
           ))}
-        </G>
-      </Svg>
+        </Svg>
+      </View>
       {centerContent ? <View style={styles.center}>{centerContent}</View> : null}
     </View>
   );
@@ -70,6 +70,11 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  svgBox: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   center: {
     position: 'absolute',

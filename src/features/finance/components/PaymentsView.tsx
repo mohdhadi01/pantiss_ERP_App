@@ -151,6 +151,7 @@ export const PaymentsView: React.FC = () => {
               <View style={[styles.grid, isMd && styles.gridWide]}>
                 {areas.map(({ area, count }) => (
                   <Pressable
+                    style={styles.scopeCardWrap}
                     key={area.id}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -182,6 +183,7 @@ export const PaymentsView: React.FC = () => {
               <View style={[styles.grid, isMd && styles.gridWide]}>
                 {(areas.find((row) => row.area.id === areaId)?.projects ?? []).map((name) => (
                   <Pressable
+                    style={styles.scopeCardWrap}
                     key={name}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -377,7 +379,8 @@ const styles = StyleSheet.create({
   section: { gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
-  scopeCard: { flexGrow: 1, flexBasis: 220, gap: 8 },
+  scopeCard: { gap: 8 },
+  scopeCardWrap: { flexGrow: 1, flexBasis: 220 },
   scopeTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scopeTile: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   scopeTileText: { fontSize: 15, fontWeight: '700' },

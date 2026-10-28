@@ -199,7 +199,7 @@ export const BankingView: React.FC = () => {
           {BANK_ACCOUNTS.map((acc) => {
             const selected = acc.id === selectedAccountId;
             return (
-              <Pressable key={acc.id} onPress={() => setSelectedAccountId(acc.id)}>
+              <Pressable key={acc.id} onPress={() => setSelectedAccountId(acc.id)} style={styles.accountCardWrap}>
                 <Card
                   padding={16}
                   style={[
@@ -338,7 +338,8 @@ const styles = StyleSheet.create({
   metricCard: { flexGrow: 1, flexBasis: 220 },
   section: { gap: 12 },
   accountsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  accountCard: { flexGrow: 1, flexBasis: 250, gap: 8 },
+  accountCard: { gap: 8 },
+  accountCardWrap: { flexGrow: 1, flexBasis: 250 },
   accTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   accTile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   accInitial: { fontSize: 16, fontWeight: '700' },

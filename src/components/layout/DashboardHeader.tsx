@@ -115,7 +115,10 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               {eyebrow}
             </Text>
           ) : null}
-          <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, !isMd && styles.titleMobile, { color: theme.colors.text }]}
+            numberOfLines={isMd ? 1 : 2}
+          >
             {title}
           </Text>
           {subtitle ? (
@@ -232,6 +235,11 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '600',
     letterSpacing: -0.5,
+  },
+  titleMobile: {
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 11,

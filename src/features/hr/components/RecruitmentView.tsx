@@ -394,9 +394,11 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
     <View style={styles.container}>
       {/* Header block */}
       <View style={[styles.headerCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border, ...(theme.shadows.card as object) }]}>
-        <View style={[styles.iconTile, { backgroundColor: theme.colors.brandSoft }]}>
-          <Icon name="UserCheck" size={19} color={theme.colors.brandPrimary} strokeWidth={1.9} />
-        </View>
+        {isMd ? (
+          <View style={[styles.iconTile, { backgroundColor: theme.colors.brandSoft }]}>
+            <Icon name="UserCheck" size={19} color={theme.colors.brandPrimary} strokeWidth={1.9} />
+          </View>
+        ) : null}
         <View style={styles.headerMain}>
           <Text style={[theme.fontStyles.h2, { color: theme.colors.text }]}>Recruitment &amp; Hiring</Text>
           <Text style={[styles.headerSub, { color: theme.colors.textMuted }]}>
@@ -656,6 +658,7 @@ const styles = StyleSheet.create({
   headerCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 13,
     borderWidth: 1,
     borderRadius: 16,

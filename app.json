@@ -19,7 +19,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/pantiss-mark.png",
       "name": "Pantiss ERP",
       "backgroundColor": "#09090b",

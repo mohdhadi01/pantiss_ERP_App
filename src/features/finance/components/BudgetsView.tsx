@@ -119,8 +119,8 @@ export const BudgetsView: React.FC = () => {
             {financeAreas.map((area) => {
               const totals = areaTotals(area);
               return (
-                <Pressable key={area.id} onPress={() => handleSelectArea(area)}>
-                  <Card padding={18} style={[styles.areaCard, isMd && { flexGrow: 1, flexBasis: 280 }]}>
+                <Pressable key={area.id} onPress={() => handleSelectArea(area)} style={styles.areaCardWrap}>
+                  <Card padding={18} style={styles.areaCard}>
                     <View style={styles.areaTitleRow}>
                       <View style={[styles.areaDot, { backgroundColor: area.color }]} />
                       <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{area.name}</Text>
@@ -314,7 +314,8 @@ const styles = StyleSheet.create({
   metricCard: { flexGrow: 1, flexBasis: 220 },
   section: { gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  areaCard: { flexGrow: 1, flexBasis: 280, gap: 10 },
+  areaCard: { gap: 10 },
+  areaCardWrap: { flexGrow: 1, flexBasis: 280 },
   areaTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   areaDot: { width: 8, height: 8, borderRadius: 4 },
   areaName: { fontSize: 13.5, fontWeight: '600', flexShrink: 1 },

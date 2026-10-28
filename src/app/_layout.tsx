@@ -12,6 +12,7 @@ import {
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { CategoryProvider } from '../context/CategoryContext';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../hooks/useTheme';
 import { WelcomeSplash } from '../components/animations/WelcomeSplash';
@@ -77,16 +78,18 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <CategoryProvider>
-              <RootLayoutContent />
-            </CategoryProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <CategoryProvider>
+                <RootLayoutContent />
+              </CategoryProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

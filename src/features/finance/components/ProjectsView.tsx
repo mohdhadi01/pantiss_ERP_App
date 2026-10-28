@@ -141,6 +141,7 @@ export const ProjectsView: React.FC = () => {
                     Haptics.selectionAsync().catch(() => {});
                     setSelectedArea(area);
                   }}
+                  style={styles.areaCardWrap}
                 >
                   <Card padding={16} style={styles.areaCard}>
                     <View style={styles.areaTop}>
@@ -243,7 +244,8 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 32, fontWeight: '600', letterSpacing: -1.3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
-  areaCard: { flexGrow: 1, flexBasis: 260, gap: 9 },
+  areaCard: { gap: 9 },
+  areaCardWrap: { flexGrow: 1, flexBasis: 260 },
   areaTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   areaTile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   areaName: { fontSize: 13.5, fontWeight: '600', flexShrink: 1 },

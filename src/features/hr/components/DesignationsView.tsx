@@ -174,7 +174,7 @@ export const DesignationsView: React.FC<DesignationsViewProps> = ({ store }) => 
         {financeAreas.map((item) => {
           const count = data.designations.filter((d) => d.areaId === item.id).length;
           return (
-            <Pressable key={item.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); setActiveArea(item.id); }}>
+            <Pressable key={item.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); setActiveArea(item.id); }} style={styles.areaCardWrap}>
               <Card padding={18} style={[styles.areaCard, { borderColor: theme.colors.border }]}>
                 <View style={[styles.areaTile, { backgroundColor: theme.colors.brandSoft }]}>
                   <Icon name="Building2" size={18} color={theme.colors.brandPrimary} strokeWidth={1.9} />
@@ -219,9 +219,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   areaCard: {
+    gap: 8,
+  },
+  areaCardWrap: {
     flexGrow: 1,
     flexBasis: 260,
-    gap: 8,
   },
   areaTile: {
     width: 40,

@@ -151,7 +151,7 @@ export const InvoicesView: React.FC = () => {
           {!areaId ? (
             <View style={[styles.grid, isMd && styles.gridWide]}>
               {areaRows.map(({ area, count }) => (
-                <Pressable key={area.id} onPress={() => setAreaId(area.id)}>
+                <Pressable key={area.id} onPress={() => setAreaId(area.id)} style={styles.scopeCardWrap}>
                   <Card padding={16} style={styles.scopeCard}>
                     <View style={styles.scopeTop}>
                       <View style={[styles.scopeTile, { backgroundColor: `${area.color}1A` }]}>
@@ -180,6 +180,7 @@ export const InvoicesView: React.FC = () => {
                         setProjectId(name);
                         setSearch('');
                       }}
+                      style={styles.scopeCardWrap}
                     >
                       <Card padding={16} style={styles.scopeCard}>
                         <Text numberOfLines={1} style={[styles.scopeName, { color: theme.colors.text }]}>{name}</Text>
@@ -374,7 +375,8 @@ const styles = StyleSheet.create({
   section: { gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
-  scopeCard: { flexGrow: 1, flexBasis: 240, gap: 8 },
+  scopeCard: { gap: 8 },
+  scopeCardWrap: { flexGrow: 1, flexBasis: 240 },
   scopeTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scopeTile: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   scopeTileText: { fontSize: 15, fontWeight: '700' },

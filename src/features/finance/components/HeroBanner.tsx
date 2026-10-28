@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../hooks/useTheme';
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { GradientPreset } from '../../../theme/gradients';
 import { Icon, IconSource } from '../../../components/ui/Icon';
 
@@ -42,6 +43,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   style,
 }) => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
 
   return (
     <LinearGradient
@@ -58,7 +60,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         </View>
       ) : null}
 
-      <View style={styles.content}>
+      <View style={[styles.content, !isMd && styles.contentStacked]}>
         <View style={styles.mainColumn}>
           <View style={styles.badgeRow}>
             <View style={styles.badge}>
@@ -66,7 +68,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <Text style={styles.badgeText}>{badge.label}</Text>
             </View>
           </View>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, !isMd && styles.titleMobile]}>{title}</Text>
           {description ? <Text style={styles.description}>{description}</Text> : null}
           {actions && actions.length > 0 ? (
             <View style={styles.actionsRow}>
@@ -103,7 +105,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           ) : null}
         </View>
 
-        {right ? <View style={styles.rightColumn}>{right}</View> : null}
+        {right ? (
+          <View style={[styles.rightColumn, !isMd && styles.rightColumnStacked]}>{right}</View>
+        ) : null}
       </View>
     </LinearGradient>
   );
@@ -168,6 +172,13 @@ const styles = StyleSheet.create({
     gap: 20,
     alignItems: 'center',
   },
+  /** Phones: stack text above the glass card — full width each (mobile-first). */
+  contentStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    padding: 20,
+    gap: 18,
+  },
   mainColumn: {
     flex: 1,
     minWidth: 0,
@@ -200,6 +211,11 @@ const styles = StyleSheet.create({
     lineHeight: 33,
     fontWeight: '600',
     letterSpacing: -1.2,
+  },
+  titleMobile: {
+    fontSize: 23,
+    lineHeight: 29,
+    letterSpacing: -0.9,
   },
   description: {
     color: 'rgba(209, 250, 229, 0.85)',
@@ -235,6 +251,9 @@ const styles = StyleSheet.create({
   },
   rightColumn: {
     width: 190,
+  },
+  rightColumnStacked: {
+    width: '100%',
   },
   glassCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',

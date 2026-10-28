@@ -167,7 +167,7 @@ export const AuditTrailsView: React.FC = () => {
 
       <View style={[styles.grid, isMd && styles.gridWide]}>
         {directory.map((entry) => (
-          <Pressable key={entry.project} onPress={() => { setSearch(entry.project); setStatusFilter('all'); }}>
+          <Pressable key={entry.project} onPress={() => { setSearch(entry.project); setStatusFilter('all'); }} style={styles.areaCardWrap}>
             <Card padding={16} style={styles.areaCard}>
               <View style={styles.areaTop}>
                 <View style={[styles.areaTile, { backgroundColor: `${entry.color}1A` }]}>
@@ -295,7 +295,8 @@ const styles = StyleSheet.create({
   metricCard: { flexGrow: 1, flexBasis: 200 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridWide: { flexWrap: 'nowrap' },
-  areaCard: { flexGrow: 1, flexBasis: 260, gap: 10 },
+  areaCard: { gap: 10 },
+  areaCardWrap: { flexGrow: 1, flexBasis: 260 },
   areaTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   areaTile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   areaTileText: { fontSize: 15, fontWeight: '700' },
