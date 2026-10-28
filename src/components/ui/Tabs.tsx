@@ -30,6 +30,7 @@ export const Tabs: React.FC<TabsProps> = ({ items, activeKey, onChange, accent, 
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
       contentContainerStyle={[styles.row, style]}
       keyboardShouldPersistTaps="handled"
     >
@@ -95,6 +96,10 @@ function toSoftBg(hex: string): string {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

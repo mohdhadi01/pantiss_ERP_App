@@ -564,6 +564,8 @@ const styles = StyleSheet.create({
   },
   reserveCard: {
     gap: 4,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
   },
   /** Phones: compact horizontal card — icon | value stack | badge */
   reserveCardMobile: {
@@ -572,6 +574,7 @@ const styles = StyleSheet.create({
     gap: 12,
     width: '100%',
     flexWrap: 'nowrap',
+    overflow: 'hidden',
   },
   reserveText: {
     flex: 1,
