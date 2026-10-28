@@ -1,98 +1,110 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { ScreenWrapper } from '../components/layout/ScreenWrapper';
+import { useTheme } from '../hooks/useTheme';
+import { useCategory } from '../hooks/useCategory';
+import { categories } from '../data/modules';
+import { Category } from '../types/modules';
+import { CategoryCard } from '../components/cards/CategoryCard';
+import { TopNavigation } from '../components/layout/TopNavigation';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function WorkspaceLandingScreen() {
+  const { theme } = useTheme();
+  const { setSelectedCategory } = useCategory();
+  const router = useRouter();
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  const handleSelectCategory = (category: Category) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setSelectedCategory(category.id);
+    router.push(`/modules/${category.id}` as any);
+  };
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <ScreenWrapper scrollable contentContainerStyle={styles.scrollContent}>
+      {/* Top Navigation Bar matching Pantiss_ERP TopNavigation */}
+      <TopNavigation canGoBack={false} />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      {/* Main Stage */}
+      <View style={styles.mainContainer}>
+        {/* Stage Heading Row */}
+        <View style={styles.stageHeader}>
+          <View style={styles.titleColumn}>
+            <Text style={[styles.eyebrow, { color: theme.colors.textSubtle }]}>
+              WORKSPACE
+            </Text>
+            <Text style={[styles.mainHeading, { color: theme.colors.text }]}>
+              Select where to begin.
+            </Text>
+          </View>
+          <Text style={[styles.workspaceCount, { color: theme.colors.textSubtle }]}>
+            03 / WORKSPACES
+          </Text>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        {/* Workspace Deck */}
+        <View style={styles.workspaceDeck}>
+          {categories.map((category, index) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              index={index}
+              onSelect={handleSelectCategory}
+            />
+          ))}
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  scrollContent: {
+    padding: 0,
+    paddingBottom: 64,
+  },
+  mainContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 36,
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
+    gap: 32,
+  },
+  stageHeader: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 16,
   },
-  safeArea: {
+  titleColumn: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: 10,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  mainHeading: {
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -1.2,
+    lineHeight: 38,
+  },
+  workspaceCount: {
+    fontSize: 10,
+    fontFamily: 'monospace',
+    letterSpacing: 1.2,
+    paddingBottom: 4,
+  },
+  workspaceDeck: {
+    gap: 20,
   },
 });

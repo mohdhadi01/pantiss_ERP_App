@@ -1,18 +1,68 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import React, { useState } from 'react';
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { ThemeProvider } from '../context/ThemeContext';
+import { AuthProvider } from '../context/AuthContext';
+import { CategoryProvider } from '../context/CategoryContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useTheme } from '../hooks/useTheme';
+import { WelcomeSplash } from '../components/animations/WelcomeSplash';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+// In-memory session tracker: Welcome splash is shown ONLY ONCE when app is opened
+let hasShownAppSplash = false;
 
-SplashScreen.preventAutoHideAsync();
+function RootLayoutContent() {
+  const { theme, isDark } = useTheme();
+  const [showSplash, setShowSplash] = useState(!hasShownAppSplash);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const handleSplashComplete = () => {
+    hasShownAppSplash = true;
+    setShowSplash(false);
+  };
+
+  if (showSplash) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <WelcomeSplash onComplete={handleSplashComplete} />
+      </>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.colors.background },
+          animation: 'fade',
+        }}
+      >
+        <Stack.Screen name="index" options={{ title: 'Pantiss ERP' }} />
+        <Stack.Screen name="modules/[categoryId]" options={{ title: 'Workspace Modules' }} />
+        <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="(hr)" options={{ headerShown: false }} />
+        <Stack.Screen name="(finance)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CategoryProvider>
+              <RootLayoutContent />
+            </CategoryProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
