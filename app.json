@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "org.pantiss.erp",
       "adaptiveIcon": {
         "backgroundColor": "#F5F8F0",
         "foregroundImage": "./assets/images/pantiss-mark.png"
