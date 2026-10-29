@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { SalaryApprovalsView } from '../../features/hr/components/SalaryApprovalsView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
@@ -13,8 +12,8 @@ export const SalaryScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['salary']}
-        subtitle={hrSectionDescriptions['salary']}
+        title={"Salary Approvals"}
+        subtitle={"Review Admin-approved salaries and release them to Finance."}
         currentRoute="/(hr)/salary"
         onOpenDrawer={() => navigation.getParent<RootDrawerNav>()?.openDrawer()}
       >

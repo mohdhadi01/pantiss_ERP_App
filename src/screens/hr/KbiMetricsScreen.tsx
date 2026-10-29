@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { PerformanceView } from '../../features/hr/components/PerformanceView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const KbiMetricsScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['kbi-metrics']}
-        subtitle={hrSectionDescriptions['kbi-metrics']}
+        title={"KBI Metrics"}
+        subtitle={"Employee-wise Key Behavioural Indicators for the annual appraisal cycle."}
         currentRoute="/(hr)/kbi-metrics"
         notice={store.notice}
         error={store.error}

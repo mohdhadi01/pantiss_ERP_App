@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { AttendanceView } from '../../features/hr/components/AttendanceView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const AttendanceScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['attendance']}
-        subtitle={hrSectionDescriptions['attendance']}
+        title={"Attendance"}
+        subtitle={"Review punch times, live photo evidence and recorded locations."}
         currentRoute="/(hr)/attendance"
         notice={store.notice}
         error={store.error}

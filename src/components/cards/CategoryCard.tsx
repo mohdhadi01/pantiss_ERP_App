@@ -24,7 +24,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   const { theme } = useTheme();
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onSelect(category);
   };
 

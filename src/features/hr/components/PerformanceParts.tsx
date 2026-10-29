@@ -146,7 +146,7 @@ export const AppraisalForm: React.FC<{
   const raise = currentAnnual && appraisedAnnual ? appraisedAnnual - currentAnnual : 0;
 
   const finalise = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const ok = await store.commit(
       (prev) =>
         completeAppraisal(prev, {

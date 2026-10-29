@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { ReimbursementView } from '../../features/finance/components/ReimbursementView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const ReimbursementScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['reimbursement']}
-        subtitle={financeSectionDescriptions['reimbursement']}
+        title={"Staff expense claims & advances"}
+        subtitle={"Centre operating expenses and staff travel claims."}
         currentRoute="/(finance)/reimbursement"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

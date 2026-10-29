@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import {
   NavigationProp,
-  ParamListBase,
   RouteProp,
   useNavigation,
   useRoute,

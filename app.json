@@ -6,15 +6,17 @@
     "orientation": "portrait",
     "icon": "./assets/images/pantiss-mark.png",
     "scheme": "pantisserp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#09090b",
     "ios": {
       "icon": "./assets/images/pantiss-mark.png",
       "supportsTablet": true
     },
     "android": {
       "package": "org.pantiss.erp",
+      "backgroundColor": "#09090b",
       "adaptiveIcon": {
-        "backgroundColor": "#F5F8F0",
+        "backgroundColor": "#09090b",
         "foregroundImage": "./assets/images/pantiss-mark.png"
       },
       "predictiveBackGestureEnabled": false

@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { InvoicesView } from '../../features/finance/components/InvoicesView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const InvoicesScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['invoices']}
-        subtitle={financeSectionDescriptions['invoices']}
+        title={"Client Invoices"}
+        subtitle={"Select a thematic area and project to review tranche amounts."}
         currentRoute="/(finance)/invoices"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

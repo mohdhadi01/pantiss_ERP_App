@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { HRDashboard } from '../../features/hr/components/HRDashboard';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const DashboardScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['dashboard']}
-        subtitle={hrSectionDescriptions['dashboard']}
+        title={"HR Dashboard"}
+        subtitle={"Your people, approvals and priorities, connected in one place."}
         currentRoute="/(hr)/dashboard"
         notice={store.notice}
         error={store.error}

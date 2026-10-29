@@ -98,7 +98,7 @@ export const BudgetsView: React.FC = () => {
     const area = financeAreas.find((a) => a.id === areaId);
     const project = area?.projects.find((p) => p.id === projectId);
     if (!area || !project) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const draft = await addDraft({
       areaId,
       projectId,

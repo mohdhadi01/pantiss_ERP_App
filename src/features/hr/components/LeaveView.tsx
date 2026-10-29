@@ -40,7 +40,7 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
     .reduce((sum, l) => sum + l.days, 0);
 
   const handleDecide = async (req: LeaveRequest, status: 'Approved' | 'Rejected') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const ok = await commit(
       (prev) =>
         decideLeave(prev, req.id, {

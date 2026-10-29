@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 export type DrawerSection = 'finance' | 'hr' | 'none';
 
 export type PublicStackParamList = {
+  Welcome: undefined;
   Landing: undefined;
   Modules: { categoryId: string } | undefined;
   Login: { moduleId?: string } | undefined;

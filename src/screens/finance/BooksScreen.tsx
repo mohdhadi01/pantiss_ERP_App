@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { BooksView } from '../../features/finance/components/BooksView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const BooksScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['books']}
-        subtitle={financeSectionDescriptions['books']}
+        title={"Books & project expenditure"}
+        subtitle={"Every expenditure, against the right project and budget."}
         currentRoute="/(finance)/books"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

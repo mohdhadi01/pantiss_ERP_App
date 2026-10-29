@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -19,33 +19,8 @@ import { useTheme } from './hooks/useTheme';
 import { WelcomeSplash } from './components/animations/WelcomeSplash';
 import { RootNavigator } from './navigation/RootNavigator';
 
-const WELCOME_SEEN_KEY = '@pantiss_erp:has_seen_welcome';
-let hasShownAppSplash = false;
-
-function checkHasShownSplash(): boolean {
-  if (hasShownAppSplash) return true;
-  if (typeof window !== 'undefined') {
-    try {
-      if (window.sessionStorage?.getItem(WELCOME_SEEN_KEY) === 'true') return true;
-      if (window.localStorage?.getItem(WELCOME_SEEN_KEY) === 'true') return true;
-    } catch {}
-  }
-  return false;
-}
-
-function markSplashShown(): void {
-  hasShownAppSplash = true;
-  if (typeof window !== 'undefined') {
-    try {
-      window.sessionStorage?.setItem(WELCOME_SEEN_KEY, 'true');
-      window.localStorage?.setItem(WELCOME_SEEN_KEY, 'true');
-    } catch {}
-  }
-}
-
 function AppContent() {
   const { isDark } = useTheme();
-  const [showSplash, setShowSplash] = useState(!checkHasShownSplash());
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -54,23 +29,19 @@ function AppContent() {
     Inter_700Bold,
   });
 
-  const handleSplashComplete = () => {
-    markSplashShown();
-    setShowSplash(false);
-  };
-
-  const splashVisible = !fontsLoaded || showSplash;
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        <WelcomeSplash onComplete={() => {}} loading={true} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      <StatusBar style={splashVisible ? 'light' : isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <RootNavigator />
-
-      {splashVisible ? (
-        <View style={[StyleSheet.absoluteFill, styles.splashOverlay]}>
-          <WelcomeSplash onComplete={handleSplashComplete} loading={!fontsLoaded} />
-        </View>
-      ) : null}
     </View>
   );
 }

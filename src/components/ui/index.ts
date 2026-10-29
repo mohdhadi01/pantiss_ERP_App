@@ -1,6 +1,5 @@
 export { Card, SectionCard } from './Card';
 export { MetricCard } from './MetricCard';
-export { ScreenHeading } from './ScreenHeading';
 export { ModalSheet } from './ModalSheet';
 export { Tabs } from './Tabs';
 export type { TabItem } from './Tabs';

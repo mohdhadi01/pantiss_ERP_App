@@ -3,7 +3,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { AssignmentView } from '../../features/hr/components/AssignmentView';
 import type { HrStackParamList, HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -16,8 +15,8 @@ export const ProjectAssignmentScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['project-assignment']}
-        subtitle={hrSectionDescriptions['project-assignment']}
+        title={"Project Assignment"}
+        subtitle={"Connect each employee to a project and centre in their thematic area."}
         currentRoute="/(hr)/project-assignment"
         notice={store.notice}
         error={store.error}

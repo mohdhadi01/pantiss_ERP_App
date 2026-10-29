@@ -130,7 +130,7 @@ export const ProcurementView: React.FC = () => {
   });
 
   const createPO = (req: Requisition) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const poNo = `PO-${req.id.replace('REQ-', '')}-${Math.floor(Math.random() * 900 + 100)}`;
     patchReq(req.id, (r) => ({
       status: 'PO Created',
@@ -140,7 +140,7 @@ export const ProcurementView: React.FC = () => {
   };
 
   const advance = (id: string, status: ProcurementStatus, action: string, actor: string, detail: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     patchReq(id, (r) => ({ status, audit: [...r.audit, auditEntry(action, actor, detail)] }));
   };
 
@@ -155,7 +155,7 @@ export const ProcurementView: React.FC = () => {
 
   const approveSelected = () => {
     if (!reviewReq || !selectedQuote) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     patchReq(reviewReq.id, (r) => ({
       status: 'Approved',
       audit: [...r.audit, auditEntry('Procurement approved', 'Finance Approver', `${selectedQuote.vendor} approved for ${formatRupees(selectedQuote.amount)}.`)],
@@ -164,7 +164,7 @@ export const ProcurementView: React.FC = () => {
 
   const attachSlip = () => {
     if (!slipReq) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const fileName = slipReq.paymentSlip ?? `payment-slip-${slipReq.id}.pdf`;
     patchReq(slipReq.id, (r) => ({
       status: 'Payment slip uploaded',

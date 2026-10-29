@@ -216,7 +216,7 @@ export const ReleaseOfferModal: React.FC<{
   };
 
   const release = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onRelease({
       candidateId,
       designationTitle: designationTitle.trim(),

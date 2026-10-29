@@ -134,29 +134,3 @@ export const hrNavItems: NavItem[] = [
     iconName: 'Award',
   },
 ];
-
-export const hrSectionTitles: Record<string, string> = {
-  dashboard: 'HR Dashboard',
-  recruitment: 'Recruitment & Hiring',
-  'employee-onboarding': 'Employee Onboarding',
-  'project-assignment': 'Project Assignment',
-  'job-designations': 'Job Designations',
-  salary: 'Salary Approvals',
-  attendance: 'Attendance',
-  'leave-management': 'Leave Management',
-  'kbi-metrics': 'KBI Metrics',
-  appraisals: 'Year-end Appraisals',
-};
-
-export const hrSectionDescriptions: Record<string, string> = {
-  dashboard: 'Your people, approvals and priorities, connected in one place.',
-  recruitment: 'Applicant pipeline, interview scheduling, job requisitions and offer letter releases.',
-  'employee-onboarding': 'Welcome employees and prepare their role, deployment and access details.',
-  'project-assignment': 'Connect each employee to a project and centre in their thematic area.',
-  'job-designations': 'Define the roles your teams need, organised by thematic area.',
-  salary: 'Review Admin-approved salaries and release them to Finance.',
-  attendance: 'Review punch times, live photo evidence and recorded locations from the employee platform.',
-  'leave-management': 'Track Admin clearance and record HR decisions on employee leave requests.',
-  'kbi-metrics': 'Employee-wise Key Behavioural Indicators for the annual appraisal cycle.',
-  appraisals: 'Bring employee KBI assessments into a considered year-end review.',
-};

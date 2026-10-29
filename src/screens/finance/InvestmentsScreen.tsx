@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { InvestmentsView } from '../../features/finance/components/InvestmentsView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const InvestmentsScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['investments']}
-        subtitle={financeSectionDescriptions['investments']}
+        title={"Mutual Funds & Fixed Deposits Portfolio"}
+        subtitle={"Capital preservation and yield optimization across institutional fixed deposits and mutual funds."}
         currentRoute="/(finance)/investments"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

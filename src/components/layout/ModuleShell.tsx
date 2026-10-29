@@ -80,7 +80,6 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
   const isHR = currentRoute.includes('(hr)');
   const moduleAccent = accentColor ?? (isHR ? theme.colors.brandPrimary : theme.colors.financeAccent);
   const defaultEyebrow = isHR ? 'Human Resources' : 'Finance Division · FY 2026–27';
-  const defaultHeadingColor = isHR ? theme.colors.brandPrimary : theme.colors.financeAccent;
   const headerEyebrow = eyebrow ?? badgeText ?? defaultEyebrow;
   const headerEyebrowColor = eyebrowColor ?? badgeColor ?? moduleAccent;
   const defaultFootnote = isHR
@@ -146,23 +145,6 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
         ) : null}
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.dashboardHeading}>
-            <View style={styles.headingLeft}>
-              <Text style={[theme.fontStyles.eyebrow, styles.headingEyebrow, { color: eyebrowColor ?? defaultHeadingColor }]}>
-                {workspaceEyebrow || defaultEyebrow}
-              </Text>
-              <Text style={[styles.headingTitle, { color: theme.colors.text }]}>
-                {headingTitle || (title.includes('Dashboard') ? 'Your people, at a glance.' : title)}
-              </Text>
-              {subtitle ? (
-                <Text style={[styles.headingSubtitle, { color: theme.colors.textMuted }]}>{subtitle}</Text>
-              ) : null}
-            </View>
-            <View style={[styles.readonlyBadge, { borderColor: theme.colors.borderStrong }]}>
-              <Text style={[styles.readonlyText, { color: theme.colors.textSubtle }]}>Demo workspace</Text>
-            </View>
-          </View>
-
           {children}
 
           <Text style={[styles.footnote, { color: theme.colors.textSubtle }]}>{footnote || defaultFootnote}</Text>
@@ -192,41 +174,6 @@ const styles = StyleSheet.create({
     maxWidth: 1600,
     width: '100%',
     alignSelf: 'center',
-  },
-  dashboardHeading: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingBottom: 4,
-  },
-  headingLeft: {
-    flex: 1,
-    gap: 6,
-    minWidth: 0,
-  },
-  headingEyebrow: {
-    fontSize: 9,
-  },
-  headingTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    letterSpacing: -1.1,
-    lineHeight: 30,
-  },
-  headingSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  readonlyBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 99,
-    borderWidth: 1,
-  },
-  readonlyText: {
-    fontSize: 10,
-    fontWeight: '500',
   },
   footnote: {
     fontSize: 11,

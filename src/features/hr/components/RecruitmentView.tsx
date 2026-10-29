@@ -204,7 +204,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
   };
 
   const handleOnboard = (offerId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     commit((prev) => onboardCandidateFromOffer(prev, offerId), 'Candidate onboarded into ERP successfully as Active Employee!');
   };
 

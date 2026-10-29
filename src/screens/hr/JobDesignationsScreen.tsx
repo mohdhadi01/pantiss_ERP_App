@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { DesignationsView } from '../../features/hr/components/DesignationsView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const JobDesignationsScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['job-designations']}
-        subtitle={hrSectionDescriptions['job-designations']}
+        title={"Job Designations"}
+        subtitle={"Define the roles your teams need, organised by thematic area."}
         currentRoute="/(hr)/job-designations"
         notice={store.notice}
         error={store.error}

@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { RecruitmentView } from '../../features/hr/components/RecruitmentView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const RecruitmentScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['recruitment']}
-        subtitle={hrSectionDescriptions['recruitment']}
+        title={"Recruitment & Hiring"}
+        subtitle={"Applicant pipeline, interview scheduling, and offer letter releases."}
         currentRoute="/(hr)/recruitment"
         notice={store.notice}
         error={store.error}

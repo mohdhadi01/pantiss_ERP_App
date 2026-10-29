@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { SalaryView } from '../../features/finance/components/SalaryView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const SalaryScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['salary']}
-        subtitle={financeSectionDescriptions['salary']}
+        title={"Salary register & payroll rollout"}
+        subtitle={"Salary approvals and payment forwarding for the payroll month."}
         currentRoute="/(finance)/salary"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

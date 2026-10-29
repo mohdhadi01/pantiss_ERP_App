@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
 import { getInitials } from '../../utils/helpers';
 
 export interface AvatarProps {
@@ -20,7 +19,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   backgroundColor,
   style,
 }) => {
-  const { theme } = useTheme();
   const displayInitials = initials || getInitials(name);
 
   const getHashColor = (str: string) => {

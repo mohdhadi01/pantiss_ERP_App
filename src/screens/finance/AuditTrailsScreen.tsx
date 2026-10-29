@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { AuditTrailsView } from '../../features/finance/components/AuditTrailsView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const AuditTrailsScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['audit-trails']}
-        subtitle={financeSectionDescriptions['audit-trails']}
+        title={"Audit trail"}
+        subtitle={"Follow every employee invoice, from submission to disbursement."}
         currentRoute="/(finance)/audit-trails"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

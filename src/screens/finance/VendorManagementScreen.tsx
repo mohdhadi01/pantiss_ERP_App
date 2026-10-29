@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { VendorManagementView } from '../../features/finance/components/VendorManagementView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const VendorManagementScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['vendor-management']}
-        subtitle={financeSectionDescriptions['vendor-management']}
+        title={"Vendor directory & contracts"}
+        subtitle={"Empaneled vendor master directory and compliance."}
         currentRoute="/(finance)/vendor-management"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

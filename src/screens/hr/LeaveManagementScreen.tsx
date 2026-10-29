@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { LeaveView } from '../../features/hr/components/LeaveView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const LeaveManagementScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['leave-management']}
-        subtitle={hrSectionDescriptions['leave-management']}
+        title={"Leave Management"}
+        subtitle={"Track Admin clearance and record HR decisions on employee leave requests."}
         currentRoute="/(hr)/leave-management"
         notice={store.notice}
         error={store.error}

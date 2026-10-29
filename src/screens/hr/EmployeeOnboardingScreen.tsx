@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/constants';
 import { useHR } from '../../features/hr/HRContext';
 import { OnboardingView } from '../../features/hr/components/OnboardingView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const EmployeeOnboardingScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="human-resources" role="hr-manager">
       <ModuleShell
-        title={hrSectionTitles['employee-onboarding']}
-        subtitle={hrSectionDescriptions['employee-onboarding']}
+        title={"Employee Onboarding"}
+        subtitle={"Welcome employees and prepare their role, deployment and access details."}
         currentRoute="/(hr)/employee-onboarding"
         notice={store.notice}
         error={store.error}

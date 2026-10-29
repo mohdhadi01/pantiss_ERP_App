@@ -121,7 +121,7 @@ export const BooksView: React.FC = () => {
       return;
     }
     setDateError('');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     await addEntry({
       projectId: voucherProject,
       head,

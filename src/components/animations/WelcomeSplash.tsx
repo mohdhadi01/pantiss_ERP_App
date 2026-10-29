@@ -116,7 +116,7 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, loadin
   }));
 
   const handleEnter = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onComplete();
   };
 
@@ -351,6 +351,8 @@ export const WelcomeSplash: React.FC<WelcomeSplashProps> = ({ onComplete, loadin
           style={styles.actionColumn}
         >
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Enter workspace"
             onPress={handleEnter}
             style={({ pressed }) => [
               styles.enterButton,

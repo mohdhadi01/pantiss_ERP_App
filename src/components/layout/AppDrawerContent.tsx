@@ -145,7 +145,7 @@ export const AppDrawerContent: React.FC<AppDrawerContentProps> = ({
   };
 
   const handleSignOut = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (onClose) onClose();
     await logout();
     navigation.reset({

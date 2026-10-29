@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 
 import { ModuleGate } from '../../navigation/guards';
 import { ModuleShell } from '../../components/layout/ModuleShell';
-import { financeSectionTitles, financeSectionDescriptions } from '../../features/finance/constants';
 import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { TaxationView } from '../../features/finance/components/TaxationView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
@@ -15,8 +14,8 @@ export const TaxationScreen: React.FC = () => {
   return (
     <ModuleGate moduleId="finance">
       <ModuleShell
-        title={financeSectionTitles['taxation']}
-        subtitle={financeSectionDescriptions['taxation']}
+        title={"Filings, credits & tax deducted"}
+        subtitle={"Monitor GST filing, track input tax credit, and review total TDS."}
         currentRoute="/(finance)/taxation"
         avatarVariant="finance"
         searchPlaceholder="Search financial records"

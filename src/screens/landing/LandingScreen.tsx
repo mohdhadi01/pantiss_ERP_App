@@ -18,14 +18,14 @@ export const LandingScreen: React.FC = () => {
   const navigation = useNavigation<PublicStackNav>();
 
   const handleSelectCategory = (category: Category) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSelectedCategory(category.id);
     navigation.navigate('Modules', { categoryId: category.id });
   };
 
   return (
     <ScreenWrapper scrollable contentContainerStyle={styles.scrollContent}>
-      <TopNavigation canGoBack={false} />
+      <TopNavigation canGoBack={true} onBack={() => navigation.navigate('Welcome')} />
 
       <View style={styles.mainContainer}>
         <View style={styles.stageHeader}>

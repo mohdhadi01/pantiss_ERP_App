@@ -10,7 +10,8 @@ export const linking: LinkingOptions<RootDrawerParamList> = {
       PublicStack: {
         path: '',
         screens: {
-          Landing: '',
+          Welcome: '',
+          Landing: 'workspaces',
           Modules: 'modules/:categoryId',
           Login: 'login',
           NotFound: '*',
