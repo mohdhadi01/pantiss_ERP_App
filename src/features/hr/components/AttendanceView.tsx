@@ -287,13 +287,15 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
                   <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{employee.name}</Text>
                   <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{employee.id}</Text>
                 </View>
-                <StatusChip status={attendanceIssue(record)} />
+                <View style={styles.chipWrapper}>
+                  <StatusChip status={attendanceIssue(record)} />
+                </View>
               </View>
-              <View style={styles.mobileTimes}>
-                <Text style={[styles.cellText, { color: theme.colors.textMuted }]} numberOfLines={2}>
-                  In {timestampLabel(record?.punchIn?.time)} · Out {timestampLabel(record?.punchOut?.time)} ·{' '}
-                  {elapsedLabel(record)}
-                </Text>
+              <Text style={[styles.cellText, { color: theme.colors.textMuted }]}>
+                In {timestampLabel(record?.punchIn?.time)} · Out {timestampLabel(record?.punchOut?.time)} ·{' '}
+                {elapsedLabel(record)}
+              </Text>
+              <View style={styles.mobileActionRow}>
                 <Button
                   label="View evidence"
                   variant="outline"
@@ -441,11 +443,14 @@ const styles = StyleSheet.create({
     padding: 13,
     gap: 10,
   },
-  mobileTimes: {
+  chipWrapper: {
+    flexShrink: 0,
+  },
+  mobileActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   sheetDescription: {
     fontSize: 12,
