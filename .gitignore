@@ -21,16 +21,24 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# debug & logs
+*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
-# macOS
-.DS_Store
-*.pem
+# IDE & Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
 
-# local env files
+# OS & Environment
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+*.pem
 .env*.local
 
 # typescript
