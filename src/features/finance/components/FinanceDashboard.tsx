@@ -22,7 +22,6 @@ import { Card } from '../../../components/ui/Card';
 import { Icon, IconSource } from '../../../components/ui/Icon';
 import type { FinanceStackNav } from '../../../navigation/types';
 
-/** Web compliance checklist (web FinanceDashboard — donut 88% + 6 rows, done/warn icons). */
 const COMPLIANCE_ROWS = [
   { label: 'Bank reconciliation statements', value: 100, done: true },
   { label: 'Voucher & supporting documents', value: 93, done: true },
@@ -49,7 +48,6 @@ export const FinanceDashboard: React.FC = () => {
     [],
   );
 
-  /** Web: `${releaseRate}% of sanctioned donor allocations received in bank`. */
   const releaseRate = useMemo(
     () => (portfolioTotals.approved ? Math.round((portfolioTotals.released / portfolioTotals.approved) * 100) : 0),
     [],
@@ -62,7 +60,6 @@ export const FinanceDashboard: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Taxation shortcuts (web: 3 buttons → /finance/taxation) */}
       <View style={styles.taxBar}>
         {TAX_SHORTCUTS.map((item) => (
           <Pressable
@@ -91,7 +88,6 @@ export const FinanceDashboard: React.FC = () => {
         ))}
       </View>
 
-      {/* Hero — web `from-slate-950 via-emerald-950 to-emerald-700` + glass utilization card */}
       <HeroBanner
         gradient={heroGradients.finance}
         badge={{ icon: 'CircleDollarSign', label: 'Finance portfolio control' }}
@@ -110,7 +106,6 @@ export const FinanceDashboard: React.FC = () => {
         }
       />
 
-      {/* Cumulative financials (web: Total Balance / Investments / Liabilities) */}
       <View style={styles.section}>
         <SectionHeading
           title="Cumulative financials"
@@ -118,49 +113,56 @@ export const FinanceDashboard: React.FC = () => {
           eyebrow="Treasury & Reserves"
         />
         <View style={styles.grid2}>
-          {/* Sizing lives on the wrapper: Pressable is a column-flex container,
-              so flexBasis on the Card itself would set its height. */}
-          <Pressable onPress={() => handleNav(() => navigation.navigate('Banking'))} style={styles.reserveWrap}>
-            <Card padding={18} style={[styles.reserveCard, !isMd && styles.reserveCardMobile]}>
-              <View style={[styles.iconTile, { backgroundColor: theme.colors.successSoft }]}>
-                <Icon name="Landmark" size={18} color={theme.colors.financeAccent} strokeWidth={1.8} />
+          <Pressable
+            onPress={() => handleNav(() => navigation.navigate('Banking'))}
+            style={[styles.reserveWrap, !isMd && styles.reserveWrapMobile]}
+          >
+            <Card padding={18} style={styles.reserveCard}>
+              <View style={styles.reserveTop}>
+                <View style={[styles.iconTile, { backgroundColor: theme.colors.successSoft }]}>
+                  <Icon name="Landmark" size={18} color={theme.colors.financeAccent} strokeWidth={1.8} />
+                </View>
+                <View style={[styles.linkPill, { backgroundColor: theme.colors.successSoft }]}>
+                  <Text style={[styles.linkPillText, { color: theme.colors.successText }]}>Banking →</Text>
+                </View>
               </View>
-              <View style={styles.reserveText}>
-                <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
-                <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Balance</Text>
-                <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-                  Across 4 institutional bank accounts · Click to view Banking ledger
-                </Text>
-              </View>
-              <View style={[styles.linkPill, { backgroundColor: theme.colors.successSoft }]}>
-                <Text style={[styles.linkPillText, { color: theme.colors.successText }]}>Banking →</Text>
-              </View>
+              <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹38.45 Cr</Text>
+              <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Balance</Text>
+              <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                Across 4 institutional bank accounts · Click to view Banking ledger
+              </Text>
             </Card>
           </Pressable>
 
-          <Pressable onPress={() => handleNav(() => navigation.navigate('Investments'))} style={styles.reserveWrap}>
-            <Card padding={18} style={[styles.reserveCard, !isMd && styles.reserveCardMobile]}>
-              <View style={[styles.iconTile, { backgroundColor: theme.colors.infoSoft }]}>
-                <Icon name="TrendingUp" size={18} color={theme.colors.info} strokeWidth={1.8} />
+          <Pressable
+            onPress={() => handleNav(() => navigation.navigate('Investments'))}
+            style={[styles.reserveWrap, !isMd && styles.reserveWrapMobile]}
+          >
+            <Card padding={18} style={styles.reserveCard}>
+              <View style={styles.reserveTop}>
+                <View style={[styles.iconTile, { backgroundColor: theme.colors.infoSoft }]}>
+                  <Icon name="TrendingUp" size={18} color={theme.colors.info} strokeWidth={1.8} />
+                </View>
+                <View style={[styles.linkPill, { backgroundColor: theme.colors.infoSoft }]}>
+                  <Text style={[styles.linkPillText, { color: theme.colors.infoText }]}>Investments →</Text>
+                </View>
               </View>
-              <View style={styles.reserveText}>
-                <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
-                <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Investments</Text>
-                <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
-                  Fixed deposits (₹2.85 Cr) &amp; liquid mutual funds (₹1.42 Cr) · Click to view portfolio
-                </Text>
-              </View>
-              <View style={[styles.linkPill, { backgroundColor: theme.colors.infoSoft }]}>
-                <Text style={[styles.linkPillText, { color: theme.colors.infoText }]}>Investments →</Text>
-              </View>
+              <Text style={[styles.reserveValue, { color: theme.colors.text }]}>₹4.27 Cr</Text>
+              <Text style={[styles.reserveLabel, { color: theme.colors.textMuted }]}>Total Investments</Text>
+              <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
+                Fixed deposits (₹2.85 Cr) &amp; liquid mutual funds (₹1.42 Cr) · Click to view portfolio
+              </Text>
             </Card>
           </Pressable>
 
-          <Card padding={18} style={[styles.reserveCard, !isMd && styles.reserveCardMobile]}>
-            <View style={[styles.iconTile, { backgroundColor: 'rgba(124, 58, 237, 0.1)' }]}>
-              <Icon name="Banknote" size={18} color={theme.colors.violet} strokeWidth={1.8} />
-            </View>
-            <View style={styles.reserveText}>
+          <View style={[styles.reserveWrap, !isMd && styles.reserveWrapMobile]}>
+            <Card padding={18} style={styles.reserveCard}>
+              <View style={styles.reserveTop}>
+                <View style={[styles.iconTile, { backgroundColor: 'rgba(124, 58, 237, 0.1)' }]}>
+                  <Icon name="Banknote" size={18} color={theme.colors.violet} strokeWidth={1.8} />
+                </View>
+                <View style={styles.purpleDot} />
+              </View>
               <Text style={[styles.reserveValue, { color: theme.colors.text }]}>
                 {formatCurrency(portfolioTotals.committed)}
               </Text>
@@ -168,12 +170,11 @@ export const FinanceDashboard: React.FC = () => {
               <Text numberOfLines={2} style={[styles.reserveSub, { color: theme.colors.textSubtle }]}>
                 Approved purchase orders, contractor retentions &amp; statutory payables
               </Text>
-            </View>
-          </Card>
+            </Card>
+          </View>
         </View>
       </View>
 
-      {/* Annual Financials (web: Sanctions / Received / Expenditure / Corpus) */}
       <View style={styles.section}>
         <SectionHeading
           title="Annual Financials"
@@ -217,10 +218,8 @@ export const FinanceDashboard: React.FC = () => {
         </View>
       </View>
 
-      {/* Tranche Fund Allocation (web FinanceDashboard.tsx:633-741) */}
       <TrancheSection />
 
-      {/* Compliance donut + Highlights (web 2-col xl, stacked below) */}
       <View style={[styles.complianceRow, isMd && styles.complianceRowWide]}>
         <Card padding={20} style={isMd ? { flex: 1 } : styles.fullWidth}>
           <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Compliance Completeness</Text>
@@ -360,7 +359,6 @@ export const FinanceDashboard: React.FC = () => {
         </Card>
       </View>
 
-      {/* Thematic financial scorecards (web: 8 area cards, 2-up ≥md, full-width below) */}
       <View style={styles.section}>
         <View style={styles.scorecardHeader}>
           <View style={styles.scorecardHeaderText}>
@@ -559,37 +557,29 @@ const styles = StyleSheet.create({
   reserveWrap: {
     flexGrow: 1,
     flexShrink: 1,
-    flexBasis: '46%',
+    flexBasis: 240,
     minWidth: 0,
+  },
+  reserveWrapMobile: {
+    flexBasis: '100%',
+    width: '100%',
   },
   reserveCard: {
     gap: 4,
     overflow: 'hidden',
     alignSelf: 'stretch',
   },
-  /** Phones: compact horizontal card — icon | value stack | badge */
-  reserveCardMobile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
-  },
-  reserveText: {
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
-    gap: 2,
-  },
   reserveTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  reserveWrapMobile: {
-    flexBasis: '100%',
+  purpleDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(168, 85, 247, 0.7)',
   },
   iconTile: {
     width: 40,

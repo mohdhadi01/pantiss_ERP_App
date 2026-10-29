@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { storage } from '../../../utils/storage';
 
-/**
- * Persisted budget drafts (web localStorage `pantiss:finance-budget-drafts`,
- * FinanceOperationsViews.tsx:23-73). "Save as draft" writes here and the
- * project drill's "Budget documents and workflow" section lists the versions.
- */
-
 export type BudgetStatus = 'Draft' | 'Pending approval' | 'Changes requested' | 'Approved';
 
 export interface BudgetDraftLine {
@@ -90,7 +84,6 @@ export function useBudgetDrafts() {
     [drafts, persist],
   );
 
-  /** Draft / Changes requested → Pending approval. */
   const submitForApproval = useCallback(
     (id: string) => {
       const draft = drafts.find((d) => d.id === id);
@@ -103,7 +96,6 @@ export function useBudgetDrafts() {
     [drafts, updateDraft],
   );
 
-  /** Pending approval → Changes requested. */
   const returnForRevision = useCallback(
     (id: string, note?: string) => {
       const draft = drafts.find((d) => d.id === id);
@@ -116,7 +108,6 @@ export function useBudgetDrafts() {
     [drafts, updateDraft],
   );
 
-  /** Pending approval → Approved. */
   const approveBudget = useCallback(
     (id: string) => {
       const draft = drafts.find((d) => d.id === id);

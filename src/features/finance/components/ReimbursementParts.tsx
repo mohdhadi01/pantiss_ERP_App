@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
+import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { formatDate } from '../../../utils/formatDate';
 import { Card } from '../../../components/ui/Card';
@@ -10,7 +11,6 @@ import { Timeline } from '../../../components/ui/Timeline';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 
-// ─── Web-aligned centre expense model (FinanceOperationsViews.tsx:307-343) ────
 export type ExpenseType = 'Rental' | 'Food' | 'Electricity' | 'TA/DA';
 export type BillStatus = 'Submitted' | 'Verified' | 'Approved' | 'Query raised';
 
@@ -63,7 +63,6 @@ export const expenseColor: Record<ExpenseType, string> = {
   'TA/DA': '#7c3aed',
 };
 
-/** Employee TA/DA bills (web taDaEmployeeBills, amounts converted to rupees). */
 export const TADA_BILLS: EmployeeBill[] = [
   { id: 'TADA-2681', employee: 'Ananya Mishra', employeeId: 'EMP-0142', designation: 'Center Manager', travelDate: '22 Jul 2026', route: 'Angul – Bhubaneswar', purpose: 'Monthly project review', claimed: 18000, eligible: 17000, status: 'Submitted', documents: [{ name: 'train-ticket-2207.pdf', kind: 'Travel ticket', size: '428 KB' }, { name: 'hotel-invoice-2207.pdf', kind: 'Accommodation', size: '612 KB' }, { name: 'travel-claim-form.pdf', kind: 'Signed claim', size: '284 KB' }] },
   { id: 'TADA-2678', employee: 'Rahul Behera', employeeId: 'EMP-0198', designation: 'Mobilization Officer', travelDate: '18 Jul 2026', route: 'Angul – Chhendipada', purpose: 'Candidate mobilization camp', claimed: 12000, eligible: 12000, status: 'Verified', documents: [{ name: 'bus-tickets-july.pdf', kind: 'Travel tickets', size: '318 KB' }, { name: 'field-visit-approval.pdf', kind: 'Tour approval', size: '196 KB' }] },
@@ -87,10 +86,9 @@ export const billsForCenterMonth = (centerId: string, month: string): EmployeeBi
   return TADA_BILLS.filter((bill) => ids.includes(bill.id));
 };
 
-/** Non-TA/DA supporting documents (web getCenterBillDocuments). */
-export const expenseDocuments = (type: Exclude<ExpenseType, 'TA/DA'>, request: CentreExpense): Array<BillDocument & { reference: string; uploaded: string }> => {
+export const expenseDocuments = (type: Exclude<ExpenseType, 'TA/DA'>, request: CentreExpense): (BillDocument & { reference: string; uploaded: string })[] => {
   const period = request.month.toLowerCase().replace(' ', '-');
-  const documents: Record<Exclude<ExpenseType, 'TA/DA'>, Array<BillDocument & { reference: string; uploaded: string }>> = {
+  const documents: Record<Exclude<ExpenseType, 'TA/DA'>, (BillDocument & { reference: string; uploaded: string })[]> = {
     Rental: [
       { name: `rent-invoice-${period}.pdf`, kind: 'Monthly rent invoice', reference: `RNT/${request.id.slice(-4)}`, uploaded: request.submitted, size: '486 KB' },
       { name: 'registered-lease-agreement.pdf', kind: 'Lease agreement', reference: 'LEASE/2026/041', uploaded: '05 Apr 2026', size: '1.8 MB' },
@@ -111,12 +109,12 @@ export const expenseDocuments = (type: Exclude<ExpenseType, 'TA/DA'>, request: C
   return documents[type];
 };
 
-/** Centre expense card — "{n} employee claims" for TA/DA, otherwise documents. */
 export const CentreExpenseCard: React.FC<{ expense: CentreExpense; employeeCount: number; onReview: () => void }> = ({ expense, employeeCount, onReview }) => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
   const color = expenseColor[expense.type];
   return (
-    <Card padding={16} style={styles.centreCard}>
+    <Card padding={16} style={[styles.centreCard, isMd && styles.centreCardWide]}>
       <View style={styles.centreTop}>
         <View style={[styles.typeTile, { backgroundColor: `${color}1A` }]}>
           <Icon name={expenseIcon[expense.type]} size={17} color={color} strokeWidth={1.8} />
@@ -163,7 +161,6 @@ export interface Claim {
   payoutDate?: string;
 }
 
-/** Claim review overlay with audit timeline (web Review Claim Overlay). */
 export const ClaimReviewSheet: React.FC<{
   claim: Claim | null;
   visible: boolean;
@@ -248,7 +245,6 @@ const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value
   );
 };
 
-/** Stacked claim card (<1024px). */
 export const ClaimMobileCard: React.FC<{ claim: Claim; onView: () => void }> = ({ claim, onView }) => {
   const { theme } = useTheme();
   return (
@@ -278,7 +274,8 @@ export const ClaimMobileCard: React.FC<{ claim: Claim; onView: () => void }> = (
 };
 
 const styles = StyleSheet.create({
-  centreCard: { gap: 12, flexGrow: 1, flexBasis: 240 },
+  centreCard: { gap: 12 },
+  centreCardWide: { flexGrow: 1, flexBasis: 280 },
   centreTop: { flexDirection: 'row', gap: 10 },
   typeTile: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   centreTitleCol: { flex: 1, minWidth: 0 },

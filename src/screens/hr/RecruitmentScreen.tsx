@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { RecruitmentView } from '../../features/hr/components/RecruitmentView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/recruitment. */
 export const RecruitmentScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

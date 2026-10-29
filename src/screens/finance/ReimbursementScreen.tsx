@@ -8,7 +8,6 @@ import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { ReimbursementView } from '../../features/finance/components/ReimbursementView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /finance/reimbursement. */
 export const ReimbursementScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const alerts = useFinanceAlerts();

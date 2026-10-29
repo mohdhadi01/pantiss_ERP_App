@@ -53,30 +53,9 @@ export const SalaryView: React.FC = () => {
   const { allRecords, forwardForPayment, forwardMultiple, approveSalary, rejectSalary, savePayment } =
     useSalaryRecords('finance');
 
-  const monthlyRecords = useMemo(
-    () => allRecords.filter((r) => r.month === selectedMonth),
-    [allRecords, selectedMonth],
-  );
-  const totals = useMemo(() => salaryTotals(monthlyRecords), [monthlyRecords]);
-
-  const scopeAreas = useMemo(() => {
-    const ids = Array.from(new Set(monthlyRecords.map((r) => r.projectId).filter(Boolean))) as string[];
-    return financeAreas
-      .filter((area) => area.projects.some((p) => ids.includes(p.id)))
-      .map((area) => ({ area, count: monthlyRecords.filter((r) => area.projects.some((p) => p.id === r.projectId)).length }));
-  }, [monthlyRecords]);
-
-  const scopeProjects = useMemo(() => {
-    const area = financeAreas.find((a) => a.id === scopeAreaId);
-    const projects = area ? area.projects : financeAreas.flatMap((a) => a.projects);
-    return projects
-      .filter((p) => monthlyRecords.some((r) => r.projectId === p.id))
-      .map((p) => ({ project: p, count: monthlyRecords.filter((r) => r.projectId === p.id).length }));
-  }, [monthlyRecords, scopeAreaId]);
-
-  const scoped = useMemo(
+  const scopedRecords = useMemo(
     () =>
-      monthlyRecords.filter((r) => {
+      allRecords.filter((r) => {
         const matchesProject =
           scopeProjectId === 'all' ||
           r.projectId === scopeProjectId ||
@@ -85,11 +64,39 @@ export const SalaryView: React.FC = () => {
           scopeAreaId === 'all' ||
           financeAreas.find((a) => a.id === scopeAreaId)?.projects.some((p) => p.id === r.projectId) ||
           false;
-        const matchesScope = scopeProjectId === 'all' ? matchesArea : matchesProject;
-        return matchesScope;
+        return scopeProjectId === 'all' ? matchesArea : matchesProject;
       }),
-    [monthlyRecords, scopeAreaId, scopeProjectId],
+    [allRecords, scopeAreaId, scopeProjectId],
   );
+
+  const monthlyRecords = useMemo(
+    () => scopedRecords.filter((r) => r.month === selectedMonth),
+    [scopedRecords, selectedMonth],
+  );
+  const totals = useMemo(() => salaryTotals(monthlyRecords), [monthlyRecords]);
+
+  const scopeAreas = useMemo(() => {
+    const ids = Array.from(new Set(allRecords.map((r) => r.projectId).filter(Boolean))) as string[];
+    return financeAreas
+      .filter((area) => area.projects.some((p) => ids.includes(p.id)))
+      .map((area) => ({
+        area,
+        count: allRecords.filter((r) => r.month === selectedMonth && area.projects.some((p) => p.id === r.projectId)).length,
+      }));
+  }, [allRecords, selectedMonth]);
+
+  const scopeProjects = useMemo(() => {
+    const area = financeAreas.find((a) => a.id === scopeAreaId);
+    const projects = area ? area.projects : financeAreas.flatMap((a) => a.projects);
+    return projects
+      .filter((p) => allRecords.some((r) => r.projectId === p.id))
+      .map((p) => ({
+        project: p,
+        count: allRecords.filter((r) => r.month === selectedMonth && r.projectId === p.id).length,
+      }));
+  }, [allRecords, scopeAreaId, selectedMonth]);
+
+  const scoped = monthlyRecords;
 
   const isReady = (rec: SalaryRecord) => rec.status === 'Pending' && !rec.forwardedAt;
   const readyAll = useMemo(() => scoped.filter((rec) => canForwardSalary(rec)), [scoped]);
@@ -156,8 +163,8 @@ export const SalaryView: React.FC = () => {
   };
 
   const monthSummaries = useMemo(
-    () => payrollMonths.map((m) => salaryTotals(scoped.filter((r) => r.month === m))),
-    [scoped],
+    () => payrollMonths.map((m) => salaryTotals(scopedRecords.filter((r) => r.month === m))),
+    [scopedRecords],
   );
 
   const runWorkflow = (fn: () => Promise<void>) => {
@@ -165,7 +172,7 @@ export const SalaryView: React.FC = () => {
     fn().catch(() => {});
   };
 
-  const columns: Array<DataColumn<SalaryRecord>> = [
+  const columns: DataColumn<SalaryRecord>[] = [
     { key: 'employee', label: 'Employee', flex: 1.8 },
     { key: 'gross', label: 'Gross Pay', flex: 1, align: 'right', wideOnly: true },
     { key: 'deductions', label: 'Deductions', flex: 1, align: 'right', wideOnly: true },
@@ -279,19 +286,43 @@ export const SalaryView: React.FC = () => {
         <MetricCard style={styles.metricCard} label="Disbursed / Paid" value={formatRupees(totals.paid)} subtitle={`${totals.paidCount} of ${totals.employees} paid`} icon="CheckCircle2" accentColor={theme.colors.emerald} arrow />
       </View>
 
-      <View style={styles.scopeBlock}>
-        <Text style={[styles.scopeTitle, { color: theme.colors.textMuted }]}>Scope — center & project</Text>
-        <View style={styles.scopeRow}>
-          <ScopeChip icon="Building2" label="All areas" active={scopeAreaId === 'all'} onPress={() => { setScopeAreaId('all'); setScopeProjectId('all'); }} theme={theme} />
-          {scopeAreas.map(({ area, count }) => (
-            <ScopeChip key={area.id} icon="Building2" label={`${area.shortName} (${count})`} active={scopeAreaId === area.id} onPress={() => { setScopeAreaId(area.id); setScopeProjectId('all'); }} theme={theme} color={area.color} />
-          ))}
+      <View style={[styles.scopeBlock, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
+        <View style={styles.scopeGroup}>
+          <View style={styles.scopeHeaderRow}>
+            <Text style={[styles.scopeGroupLabel, { color: theme.colors.textMuted }]}>Thematic Area</Text>
+            {scopeAreaId !== 'all' ? (
+              <Pressable onPress={() => { setScopeAreaId('all'); setScopeProjectId('all'); }}>
+                <Text style={[styles.resetLink, { color: theme.colors.financeAccent }]}>Reset to all</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.scopeRow}>
+            <ScopeChip icon="Building2" label="All areas" active={scopeAreaId === 'all'} onPress={() => { setScopeAreaId('all'); setScopeProjectId('all'); }} theme={theme} />
+            {scopeAreas.map(({ area, count }) => (
+              <ScopeChip key={area.id} icon="Building2" label={`${area.shortName} (${count})`} active={scopeAreaId === area.id} onPress={() => { setScopeAreaId(area.id); setScopeProjectId('all'); }} theme={theme} color={area.color} />
+            ))}
+          </View>
         </View>
-        <View style={styles.scopeRow}>
-          <ScopeChip icon="FolderKanban" label="All projects" active={scopeProjectId === 'all'} onPress={() => setScopeProjectId('all')} theme={theme} />
-          {scopeProjects.map(({ project, count }) => (
-            <ScopeChip key={project.id} icon="FolderKanban" label={`${project.name} (${count})`} active={scopeProjectId === project.id} onPress={() => setScopeProjectId(project.id)} theme={theme} />
-          ))}
+
+        <View style={[styles.scopeDivider, { backgroundColor: theme.colors.border }]} />
+
+        <View style={styles.scopeGroup}>
+          <View style={styles.scopeHeaderRow}>
+            <Text style={[styles.scopeGroupLabel, { color: theme.colors.textMuted }]}>
+              {scopeAreaId === 'all' ? 'Project Cost Center' : `Projects in ${financeAreas.find((a) => a.id === scopeAreaId)?.name ?? ''}`}
+            </Text>
+            {scopeProjectId !== 'all' ? (
+              <Pressable onPress={() => setScopeProjectId('all')}>
+                <Text style={[styles.resetLink, { color: theme.colors.financeAccent }]}>All projects</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <View style={styles.scopeRow}>
+            <ScopeChip icon="FolderKanban" label="All projects" active={scopeProjectId === 'all'} onPress={() => setScopeProjectId('all')} theme={theme} />
+            {scopeProjects.map(({ project, count }) => (
+              <ScopeChip key={project.id} icon="FolderKanban" label={`${project.name} (${count})`} active={scopeProjectId === project.id} onPress={() => setScopeProjectId(project.id)} theme={theme} />
+            ))}
+          </View>
         </View>
       </View>
 
@@ -319,19 +350,26 @@ export const SalaryView: React.FC = () => {
           </View>
         }
       >
-        <Tabs
-          items={[
-            { key: 'all', label: `All Employees (${counts.all})` },
-            { key: 'pending', label: `Pending Approval (${counts.pending})` },
-            { key: 'ready', label: `Ready to Forward (${counts.ready})` },
-            { key: 'forwarded', label: `Forwarded to Payments (${counts.forwarded})` },
-            { key: 'disbursed', label: `Disbursed (${counts.disbursed})` },
-          ]}
-          activeKey={filter}
-          onChange={(key) => setFilter(key as FilterKey)}
-          accent={theme.colors.financeAccent}
-        />
-        <TextField value={search} onChangeText={setSearch} placeholder="Search by employee name, PAN-EMP ID, designation, or department..." />
+        <View style={styles.tableControls}>
+          <Tabs
+            items={[
+              { key: 'all', label: `All Employees (${counts.all})` },
+              { key: 'pending', label: `Pending Approval (${counts.pending})` },
+              { key: 'ready', label: `Ready to Forward (${counts.ready})` },
+              { key: 'forwarded', label: `Forwarded to Payments (${counts.forwarded})` },
+              { key: 'disbursed', label: `Disbursed (${counts.disbursed})` },
+            ]}
+            activeKey={filter}
+            onChange={(key) => setFilter(key as FilterKey)}
+            accent={theme.colors.financeAccent}
+          />
+          <TextField
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by employee name, PAN-EMP ID, designation, or department..."
+            containerStyle={styles.searchField}
+          />
+        </View>
 
         <DataTable
           columns={columns}
@@ -419,9 +457,43 @@ const styles = StyleSheet.create({
   monthChipText: { fontSize: 11.5, fontWeight: '600', textAlign: 'center' },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 220 },
-  scopeBlock: { gap: 8 },
-  scopeTitle: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  scopeBlock: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+  },
+  scopeGroup: {
+    gap: 8,
+  },
+  scopeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  scopeGroupLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  resetLink: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   scopeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scopeDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 2,
+  },
+  tableControls: {
+    gap: 12,
+    marginBottom: 14,
+  },
+  searchField: {
+    marginTop: 2,
+  },
   scopeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, maxWidth: 240 },
   scopeChipText: { fontSize: 11.5, fontWeight: '600', flexShrink: 1 },
   registerBadge: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },

@@ -80,7 +80,7 @@ export const DesignationsView: React.FC<DesignationsViewProps> = ({ store }) => 
     }
   };
 
-  const columns: Array<DataColumn<Designation>> = [
+  const columns: DataColumn<Designation>[] = [
     { key: 'title', label: 'Job designation', flex: 1.1 },
     { key: 'level', label: 'Level', flex: 1 },
     { key: 'responsibilities', label: 'Responsibilities', flex: 1.8 },

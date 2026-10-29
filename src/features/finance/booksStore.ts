@@ -10,11 +10,6 @@ import { storage } from '../../utils/storage';
 const BOOKS_STORAGE_KEY = 'finance_books_entries_v2';
 const TALLY_SETTINGS_STORAGE_KEY = 'finance_tally_settings_v1';
 
-/**
- * Persisted Books store. Entries keep the v2 key/loading behaviour; Tally
- * settings persist separately (web booksStore `settings`) so the setup sheet
- * survives reloads.
- */
 export function useBooksStore() {
   const [entries, setEntries] = useState<BookEntry[]>(sampleBookEntries);
   const [settings, setSettings] = useState<TallySettings>(defaultTallySettings);

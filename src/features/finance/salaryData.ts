@@ -10,7 +10,7 @@ export interface EmployeeSalaryRecord {
     | 'M&E';
   location: string;
   workingDays: number;
-  basicHra: number; // in Rupees
+  basicHra: number;
   allowance: number;
   pfDeduction: number;
   esiDeduction: number;

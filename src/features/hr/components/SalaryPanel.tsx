@@ -3,11 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { rupees } from '../helpers';
 
-/**
- * Web-parity `SalarySummary` (web `src/features/hr/components.tsx:46`): a
- * label + caption header over Annual / Monthly rows. `tone="highlight"` is
- * used for revised/appraised and offered compensation figures.
- */
 export const SalaryPanel: React.FC<{
   label: string;
   annual?: number;

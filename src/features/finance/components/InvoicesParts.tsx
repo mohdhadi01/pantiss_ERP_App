@@ -37,20 +37,17 @@ export const EMPTY_CREATE: CreateFormState = {
   notes: 'NEFT to Pantiss Foundation current account. Quote the invoice number in the remittance reference.',
 };
 
-/** Create-invoice overlay with line-item editor (web modal size lg). */
 export const CreateInvoiceSheet: React.FC<{
   visible: boolean;
   onClose: () => void;
   onSave: (draft: CreateFormState, items: InvoiceItemLine[]) => void;
   projectName: string | null;
-  /** Pre-filled from a tranche raise (client / amount / line description). */
   prefill?: { client?: string; amount?: number; lineDescription?: string };
 }> = ({ visible, onClose, onSave, projectName, prefill }) => {
   const { theme } = useTheme();
   const [form, setForm] = useState<CreateFormState>(EMPTY_CREATE);
   const [items, setItems] = useState<InvoiceItemLine[]>([{ id: 1, description: projectName ?? 'Grant tranche', qty: '1', rate: '' }]);
 
-  // Reset the form each time the sheet opens, applying any tranche prefill.
   React.useEffect(() => {
     if (visible) {
       setForm({ ...EMPTY_CREATE, client: prefill?.client ?? '' });
@@ -63,7 +60,7 @@ export const CreateInvoiceSheet: React.FC<{
         },
       ]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [visible, prefill?.client, prefill?.amount, prefill?.lineDescription, projectName]);
 
   const setField = (key: keyof CreateFormState) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -152,7 +149,6 @@ export const CreateInvoiceSheet: React.FC<{
   );
 };
 
-/** View-invoice overlay with lifecycle actions. */
 export const InvoiceViewSheet: React.FC<{
   invoice: Invoice | null;
   visible: boolean;

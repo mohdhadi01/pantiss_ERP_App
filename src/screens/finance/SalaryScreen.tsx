@@ -8,7 +8,6 @@ import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { SalaryView } from '../../features/finance/components/SalaryView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /finance/salary. */
 export const SalaryScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const alerts = useFinanceAlerts();

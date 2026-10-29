@@ -6,11 +6,6 @@ import { formatRupees } from '../../../utils/formatCurrency';
 import { Icon } from '../../../components/ui/Icon';
 import { trancheFund, FundTranche } from '../data/tranchesData';
 
-/**
- * Web parity helpers for the finance dashboard (FinanceDashboard.tsx):
- * section headings with sub-captions + the Tranche Fund Allocation grid.
- */
-
 export const SectionHeading: React.FC<{ title: string; sub: string; eyebrow: string }> = ({
   title,
   sub,
@@ -28,7 +23,6 @@ export const SectionHeading: React.FC<{ title: string; sub: string; eyebrow: str
   );
 };
 
-/** Web TrancheAllocationSection (FinanceDashboard.tsx:633-741) as compact wrapped cards. */
 export const TrancheSection: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();

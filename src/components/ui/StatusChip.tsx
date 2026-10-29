@@ -7,14 +7,12 @@ export type StatusTone = BadgeTone;
 
 export interface StatusChipProps {
   status: string;
-  /** Explicit tone overrides the string-matching default (web `.hr-status` tones). */
   tone?: StatusTone;
-  /** Renders the leading 6px dot (web `.cxo-status` has none; list chips do). */
   dot?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-const TONE_KEYWORDS: Array<{ tone: StatusTone; words: string[] }> = [
+const TONE_KEYWORDS: { tone: StatusTone; words: string[] }[] = [
   {
     tone: 'success',
     words: ['active', 'live', 'approved', 'on track', 'released', 'complete', 'compliant', 'finalised', 'finalized', 'disbursed', 'reconciled', 'onboarded', 'accepted', 'filed', 'paid', 'ready', 'verified', 'exported', 'settled'],
@@ -37,7 +35,6 @@ const TONE_KEYWORDS: Array<{ tone: StatusTone; words: string[] }> = [
   },
 ];
 
-/** String→tone mapping mirrors the web's `.hr-status` / `.audit-status[data-status]` rules. */
 export function statusTone(status: string): StatusTone {
   const s = status.toLowerCase();
   for (const { tone, words } of TONE_KEYWORDS) {

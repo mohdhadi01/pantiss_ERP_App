@@ -8,7 +8,6 @@ import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { PaymentsView } from '../../features/finance/components/PaymentsView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /finance/payments. */
 export const PaymentsScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const alerts = useFinanceAlerts();

@@ -1,9 +1,3 @@
-/**
- * Candidate interaction surfaces for RecruitmentView: profile modal, Release
- * Offer form (all 8 web fields) and the formal offer letter view with actions.
- * Web reference: Pantiss_ERP/src/features/hr/RecruitmentViews.tsx
- * (CandidateDetailView 1384-1561, CreateOfferForm 2227-2458, OfferLetterDocumentView 2464-2651).
- */
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Linking } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -38,8 +32,6 @@ const DEFAULT_TERMS =
 
 const plusDays = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
-
-/* ------------------------------ Candidate profile ----------------------------- */
 
 export const ProfileModal: React.FC<{
   visible: boolean;
@@ -170,8 +162,6 @@ export const ProfileModal: React.FC<{
     </ModalSheet>
   );
 };
-
-/* ------------------------------- Release offer -------------------------------- */
 
 export const ReleaseOfferModal: React.FC<{
   visible: boolean;
@@ -309,8 +299,6 @@ export const ReleaseOfferModal: React.FC<{
     </ModalSheet>
   );
 };
-
-/* ------------------------------- Offer letter --------------------------------- */
 
 export const OfferLetterModal: React.FC<{
   visible: boolean;
@@ -468,8 +456,6 @@ export const OfferLetterModal: React.FC<{
     </ModalSheet>
   );
 };
-
-/* --------------------------------- Styles ------------------------------------ */
 
 const styles = StyleSheet.create({
   profileTop: {

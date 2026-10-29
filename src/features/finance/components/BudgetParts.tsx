@@ -11,12 +11,6 @@ import { DataTable, DataColumn } from '../../../components/ui/DataTable';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Button } from '../../../components/ui/Button';
 
-/**
- * Web "Budget documents and workflow" (FinanceOperationsViews.tsx:101-180):
- * approved version row, draft version cards with approval transitions and the
- * budget comparison table.
- */
-
 const statusChipTone = (status: BudgetDraft['status']) =>
   status === 'Approved' ? 'success' : status === 'Pending approval' ? 'info' : status === 'Changes requested' ? 'warning' : 'neutral';
 
@@ -26,7 +20,7 @@ interface ComparisonRow {
   draft: number | null;
 }
 
-const COMPARE_COLUMNS: Array<DataColumn<ComparisonRow>> = [
+const COMPARE_COLUMNS: DataColumn<ComparisonRow>[] = [
   { key: 'name', label: 'Cost head', flex: 1.6 },
   { key: 'approved', label: 'Approved', flex: 1.1, align: 'right' },
   { key: 'draft', label: 'Draft', flex: 1.1, align: 'right' },
@@ -57,7 +51,6 @@ export const BudgetWorkflowSection: React.FC<{
       description="Preview, compare, download and move budget versions through approval"
     >
       <View style={styles.rows}>
-        {/* Approved version row (web ProjectBudgetDetail approvedPdf row) */}
         <View style={[styles.versionRow, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
           <View style={styles.versionInfo}>
             <Text style={[styles.versionTitle, { color: theme.colors.text }]}>Approved budget · Version 1.0</Text>
@@ -172,7 +165,7 @@ const ComparisonSheet: React.FC<{
   area: FinanceArea;
   project: FinanceProject;
   draft: BudgetDraft;
-  approvedLines: Array<{ name: string; amount: number }>;
+  approvedLines: { name: string; amount: number }[];
   onClose: () => void;
 }> = ({ area, project, draft, approvedLines, onClose }) => {
   const { theme } = useTheme();

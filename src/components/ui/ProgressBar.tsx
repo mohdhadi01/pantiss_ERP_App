@@ -8,11 +8,8 @@ export interface ProgressBarProps {
   value: number;
   max?: number;
   height?: number;
-  /** Solid fill color; wins over `gradient` when both are set. */
   color?: string;
-  /** Web bars use gradients (`from-red-600 to-rose-400`, `from-emerald-600 to-teal-400`). */
   gradient?: GradientPreset;
-  /** Neutral track color override (defaults to theme border). */
   trackColor?: string;
   showLabel?: boolean;
   label?: string;
@@ -70,12 +67,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   );
 };
 
-/** Convenience: web `bg-gradient-to-r from-emerald-600 to-teal-400` bar. */
 export const EmeraldBar: React.FC<Omit<ProgressBarProps, 'gradient'>> = (props) => (
   <ProgressBar gradient={barGradients.emerald} {...props} />
 );
 
-/** Convenience: web `bg-gradient-to-r from-red-600 to-rose-400` bar. */
 export const RedBar: React.FC<Omit<ProgressBarProps, 'gradient'>> = (props) => (
   <ProgressBar gradient={barGradients.red} {...props} />
 );

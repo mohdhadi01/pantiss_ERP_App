@@ -12,15 +12,10 @@ export interface FunnelStage {
 
 export interface FunnelBarsProps {
   stages: FunnelStage[];
-  /** Max bar height in px (web funnel bars scale with the tallest stage). */
   maxHeight?: number;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Recruitment pipeline funnel — the web's `rec-funnel`: one column per stage,
- * vertical bar heights ∝ count, count above, label below.
- */
 export const FunnelBars: React.FC<FunnelBarsProps> = ({ stages, maxHeight = 110, style }) => {
   const { theme } = useTheme();
   const max = Math.max(...stages.map((s) => s.count), 1);

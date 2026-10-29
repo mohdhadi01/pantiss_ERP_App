@@ -8,7 +8,6 @@ import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { ProcurementView } from '../../features/finance/components/ProcurementView';
 import type { FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /finance/procurement. */
 export const ProcurementScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const alerts = useFinanceAlerts();

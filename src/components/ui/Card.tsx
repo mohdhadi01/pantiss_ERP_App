@@ -1,48 +1,53 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, StyleProp, Pressable } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 export interface CardProps {
   children: React.ReactNode;
-  /** Web rounded-2xl (16) by default; pass radii.panel (22) / radii.hero (30) for larger surfaces. */
   radius?: number;
   padding?: number;
-  /** Disable the card shadow (web hover-less flat variants, e.g. Books). */
   flat?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
 }
 
-/**
- * Base surface — the web's `rounded-2xl border border-[var(--border)]
- * bg-[var(--module-bg)] shadow-[var(--shadow-card)]` pattern.
- */
 export const Card: React.FC<CardProps> = ({
   children,
   radius,
   padding = 20,
   flat = false,
+  onPress,
   style,
   contentStyle,
 }) => {
   const { theme } = useTheme();
 
+  const cardStyle = [
+    styles.card,
+    {
+      borderRadius: radius ?? theme.radii.card,
+      padding,
+      backgroundColor: theme.colors.moduleBg,
+      borderColor: theme.colors.border,
+      ...(flat ? {} : theme.shadows.card),
+    },
+    style,
+    contentStyle,
+  ];
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={cardStyle}>
+        {children}
+      </Pressable>
+    );
+  }
+
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          borderRadius: radius ?? theme.radii.card,
-          padding,
-          backgroundColor: theme.colors.moduleBg,
-          borderColor: theme.colors.border,
-          ...(flat ? {} : theme.shadows.card),
-        },
-        style,
-      ]}
-    >
-      <View style={contentStyle}>{children}</View>
+    <View style={cardStyle}>
+      {children}
     </View>
   );
 };
@@ -50,15 +55,12 @@ export const Card: React.FC<CardProps> = ({
 export interface SectionCardProps extends Omit<CardProps, 'children'> {
   title: string;
   description?: string;
-  /** Eyebrow rendered above the title (web `text-[9px] uppercase tracking`). */
   eyebrow?: string;
-  /** Right-aligned header slot — buttons, links, badges. */
   action?: React.ReactNode;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
-/** Card with the web's panel header: title + optional description + right action. */
 export const SectionCard: React.FC<SectionCardProps> = ({
   title,
   description,
@@ -69,11 +71,12 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   ...cardProps
 }) => {
   const { theme } = useTheme();
+  const { isMd } = useBreakpoint();
 
   return (
     <Card {...cardProps}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
+      <View style={[styles.header, !isMd && styles.headerMobile]}>
+        <View style={[styles.headerText, !isMd && styles.headerTextMobile]}>
           {eyebrow ? (
             <Text
               numberOfLines={1}
@@ -92,7 +95,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
             </Text>
           ) : null}
         </View>
-        {action ? <View style={styles.action}>{action}</View> : null}
+        {action ? <View style={[styles.action, !isMd && styles.actionMobile]}>{action}</View> : null}
       </View>
       {children}
       {footer ? <View style={styles.footer}>{footer}</View> : null}
@@ -111,9 +114,17 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
+  headerMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   headerText: {
     flex: 1,
     minWidth: 0,
+  },
+  headerTextMobile: {
+    width: '100%',
   },
   description: {
     fontSize: 12,
@@ -124,6 +135,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  actionMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,

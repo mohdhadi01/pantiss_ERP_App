@@ -105,7 +105,6 @@ export const WorkspaceArtwork: React.FC<WorkspaceArtworkProps> = ({
         <LeadershipNetwork strokeColor={strokeColor} faintColor={faintColor} />
       )}
 
-      {/* Floating Center Icon */}
       <View style={styles.centerIconWrapper}>
         <LinearGradient
           colors={accentColors}

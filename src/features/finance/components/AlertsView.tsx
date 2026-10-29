@@ -21,7 +21,7 @@ const CATEGORY_META: Record<FinanceAlertCategory, { icon: IconSource; color: str
   Completed: { icon: 'CheckCircle', color: '#10b981' },
 };
 
-const FILTERS: Array<'All' | FinanceAlertCategory> = [
+const FILTERS: ('All' | FinanceAlertCategory)[] = [
   'All',
   'Action Required',
   'Compliance',

@@ -13,7 +13,6 @@ import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 
-// ─── Web TaxationView.tsx:35-90 — GST return register ─────────────────────────
 interface GstRecord {
   period: string;
   returnType: 'GSTR-1' | 'GSTR-3B' | 'GSTR-9';
@@ -35,7 +34,6 @@ const INITIAL_GST: GstRecord[] = [
   { period: 'FY 2025-26', returnType: 'GSTR-9', dueDate: '31 Dec 2026', turnover: 1140.0, taxLiability: 142.0, itcClaimed: 89.0, netPaidCash: 53.0, status: 'Upcoming' },
 ];
 
-// ─── Web tdsChallans (92-148) ──────────────────────────────────────────────────
 const CHALLANS = [
   { id: 'CHL-2026-081', month: 'August 2026', section: '194C (Contractors)', amount: 148500, bsr: '0001042', challanNo: '09182', tender: '07 Sep 2026', status: 'Paid & Reconciled' },
   { id: 'CHL-2026-082', month: 'August 2026', section: '194J (Professionals)', amount: 224000, bsr: '0001042', challanNo: '09183', tender: '07 Sep 2026', status: 'Paid & Reconciled' },
@@ -46,7 +44,7 @@ const CHALLANS = [
 
 type UpdateTarget = { kind: 'gst'; record: GstRecord } | { kind: 'tds'; form: '24Q' | '26Q' };
 
-const CHALLAN_COLUMNS: Array<DataColumn<(typeof CHALLANS)[number]>> = [
+const CHALLAN_COLUMNS: DataColumn<(typeof CHALLANS)[number]>[] = [
   { key: 'id', label: 'Challan ID & Month', flex: 1.6 },
   { key: 'section', label: 'Withholding Section', flex: 1.6 },
   { key: 'bsr', label: 'BSR Code', flex: 1, wideOnly: true },
@@ -56,7 +54,7 @@ const CHALLAN_COLUMNS: Array<DataColumn<(typeof CHALLANS)[number]>> = [
   { key: 'status', label: 'Status', flex: 1.1 },
 ];
 
-const ITC_COLUMNS: Array<DataColumn<GstRecord>> = [
+const ITC_COLUMNS: DataColumn<GstRecord>[] = [
   { key: 'period', label: 'Period', flex: 1.1 },
   { key: 'claimed', label: 'Claimed ITC', flex: 1, align: 'right' },
   { key: 'proposed', label: 'Proposed ITC', flex: 1, align: 'right', wideOnly: true },
@@ -145,7 +143,7 @@ export const TaxationView: React.FC = () => {
     }
   };
 
-  const GST_COLUMNS: Array<DataColumn<GstRecord>> = [
+  const GST_COLUMNS: DataColumn<GstRecord>[] = [
     { key: 'type', label: 'Return Type', flex: 1.2 },
     { key: 'period', label: 'Period', flex: 1.1 },
     { key: 'due', label: 'Due Date', flex: 1, wideOnly: true },

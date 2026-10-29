@@ -53,7 +53,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
           { opacity: pressed ? 0.92 : 1 },
         ]}
       >
-        {/* Top Edge Accent Gradient */}
         <LinearGradient
           colors={category.accentColors}
           start={{ x: 0, y: 0 }}
@@ -62,7 +61,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         />
 
         <View style={styles.cardInner}>
-          {/* Top Header Row */}
           <View style={styles.headerRow}>
             <View style={styles.numberRow}>
               <LinearGradient
@@ -81,7 +79,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
             </View>
           </View>
 
-          {/* Central Artwork */}
           <Animated.View
             sharedTransitionTag={`category-icon-${category.id}`}
             sharedTransitionStyle={cardHeroSharedTransition}
@@ -94,7 +91,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
             />
           </Animated.View>
 
-          {/* Bottom Section */}
           <View style={[styles.bottomSection, { borderTopColor: theme.colors.border }]}>
             <View style={styles.metaRow}>
               <Text style={[styles.countText, { color: theme.colors.textSubtle }]}>

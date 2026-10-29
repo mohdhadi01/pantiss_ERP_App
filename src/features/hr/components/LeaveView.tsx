@@ -70,7 +70,7 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
   const reviewRequest = reviewId ? leaves.find((l) => l.id === reviewId) : undefined;
   const reviewDecision = reviewRequest ? decisionFor(reviewRequest.id) : undefined;
 
-  const columns: Array<DataColumn<LeaveRequest>> = [
+  const columns: DataColumn<LeaveRequest>[] = [
     { key: 'employee', label: 'Employee', flex: 1.3 },
     { key: 'request', label: 'Leave request', flex: 1.1 },
     { key: 'dates', label: 'Dates', flex: 1.2 },
@@ -194,13 +194,16 @@ export const LeaveView: React.FC<LeaveViewProps> = ({ store }) => {
                 <View style={styles.personRow}>
                   <Avatar name={emp?.name ?? req.employeeId} size={36} />
                   <View style={styles.personMain}>
-                    <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{emp?.name ?? req.employeeId}</Text>
+                    <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{emp?.name ?? req.employeeId}</Text>
                     <Text style={[styles.cellSub, { color: theme.colors.textMuted }]}>
                       {req.type} · {req.days} day(s) · {formatDate(req.start)} to {formatDate(req.end)}
                     </Text>
                   </View>
                   <View style={styles.stack4}>
-                    <StatusChip status={`Admin ${req.adminStatus}`} />
+                    <StatusChip
+                      status={`Admin ${req.adminStatus}`}
+                      tone={req.adminStatus === 'Approved' ? 'success' : req.adminStatus === 'Rejected' ? 'danger' : 'warning'}
+                    />
                     <StatusChip
                       status={decision ? `HR ${decision.status}` : 'Awaiting HR'}
                       tone={decision ? (decision.status === 'Approved' ? 'success' : 'danger') : 'neutral'}
@@ -360,6 +363,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 16,
   },
   filterCell: {
     flexGrow: 1,

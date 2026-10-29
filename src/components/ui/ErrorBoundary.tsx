@@ -12,7 +12,6 @@ interface ErrorBoundaryState {
   message?: string;
 }
 
-/** Root safety net so a render error shows a branded fallback, not a white screen. */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false };
 

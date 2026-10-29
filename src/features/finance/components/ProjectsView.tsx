@@ -4,7 +4,6 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
 import { financeAreas, areaTotals, formatCurrency, FinanceArea } from '../data';
-import { formatRupees } from '../../../utils/formatCurrency';
 import { heroGradients } from '../../../theme/gradients';
 import { HeroBanner } from './HeroBanner';
 import { MetricCard } from '../../../components/ui/MetricCard';
@@ -21,14 +20,11 @@ import { LedgerSheet } from './ProjectsParts';
 
 type RegisterRow = FinanceArea['projects'][number];
 
-/** Web ProjectsView.tsx:320 — corpus is an estimate from released funds. */
 const corpusOf = (p: RegisterRow) => Math.round(p.released * 0.5);
 
 export const ProjectsView: React.FC<{ area?: string }> = ({ area: areaParam }) => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  // Deep link: /finance/projects?area={areaId} — passed through from the
-  // screen route params (web navigates to /finance/{areaId}).
   const initialArea = areaParam ? financeAreas.find((a) => a.id === areaParam) ?? null : null;
   const [selectedArea, setSelectedArea] = useState<FinanceArea | null>(initialArea);
   const [search, setSearch] = useState('');
@@ -65,7 +61,7 @@ export const ProjectsView: React.FC<{ area?: string }> = ({ area: areaParam }) =
     ];
   }, [selectedArea]);
 
-  const columns: Array<DataColumn<RegisterRow>> = [
+  const columns: DataColumn<RegisterRow>[] = [
     { key: 'project', label: 'Project', flex: 2 },
     { key: 'approved', label: 'Approved', flex: 1, align: 'right', wideOnly: true },
     { key: 'released', label: 'Released', flex: 1, align: 'right', wideOnly: true },
@@ -165,8 +161,12 @@ export const ProjectsView: React.FC<{ area?: string }> = ({ area: areaParam }) =
                         <Text style={[styles.areaStatValue, { color: theme.colors.text }]}>{formatCurrency(totals.approved)}</Text>
                       </View>
                       <View style={styles.areaStatUtil}>
-                        <ProgressBar value={totals.utilization} color={area.color} height={6} />
-                        <Text style={[styles.areaStatValue, { color: theme.colors.financeAccent }]}>{totals.utilization}%</Text>
+                        <View style={styles.progressBarWrap}>
+                          <ProgressBar value={totals.utilization} color={area.color} height={6} />
+                        </View>
+                        <Text style={[styles.areaStatValue, styles.utilPercentText, { color: theme.colors.financeAccent }]}>
+                          {totals.utilization}%
+                        </Text>
                       </View>
                     </View>
                     <View style={styles.areaFooter}>
@@ -369,7 +369,9 @@ const styles = StyleSheet.create({
   areaStat: { gap: 3 },
   areaStatLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
   areaStatValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  areaStatUtil: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  areaStatUtil: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, minWidth: 0 },
+  progressBarWrap: { flex: 1, minWidth: 36 },
+  utilPercentText: { flexShrink: 0 },
   areaFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingTop: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128, 144, 168, 0.14)' },
   areaMeta: { fontSize: 10.5 },
   viewProjects: { fontSize: 11.5, fontWeight: '600' },

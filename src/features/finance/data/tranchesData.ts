@@ -1,12 +1,5 @@
 import { FinanceProject, financeAreas } from '../data';
 
-/**
- * Tranche seeds. The web dashboard reads tranches from the project-onboarding
- * localStorage draft; the mobile app uses this static seed instead (agreed
- * scope). Dates are generated relative to "today" so overdue / due-soon
- * states stay meaningful and the current month always has scheduled inflows.
- */
-
 const DAY_MS = 86_400_000;
 
 const isoIn = (days: number): string =>
@@ -16,14 +9,12 @@ export interface ProjectTranche {
   id: string;
   projectId: string;
   areaId: string;
-  /** Share of the project's approved budget, in %. */
   percentage: number;
-  tentativeDate: string; // YYYY-MM-DD
+  tentativeDate: string;
   adminApproved: boolean;
   invoiceId: string | null;
 }
 
-/** One row per scheduled tranche across the portfolio (2–3 areas seeded). */
 export const projectTranches: ProjectTranche[] = [
   { id: 'TR-SKI-01', projectId: 'FIN-SKI-01', areaId: 'skill-development', percentage: 30, tentativeDate: isoIn(-18), adminApproved: true, invoiceId: null },
   { id: 'TR-SKI-02', projectId: 'FIN-SKI-02', areaId: 'skill-development', percentage: 25, tentativeDate: isoIn(-5), adminApproved: true, invoiceId: null },
@@ -43,29 +34,22 @@ export function trancheAmountLakhs(project: FinanceProject, tranche: ProjectTran
   return (project.approved * tranche.percentage) / 100;
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard "Tranche Fund Allocation" — a single programme's tranche ladder
-// (web FinanceDashboard.tsx:633-741 · 50% Corpus + 50% Operations per tranche).
-// ---------------------------------------------------------------------------
-
 export type FundTrancheState = 'overdue' | 'due-soon' | 'scheduled';
 
 export interface FundTranche {
   id: string;
   label: string;
   percentage: number;
-  /** Tranche value in rupees (programme budget × percentage). */
   amount: number;
-  corpus: number; // 50% of amount
-  operations: number; // 50% of amount
+  corpus: number;
+  operations: number;
   tentativeDate: string;
   invoiceRaised: boolean;
-  /** Whole days until the tentative date (negative = overdue). */
   daysUntil: number;
   state: FundTrancheState;
 }
 
-const programme = financeAreas[0].projects[0]; // PMKVY 4.0 Odisha Skills
+const programme = financeAreas[0].projects[0];
 
 const fundTrancheSeeds = [
   { label: 'Tranche 1 · Mobilisation', percentage: 30, dayOffset: -12, invoiceRaised: false },

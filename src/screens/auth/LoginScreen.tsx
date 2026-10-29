@@ -11,11 +11,8 @@ import { Icon } from '../../components/ui/Icon';
 import type { PublicStackParamList, PublicStackNav, RootDrawerNav } from '../../navigation/types';
 
 export interface LoginScreenProps {
-  /** Module being accessed — validates the account's moduleId (gate usage). */
   moduleId?: string;
-  /** Overrides the default "Sign in" heading (gate inline usage). */
   heading?: string;
-  /** Shows the "Back to workspace selection" link (default true). */
   showBackLink?: boolean;
 }
 
@@ -25,11 +22,6 @@ const moduleTitleFor = (moduleId?: string): string => {
   return 'Pantiss ERP';
 };
 
-/**
- * Full-page sign-in (web CXO split-login surface). Shares all form logic
- * with the module LoginModal through `LoginForm`. Also rendered inline by
- * the module gate when an unauthorized visitor opens a workspace.
- */
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   moduleId: moduleIdProp,
   heading,
@@ -42,7 +34,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const moduleId = moduleIdProp ?? route.params?.moduleId;
 
   const handleSuccess = (user: AuthUser) => {
-    // Web replaces onto the target workspace — reset the root drawer into it.
     const root = navigation.getParent<RootDrawerNav>();
     if (user.moduleId === 'finance') {
       root?.reset({

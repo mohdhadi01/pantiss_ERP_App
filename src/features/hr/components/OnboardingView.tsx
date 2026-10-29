@@ -117,7 +117,6 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
     );
   };
 
-  /** Web-parity onboarding draft mailto (web PeopleViews.tsx:30). */
   const draftMailto = (emp: Employee) =>
     `mailto:${encodeURIComponent(emp.email)}?subject=${encodeURIComponent(
       'Pantiss employee onboarding',
@@ -128,7 +127,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ store }) => {
   const assignmentFor = (empId: string) => data.assignments.find((a) => a.employeeId === empId);
   const designationFor = (emp: Employee) => data.designations.find((d) => d.id === emp.designationId);
 
-  const columns: Array<DataColumn<Employee>> = [
+  const columns: DataColumn<Employee>[] = [
     { key: 'id', label: 'User ID', width: 108 },
     { key: 'name', label: 'Name', flex: 1.1 },
     { key: 'role', label: 'Role', flex: 1.2 },
@@ -454,6 +453,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 16,
   },
   filterCell: {
     flexGrow: 1,

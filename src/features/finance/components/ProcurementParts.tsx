@@ -9,8 +9,6 @@ import { Timeline } from '../../../components/ui/Timeline';
 import { Icon } from '../../../components/ui/Icon';
 import type { Requisition } from '../data/procurementData';
 
-// Types, status labels and seed data live in ../data/procurementData.ts —
-// re-exported here so the view can keep importing everything from Parts.
 export {
   STATUS_LABELS,
   statusLabel,
@@ -21,7 +19,6 @@ export {
 } from '../data/procurementData';
 export type { ProcurementStatus, ProcQuote, ProcAuditEntry, Requisition } from '../data/procurementData';
 
-/** Chip tones for the 6-stage status model. */
 export const chipTones: Record<Requisition['status'], 'info' | 'warning' | 'violet' | 'brand' | 'success'> = {
   'Quotation review': 'info',
   Approved: 'warning',
@@ -31,8 +28,6 @@ export const chipTones: Record<Requisition['status'], 'info' | 'warning' | 'viol
   'Payment slip uploaded': 'success',
 };
 
-
-/** Letter-avatar area tile (web procurement drill step 1). */
 export const ProcAreaCard: React.FC<{
   name: string;
   color: string;
@@ -70,7 +65,6 @@ export const ProcAreaCard: React.FC<{
   );
 };
 
-/** Landmark-tile project card (web drill step 2). */
 export const ProcProjectCard: React.FC<{
   project: string;
   total: number;
@@ -104,7 +98,6 @@ export const ProcProjectCard: React.FC<{
   );
 };
 
-/** Full quotation card in the review sheet (web ProcurementReviewOverlay quote article). */
 export const ReviewQuoteCard: React.FC<{
   quote: Requisition['quotes'][number];
   ceiling: number;
@@ -172,7 +165,6 @@ export const ReviewQuoteCard: React.FC<{
   );
 };
 
-/** Compact quote tile inside expanded rows (web ProcurementRequestRow quotes grid). */
 export const MiniQuoteCard: React.FC<{
   quote: Requisition['quotes'][number];
   ceiling: number;
@@ -216,7 +208,6 @@ const Spec: React.FC<{ label: string; value: string }> = ({ label, value }) => {
   );
 };
 
-/** Expandable "Quotations & Bill" + "Audit Trail" block (web rows 1207-1288). */
 export const ProcExpanded: React.FC<{ req: Requisition }> = ({ req }) => {
   const { theme } = useTheme();
   const lowest = req.quotes.length ? Math.min(...req.quotes.map((q) => q.amount)) : NaN;

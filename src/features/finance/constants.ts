@@ -1,6 +1,5 @@
 import { NavItem } from '../../types/navigation';
 
-/** Web Finance sidebar menu (Alerts is reachable via the bell, not the sidebar). */
 export const financeNavItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', route: '/(finance)/dashboard', iconName: 'LayoutDashboard' },
   { id: 'budget', label: 'Budget', route: '/(finance)/budget', iconName: 'WalletCards' },
@@ -17,7 +16,6 @@ export const financeNavItems: NavItem[] = [
   { id: 'invoices', label: 'Invoices', route: '/(finance)/invoices', iconName: 'FileText' },
 ];
 
-/** Web header H1 per section (`/finance/:section`). */
 export const financeSectionTitles: Record<string, string> = {
   dashboard: 'Overall finance dashboard',
   budget: 'Budget planning & allocations',

@@ -7,21 +7,17 @@ import { EmptyState } from './EmptyState';
 export interface DataColumn<T> {
   key: string;
   label: string;
-  /** Flex weight within the row (default 1). */
   flex?: number;
-  /** Fixed pixel width — wins over flex. */
   width?: number;
   align?: 'left' | 'right' | 'center';
-  /** Column only participates in the wide (≥1024) table layout. */
   wideOnly?: boolean;
 }
 
 export interface DataTableProps<T> {
-  columns: Array<DataColumn<T>>;
+  columns: DataColumn<T>[];
   rows: T[];
   keyExtractor: (row: T, index: number) => string;
   renderCell: (row: T, column: DataColumn<T>) => React.ReactNode;
-  /** Narrow-widths card. Falls back to a generated label/value list. */
   renderMobileCard?: (row: T, index: number) => React.ReactNode;
   onRowPress?: (row: T) => void;
   emptyTitle?: string;
@@ -31,10 +27,6 @@ export interface DataTableProps<T> {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Web register pattern: real table ≥1024px (`.cxo-register` — soft header,
- * 12–14px cells, hairline dividers), stacked cards below.
- */
 export function DataTable<T>({
   columns,
   rows,
@@ -123,7 +115,7 @@ function MobileCard<T>({
   renderCell,
   onRowPress,
 }: {
-  columns: Array<DataColumn<T>>;
+  columns: DataColumn<T>[];
   row: T;
   renderCell: (row: T, column: DataColumn<T>) => React.ReactNode;
   onRowPress?: (row: T) => void;

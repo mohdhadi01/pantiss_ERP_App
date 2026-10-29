@@ -46,12 +46,10 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
       ]}
     >
       <View style={styles.cardInner}>
-        {/* Top Right Module Code */}
         <Text style={[styles.moduleCode, { color: theme.colors.textSubtle }]}>
           MOD–{String(index + 1).padStart(2, '0')}
         </Text>
 
-        {/* Top Row: Icon + Status Badge */}
         <View style={styles.topRow}>
           <LinearGradient
             colors={module.accentColors}
@@ -69,7 +67,6 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
           />
         </View>
 
-        {/* Middle & Bottom: Title, Arrow, Description & Dots */}
         <View style={styles.bottomBlock}>
           <View style={styles.titleRow}>
             <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -85,7 +82,6 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
             {module.description}
           </Text>
 
-          {/* 5 Indicator Bars matching web app */}
           <View style={styles.barRow}>
             {[0, 1, 2, 3, 4].map((item) => (
               <View
@@ -115,7 +111,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 220,
   },
-  /** Phones: drop the desktop min-height — content defines the card. */
   cardMobile: {
     minHeight: 0,
   },

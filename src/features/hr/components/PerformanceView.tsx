@@ -84,7 +84,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
     );
   };
 
-  const kbiColumns: Array<DataColumn<Employee>> = [
+  const kbiColumns: DataColumn<Employee>[] = [
     { key: 'employee', label: 'Employee', flex: 1.4 },
     { key: 'score', label: 'KBI score', width: 100 },
     { key: 'reviewer', label: 'Assessed by', flex: 1.1 },
@@ -92,7 +92,7 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
     { key: 'action', label: 'Action', width: 142 },
   ];
 
-  const appraisalColumns: Array<DataColumn<Employee>> = [
+  const appraisalColumns: DataColumn<Employee>[] = [
     { key: 'employee', label: 'Employee', flex: 1.3 },
     { key: 'score', label: 'KBI score', width: 96 },
     { key: 'reviewer', label: 'Assessed by', flex: 1 },
@@ -236,9 +236,24 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
               const status = statusFor(Boolean(appraisal), Boolean(assessment));
               return (
                 <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
-                  <View style={styles.personRow}>
-                    {employeeColumn(emp)}
-                    <StatusChip status={status.label} tone={status.tone} />
+                  <View style={styles.mobileHeader}>
+                    <View style={styles.mobileEmployee}>
+                      <Avatar name={emp.name} size={34} />
+                      <View style={styles.personMain}>
+                        <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>
+                          {emp.name}
+                        </Text>
+                        <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                          {emp.id}
+                        </Text>
+                        {assessment ? (
+                          <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                            Assessed by {assessment.reviewer}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <StatusChip status={status.label} tone={status.tone} style={styles.headerChip} />
                   </View>
                   <View style={styles.mobileFooter}>
                     <Text style={[styles.score, { color: theme.colors.text }]}>
@@ -329,11 +344,27 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
               const appraisal = appraisalFor(emp.id);
               return (
                 <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
-                  <View style={styles.personRow}>
-                    {employeeColumn(emp)}
+                  <View style={styles.mobileHeader}>
+                    <View style={styles.mobileEmployee}>
+                      <Avatar name={emp.name} size={34} />
+                      <View style={styles.personMain}>
+                        <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>
+                          {emp.name}
+                        </Text>
+                        <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                          {emp.id}
+                        </Text>
+                        {assessment ? (
+                          <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                            Assessed by {assessment.reviewer}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
                     <StatusChip
                       status={appraisal ? 'Finalised' : assessment ? 'Ready for appraisal' : 'Awaiting KBI'}
                       tone={appraisal ? 'success' : assessment ? 'info' : 'warning'}
+                      style={styles.headerChip}
                     />
                   </View>
                   <View style={styles.mobileFooter}>
@@ -362,7 +393,6 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
         {mode === 'appraisal' ? <AppraisalFootnote /> : null}
       </SectionCard>
 
-      {/* KBI assessment modal */}
       {kbiTargetEmployee ? (
         <ModalSheet
           key={`${kbiTargetEmployee.id}-${selectedYear}`}
@@ -377,7 +407,6 @@ export const PerformanceView: React.FC<PerformanceViewProps> = ({ store, mode })
         </ModalSheet>
       ) : null}
 
-      {/* Appraisal modal */}
       {appraisalTargetEmployee && appraisalTargetAssessment ? (
         <ModalSheet
           key={`${appraisalTargetEmployee.id}-${selectedYear}`}
@@ -438,6 +467,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 16,
   },
   filterCell: {
     flexGrow: 1,
@@ -456,6 +486,7 @@ const styles = StyleSheet.create({
   cellTitle: {
     fontSize: 12.5,
     fontWeight: '600',
+    flexShrink: 1,
   },
   cellSub: {
     fontSize: 10.5,
@@ -482,6 +513,22 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 13,
     gap: 10,
+  },
+  mobileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  headerChip: {
+    flexShrink: 0,
+  },
+  mobileEmployee: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    flex: 1,
+    minWidth: 0,
   },
   mobileFooter: {
     flexDirection: 'row',

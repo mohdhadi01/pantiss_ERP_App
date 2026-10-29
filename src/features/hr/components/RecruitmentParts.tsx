@@ -1,7 +1,3 @@
-/**
- * Sub-components + modals for RecruitmentView (web-parity UI only).
- * All business logic stays in RecruitmentView via `store.commit`.
- */
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
@@ -26,7 +22,6 @@ import { TextField } from '../../../components/ui/TextField';
 import { SelectField, SelectOption } from '../../../components/ui/SelectField';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 
-/** Amber star-rating color (web data-identity). */
 const STAR_FILLED = '#f59e0b';
 
 export const STAGE_OPTIONS: SelectOption[] = [
@@ -59,7 +54,6 @@ const MODE_OPTIONS: SelectOption[] = (
   ['Google Meet', 'In-Person (HQ)', 'Phone Screen', 'Microsoft Teams'] as InterviewMode[]
 ).map((mode) => ({ value: mode, label: mode }));
 
-/** Web interview evaluation labels (web RecruitmentViews.tsx:2171-2175). */
 const RATING_OPTIONS: SelectOption[] = [1, 2, 3, 4, 5].map((n) => ({
   value: String(n),
   label: `${n} / 5 ${n === 5 ? '· Outstanding' : n === 4 ? '· Strong Fit' : n === 3 ? '· Acceptable' : '· Substandard'}`,
@@ -80,7 +74,6 @@ export function daysLeft(closingDate: string): number {
   return Math.ceil((new Date(`${closingDate}T23:59:59`).getTime() - Date.now()) / 86_400_000);
 }
 
-/** Web urgencyLabel (web RecruitmentViews.tsx:70-75). */
 export function urgencyLabel(days: number): { label: string; tone: 'ok' | 'warn' | 'danger' } {
   if (days < 0) return { label: 'Closed', tone: 'danger' };
   if (days <= 5) return { label: `${days}d left`, tone: 'danger' };
@@ -96,7 +89,6 @@ export function pipelineCounts(candidates: Candidate[]) {
   };
 }
 
-/** "{n} vacanc{ies|y}" (web JobCard meta, web RecruitmentViews.tsx:316). */
 export function vacanciesLabel(n: number): string {
   return `${n} vacanc${n > 1 ? 'ies' : 'y'}`;
 }
@@ -120,8 +112,6 @@ export const Stars: React.FC<{ rating?: number; size?: number }> = ({ rating = 0
     </View>
   );
 };
-
-/* ---------------------------------- Job card --------------------------------- */
 
 export const JobCard: React.FC<{
   job: JobPosting;
@@ -218,8 +208,6 @@ export const SalaryBandCard: React.FC<{ job: JobPosting }> = ({ job }) => {
   );
 };
 
-/* -------------------------------- Applicant row ------------------------------ */
-
 export const ApplicantRow: React.FC<{
   candidate: Candidate;
   onProfile: () => void;
@@ -250,7 +238,7 @@ export const ApplicantRow: React.FC<{
           <Stars rating={candidate.rating} />
         </View>
       </View>
-      <View style={styles.applicantActions}>
+      <View style={[styles.applicantActions, { borderTopColor: theme.colors.border }]}>
         <Button label="Profile" variant="outline" size="sm" icon="Eye" onPress={onProfile} />
         {candidate.stage === 'Applied' ? (
           <Button label="Shortlist" variant="primary" size="sm" icon="CheckCircle2" onPress={onShortlist} />
@@ -261,8 +249,6 @@ export const ApplicantRow: React.FC<{
     </View>
   );
 };
-
-/* ----------------------------- Offer tab candidate ---------------------------- */
 
 export const OfferCandidateCard: React.FC<{
   candidate: Candidate;
@@ -316,8 +302,6 @@ export const OfferCandidateCard: React.FC<{
     </View>
   );
 };
-
-/* -------------------------- Create / edit job requisition --------------------- */
 
 export const PostingModal: React.FC<{
   visible: boolean;
@@ -450,8 +434,6 @@ export const AreaSelect: React.FC<{ value: string; onChange: (v: string) => void
 export const areaOptions = (): SelectOption[] =>
   financeAreas.map((area) => ({ value: area.id, label: area.name }));
 
-/* ------------------------------- Add applicant ------------------------------- */
-
 export const ApplicantModal: React.FC<{
   visible: boolean;
   onClose: () => void;
@@ -536,8 +518,6 @@ export const ApplicantModal: React.FC<{
   );
 };
 
-/* ------------------------------ Schedule interview ---------------------------- */
-
 export const ScheduleModal: React.FC<{
   visible: boolean;
   onClose: () => void;
@@ -548,7 +528,6 @@ export const ScheduleModal: React.FC<{
   const defaultSlot = () => {
     const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
     d.setHours(11, 0, 0, 0);
-    // Local "YYYY-MM-DDTHH:MM" like the web datetime-local default (+2 days, 11:00).
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
@@ -607,8 +586,6 @@ export const ScheduleModal: React.FC<{
   );
 };
 
-/* ----------------------------- Interview evaluation --------------------------- */
-
 export const FeedbackModal: React.FC<{
   visible: boolean;
   onClose: () => void;
@@ -665,8 +642,6 @@ export const FeedbackModal: React.FC<{
     </ModalSheet>
   );
 };
-
-/* --------------------------------- Helpers ----------------------------------- */
 
 export const FieldRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <View style={styles.fieldRow}>
@@ -804,33 +779,36 @@ const styles = StyleSheet.create({
   applicantCard: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 13,
-    gap: 10,
+    padding: 14,
+    gap: 12,
   },
   applicantTop: {
     flexDirection: 'row',
-    gap: 11,
+    gap: 12,
   },
   applicantMain: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 3,
   },
   applicantSide: {
     alignItems: 'flex-end',
-    gap: 5,
+    gap: 6,
   },
   applicantName: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
   applicantSub: {
-    fontSize: 11,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   resumeBlurb: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 11.5,
+    lineHeight: 16,
     fontStyle: 'italic',
+    marginTop: 2,
   },
   modalError: {
     fontSize: 12,
@@ -857,9 +835,11 @@ const styles = StyleSheet.create({
   },
   applicantActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
   },
   offerLine: {
     fontSize: 12,

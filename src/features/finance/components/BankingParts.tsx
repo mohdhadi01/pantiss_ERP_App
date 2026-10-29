@@ -8,11 +8,6 @@ import { TextField } from '../../../components/ui/TextField';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 
-/**
- * Web Inter-Bank Float Transfer overlay (BankingView.tsx:579-676) as a
- * ModalSheet — executes against the live accounts state on the parent.
- */
-
 export const TransferSheet: React.FC<{
   visible: boolean;
   onClose: () => void;

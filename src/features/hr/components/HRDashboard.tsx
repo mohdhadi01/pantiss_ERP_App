@@ -109,7 +109,6 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         </View>
       ) : null}
 
-      {/* KPI row 1 */}
       <View style={styles.metricsGrid}>
         <MetricCard
           label="Active employees"
@@ -137,7 +136,6 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         />
       </View>
 
-      {/* Distribution + action centre */}
       <View style={[styles.splitRow, isMd && styles.splitRowWide]}>
         <SectionCard
           title="People across thematic areas"
@@ -193,7 +191,6 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         </SectionCard>
       </View>
 
-      {/* KPI row 2 */}
       <View style={styles.metricsGrid}>
         <MetricCard
           label="Awaiting Admin approval"
@@ -221,7 +218,6 @@ export const HRDashboard: React.FC<HRDashboardProps> = ({ data }) => {
         />
       </View>
 
-      {/* Payroll summary + annual review progress */}
       <View style={[styles.splitRow, isMd && styles.splitRowWide]}>
         <LinearGradient
           colors={[theme.colors.brandSoft, theme.colors.moduleBg]}

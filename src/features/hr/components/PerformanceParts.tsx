@@ -1,7 +1,3 @@
-/**
- * KBI assessment + year-end appraisal forms for PerformanceView (web-parity).
- * Web reference: Pantiss_ERP/src/features/hr/PerformanceViews.tsx.
- */
 import React, { useState } from 'react';
 import { Text, View, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -30,15 +26,12 @@ import { SalaryPanel } from './SalaryPanel';
 
 export const HR_ACTOR = 'Ritika Sen (HR Manager)';
 
-/** Web rating options are plain "1 / 5" … "5 / 5" (web PerformanceViews.tsx:41,61). */
 export const RATING_OPTIONS: SelectOption[] = [1, 2, 3, 4, 5].map((n) => ({
   value: String(n),
   label: `${n} / 5`,
 }));
 
 const INCREMENT_PRESETS = [0, 5, 8, 10, 12, 15];
-
-/* ------------------------------ KBI assessment ------------------------------ */
 
 export const KbiForm: React.FC<{
   employee: Employee;
@@ -127,8 +120,6 @@ export const KbiForm: React.FC<{
     </>
   );
 };
-
-/* ------------------------------- Appraisal form ------------------------------ */
 
 export const AppraisalForm: React.FC<{
   employee: Employee;
@@ -292,7 +283,6 @@ export const AppraisalForm: React.FC<{
   );
 };
 
-/** Appraisal-mode register footnote with the KBI shortcut (web PerformanceViews.tsx:27). */
 export const AppraisalFootnote: React.FC = () => {
   const { theme } = useTheme();
   const navigation = useNavigation<HrStackNav>();

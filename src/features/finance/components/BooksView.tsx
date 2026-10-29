@@ -22,7 +22,7 @@ import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 import { TallyIntegrationCard, TallySetupSheet, TallyImportSheet } from './BooksParts';
 
-const OPENING_EXPENDITURE = 4250000; // brought forward from FY 2025–26
+const OPENING_EXPENDITURE = 4250000;
 
 type SourceFilter = 'all' | 'tally' | 'manual' | 'not-exported' | 'exported';
 
@@ -33,7 +33,7 @@ const tallyPill = (entry: BookEntry): { status: string; tone: 'info' | 'success'
       ? { status: 'Exported', tone: 'success' }
       : { status: 'Manual', tone: 'neutral' };
 
-const REGISTER_COLUMNS: Array<DataColumn<BookEntry>> = [
+const REGISTER_COLUMNS: DataColumn<BookEntry>[] = [
   { key: 'date', label: 'Date / reference', flex: 1.2 },
   { key: 'payee', label: 'Payee / narration', flex: 2.2 },
   { key: 'head', label: 'Budget head', flex: 1.4, wideOnly: true },
@@ -56,7 +56,6 @@ export const BooksView: React.FC = () => {
   const [setupOpen, setSetupOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [notice, setNotice] = useState('');
-  // New voucher form
   const [payee, setPayee] = useState('');
   const [amount, setAmount] = useState('');
   const [narration, setNarration] = useState('');
@@ -72,7 +71,6 @@ export const BooksView: React.FC = () => {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  /** Tally cost-centre key: per project when one is selected, else the portfolio default. */
   const costCentreKey = projectId !== 'all' ? projectId : DEFAULT_COST_CENTRE_KEY;
   const costCentreScope =
     projectId !== 'all' ? booksProjects.find((p) => p.id === projectId)?.name ?? 'this project' : 'the portfolio scope';
@@ -146,7 +144,6 @@ export const BooksView: React.FC = () => {
     setNotice('Expenditure recorded in the books. Ready for Tally export.');
   };
 
-  /** Register "Export CSV" — share sheet, AsyncStorage fallback (web downloads books CSV). */
   const handleExportCsv = async () => {
     const result = await exportCsv(
       `books-${projectId === 'all' ? 'portfolio' : projectId}.csv`,
@@ -156,7 +153,6 @@ export const BooksView: React.FC = () => {
     setNotice(result.message);
   };
 
-  /** "Export N new manual entries to Tally" — static parity (no XML generation on mobile). */
   const pendingTallyCount = entries.filter((e) => e.source === 'manual' && !e.exportedAt).length;
   const handleExportTally = () => {
     setNotice(

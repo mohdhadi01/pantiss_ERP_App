@@ -7,7 +7,6 @@ export interface EmptyStateProps {
   title: string;
   description?: string;
   icon?: string;
-  /** Optional action button under the text. */
   action?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }

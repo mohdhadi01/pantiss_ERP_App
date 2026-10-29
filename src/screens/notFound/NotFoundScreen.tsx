@@ -12,11 +12,9 @@ import { useTheme } from '../../hooks/useTheme';
 import { Icon } from '../../components/ui/Icon';
 import type { PublicStackParamList } from '../../navigation/types';
 
-/** Web NotFoundPage parity: SearchX tile + "Workspace not found" + red-600 CTA. */
 export const NotFoundScreen: React.FC = () => {
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp<PublicStackParamList>>();
-  // Keep the route hook so the screen stays route-aware (typed params, linking).
   useRoute<RouteProp<PublicStackParamList, 'NotFound'>>();
 
   return (

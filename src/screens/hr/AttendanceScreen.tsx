@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { AttendanceView } from '../../features/hr/components/AttendanceView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/attendance. */
 export const AttendanceScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { DesignationsView } from '../../features/hr/components/DesignationsView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/job-designations. */
 export const JobDesignationsScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

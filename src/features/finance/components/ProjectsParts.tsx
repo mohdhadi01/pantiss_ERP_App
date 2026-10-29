@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
-import { FinanceProject } from '../data';
+import { FinanceProject , formatCurrency } from '../data';
 import { budgetCategories, allocationShares } from '../budgetCategories';
-import { formatCurrency } from '../data';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Timeline } from '../../../components/ui/Timeline';
 import { ProgressBar } from '../../../components/ui/ProgressBar';
 import { Icon } from '../../../components/ui/Icon';
 
-/** Project expenditure ledger (web "View ledger" xl overlay) — expandable cost-head rows. */
 export const LedgerSheet: React.FC<{ project: FinanceProject | null; visible: boolean; onClose: () => void }> = ({
   project,
   visible,

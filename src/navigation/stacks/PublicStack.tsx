@@ -10,7 +10,6 @@ import { NotFoundScreen } from '../../screens/notFound/NotFoundScreen';
 
 const Stack = createNativeStackNavigator<PublicStackParamList>();
 
-/** Landing / Workspace Modules / Login / 404 — the public, ungated group. */
 export const PublicStack: React.FC = () => {
   const { theme } = useTheme();
 

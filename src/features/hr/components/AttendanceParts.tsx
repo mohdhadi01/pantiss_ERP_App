@@ -1,7 +1,3 @@
-/**
- * Sub-components + import plumbing for AttendanceView (web-parity UI only).
- * Web reference: Pantiss_ERP/src/features/hr/AttendanceView.tsx.
- */
 import React, { useState } from 'react';
 import { Image, Linking, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
@@ -10,7 +6,6 @@ import { Button } from '../../../components/ui/Button';
 import { AttendanceRecord, Employee, Punch } from '../types';
 import { isDate } from '../helpers';
 
-/** Web `timestampLabel`: "{day} {mon}, hh:mm AM/PM" in IST. */
 export function timestampLabel(value?: string): string {
   if (!value) return 'Not received';
   try {
@@ -28,7 +23,6 @@ export function timestampLabel(value?: string): string {
   }
 }
 
-/** Web `formatExample` — integration-format JSON sample (web AttendanceView.tsx:42). */
 export function formatExample(employeeId?: string): string {
   return JSON.stringify(
     [
@@ -57,7 +51,6 @@ export function formatExample(employeeId?: string): string {
   );
 }
 
-/** Compact port of web `parseAttendance` (web model.ts:552-577). */
 export function parseAttendance(text: string, employees: Employee[]): AttendanceRecord[] {
   const rows: unknown = JSON.parse(text);
   if (!Array.isArray(rows) || rows.length > 5000 || rows.length === 0) {
@@ -114,8 +107,6 @@ export function parseAttendance(text: string, employees: Employee[]): Attendance
     return { id: r.id, employeeId: r.employeeId, date: r.date, punchIn, punchOut, source: 'Platform export' };
   });
 }
-
-/* ------------------------------- Evidence card ------------------------------ */
 
 export const PunchEvidenceCard: React.FC<{ title: string; punch?: Punch }> = ({ title, punch }) => {
   const { theme } = useTheme();
@@ -175,8 +166,6 @@ export const PunchEvidenceCard: React.FC<{ title: string; punch?: Punch }> = ({ 
   );
 };
 
-/* ------------------------------ Import format ------------------------------- */
-
 export const ImportFormatSheet: React.FC<{
   visible: boolean;
   onClose: () => void;
@@ -206,8 +195,6 @@ export const ImportFormatSheet: React.FC<{
     </ModalSheet>
   );
 };
-
-/* --------------------------------- Import ---------------------------------- */
 
 export const ImportSheet: React.FC<{
   visible: boolean;
@@ -240,8 +227,6 @@ export const ImportSheet: React.FC<{
     </ModalSheet>
   );
 };
-
-/* --------------------------------- Styles ----------------------------------- */
 
 const styles = StyleSheet.create({
   evidenceCard: {

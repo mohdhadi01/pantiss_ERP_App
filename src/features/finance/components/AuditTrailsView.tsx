@@ -23,7 +23,7 @@ interface InvoiceSample {
   supplier: string;
   batch: string;
   budgetHead: string;
-  items: Array<{ description: string; quantity: number; rate: number }>;
+  items: { description: string; quantity: number; rate: number }[];
 }
 
 interface EmployeeInvoice {
@@ -53,7 +53,7 @@ const INVOICES: EmployeeInvoice[] = [
 const statusTone = (status: InvoiceStatus) =>
   status === 'Finance Approved' ? ('info' as const) : status === 'Pending Verification' ? ('warning' as const) : status === 'Rejected' ? ('danger' as const) : ('success' as const);
 
-const COLUMNS: Array<DataColumn<EmployeeInvoice>> = [
+const COLUMNS: DataColumn<EmployeeInvoice>[] = [
   { key: 'invoice', label: 'Invoice / claim', flex: 1.4 },
   { key: 'employee', label: 'Employee', flex: 1.5 },
   { key: 'raised', label: 'Raised on', flex: 1, wideOnly: true },
@@ -159,23 +159,6 @@ export const AuditTrailsView: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.headingRow, isMd && styles.headingRowWide]}>
-        <View style={styles.headingMain}>
-          <View style={styles.eyebrowRow}>
-            <Icon name="History" size={13} color={theme.colors.brandPrimary} />
-            <Text style={[theme.fontStyles.eyebrow, { color: theme.colors.brandPrimary }]}>Finance / Records</Text>
-          </View>
-          <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Audit trail</Text>
-          <Text style={[styles.pageSub, { color: theme.colors.textMuted }]}>
-            Follow every employee invoice, from submission to disbursement.
-          </Text>
-        </View>
-        <Card padding={16} flat style={styles.noteCard}>
-          <Text style={[styles.noteTitle, { color: theme.colors.text }]}>Project-wise history</Text>
-          <Text style={[styles.noteText, { color: theme.colors.textMuted }]}>Invoices, approvals &amp; payment records</Text>
-        </Card>
-      </View>
-
       <View style={styles.metricsGrid}>
         <MetricCard style={styles.metricCard} label="Invoice submissions" value={String(stats.submissions)} subtitle={drillProject ? 'In this project' : 'Across all thematic areas'} icon="FileText" accentColor={theme.colors.brandPrimary} />
         <MetricCard style={styles.metricCard} label="Total invoice value" value={formatRupees(stats.total)} subtitle="Submitted claim amounts" icon="BadgeIndianRupee" accentColor={theme.colors.financeAccent} />
@@ -184,39 +167,47 @@ export const AuditTrailsView: React.FC = () => {
       </View>
 
       {!drillProject ? (
-        <View style={[styles.grid, isMd && styles.gridWide]}>
-          {directory.map((entry) => (
-            <Pressable
-              key={entry.project}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setDrillProject(entry.project);
-                setSearch('');
-                setStatusFilter('all');
-              }}
-              style={styles.areaCardWrap}
-            >
-              <Card padding={16} style={styles.areaCard}>
-                <View style={styles.areaTop}>
-                  <View style={[styles.areaTile, { backgroundColor: `${entry.color}1A` }]}>
-                    <Text style={[styles.areaTileText, { color: entry.color }]}>{entry.areaName.charAt(0)}</Text>
+        <View style={styles.sectionWrap}>
+          <View style={styles.sectionHead}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Project-wise history</Text>
+            <Text style={[styles.sectionSub, { color: theme.colors.textMuted }]}>
+              Select a project to review employee invoices, approvals &amp; payment records.
+            </Text>
+          </View>
+          <View style={[styles.grid, isMd && styles.gridWide]}>
+            {directory.map((entry) => (
+              <Pressable
+                key={entry.project}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setDrillProject(entry.project);
+                  setSearch('');
+                  setStatusFilter('all');
+                }}
+                style={styles.areaCardWrap}
+              >
+                <Card padding={16} style={styles.areaCard}>
+                  <View style={styles.areaTop}>
+                    <View style={[styles.areaTile, { backgroundColor: `${entry.color}1A` }]}>
+                      <Text style={[styles.areaTileText, { color: entry.color }]}>{entry.areaName.charAt(0)}</Text>
+                    </View>
+                    <View style={styles.areaTitleCol}>
+                      <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{entry.project}</Text>
+                      <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{entry.areaName}</Text>
+                    </View>
                   </View>
-                  <View style={styles.areaTitleCol}>
-                    <Text numberOfLines={1} style={[styles.areaName, { color: theme.colors.text }]}>{entry.project}</Text>
-                    <Text style={[styles.areaMeta, { color: theme.colors.textSubtle }]}>{entry.areaName}</Text>
-                  </View>
-                </View>
-                <Text style={[styles.areaStats, { color: theme.colors.textMuted }]}>
-                  {entry.invoices.length} invoice{entry.invoices.length === 1 ? '' : 's'} · Invoice value {formatRupees(entry.invoices.reduce((sum, i) => sum + i.amount, 0))}
-                </Text>
-                {entry.pending > 0 ? (
-                  <StatusChip status={`${entry.pending} pending`} tone="warning" />
-                ) : (
-                  <StatusChip status="View records" tone="brand" />
-                )}
-              </Card>
-            </Pressable>
-          ))}
+                  <Text style={[styles.areaStats, { color: theme.colors.textMuted }]}>
+                    {entry.invoices.length} invoice{entry.invoices.length === 1 ? '' : 's'} · Invoice value {formatRupees(entry.invoices.reduce((sum, i) => sum + i.amount, 0))}
+                  </Text>
+                  {entry.pending > 0 ? (
+                    <StatusChip status={`${entry.pending} pending`} tone="warning" />
+                  ) : (
+                    <StatusChip status="View records" tone="brand" />
+                  )}
+                </Card>
+              </Pressable>
+            ))}
+          </View>
         </View>
       ) : (
         <View style={styles.breadcrumbRow}>
@@ -369,15 +360,10 @@ export const AuditTrailsView: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
-  headingRow: { gap: 12 },
-  headingRowWide: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  headingMain: { flex: 1, minWidth: 0, gap: 4 },
-  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  pageTitle: { fontSize: 32, fontWeight: '600', letterSpacing: -1.3 },
-  pageSub: { fontSize: 12.5 },
-  noteCard: { flexGrow: 0, flexBasis: 240, gap: 3 },
-  noteTitle: { fontSize: 13, fontWeight: '700' },
-  noteText: { fontSize: 11.5 },
+  sectionWrap: { gap: 12 },
+  sectionHead: { gap: 3 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
+  sectionSub: { fontSize: 12 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metricCard: { flexGrow: 1, flexBasis: 200 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },

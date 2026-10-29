@@ -135,7 +135,6 @@ export const hrNavItems: NavItem[] = [
   },
 ];
 
-/** Web H1 per HR section. */
 export const hrSectionTitles: Record<string, string> = {
   dashboard: 'HR Dashboard',
   recruitment: 'Recruitment & Hiring',

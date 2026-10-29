@@ -42,7 +42,6 @@ export const BudgetsView: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<FinanceProject | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [notice, setNotice] = useState('');
-  // New budget form
   const [areaId, setAreaId] = useState(financeAreas[0].id);
   const [projectId, setProjectId] = useState(financeAreas[0].projects[0].id);
   const [title, setTitle] = useState('');
@@ -60,12 +59,15 @@ export const BudgetsView: React.FC = () => {
     const approved = financeAreas.reduce((sum, area) => sum + area.approved, 0);
     const spent = financeAreas.reduce((sum, area) => sum + areaTotals(area).spent, 0);
     const projects = financeAreas.reduce((sum, area) => sum + area.projects.length, 0);
-    // Web: "Budget revisions" counts 6 pipeline revisions + saved drafts.
     const revisions = 6 + drafts.length;
     return { approved, spent, projects, revisions, utilization: Math.round((spent / approved) * 100) };
   }, [drafts.length]);
 
-  /** Notice toast — auto-clears like the web status line. */
+  const totalPlanned = useMemo(
+    () => costHeads.reduce((sum, r) => sum + (parseFloat(r.qty) || 0) * (parseFloat(r.rate) || 0), 0),
+    [costHeads],
+  );
+
   const showNotice = React.useCallback((message: string) => {
     setNotice(message);
   }, []);
@@ -92,7 +94,6 @@ export const BudgetsView: React.FC = () => {
     setSelectedProject(project);
   };
 
-  /** "Save as draft" — persists to the drafts store and drills into the project workflow. */
   const handleSaveDraft = async () => {
     const area = financeAreas.find((a) => a.id === areaId);
     const project = area?.projects.find((p) => p.id === projectId);
@@ -337,34 +338,123 @@ export const BudgetsView: React.FC = () => {
         </View>
 
         <View style={styles.costHeadBlock}>
-          <Text style={[styles.costHeadTitle, { color: theme.colors.text }]}>Cost heads</Text>
-          {costHeads.map((row) => (
-            <View key={row.id} style={styles.costHeadRow}>
-              <TextField value={row.name} onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, name: t } : r)))} placeholder="Cost head name" containerStyle={styles.costHeadName} />
-              <TextField value={row.qty} onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, qty: t } : r)))} keyboardType="numeric" placeholder="Qty" containerStyle={styles.costHeadQty} />
-              <TextField value={row.rate} onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, rate: t } : r)))} keyboardType="numeric" placeholder="Rate ₹" containerStyle={styles.costHeadQty} />
-              <View style={styles.costHeadAmount}>
-                <Text style={[styles.costHeadTotal, { color: theme.colors.text }]}>
-                  {formatRupees((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0))}
-                </Text>
-                <Pressable
-                  onPress={() => setCostHeads((rows) => rows.filter((r) => r.id !== row.id))}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${row.name || 'cost head'}`}
-                >
-                  <Icon name="X" size={15} color={theme.colors.dangerText} />
-                </Pressable>
+          <View style={styles.costHeadHeaderRow}>
+            <Text style={[styles.costHeadTitle, { color: theme.colors.text }]}>Cost heads</Text>
+            <Text style={[styles.costHeadCount, { color: theme.colors.textSubtle }]}>
+              {costHeads.length} {costHeads.length === 1 ? 'item' : 'items'}
+            </Text>
+          </View>
+
+          {costHeads.map((row, idx) =>
+            !isMd ? (
+              <View
+                key={row.id}
+                style={[
+                  styles.costHeadCard,
+                  { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border },
+                ]}
+              >
+                <View style={styles.costHeadCardHeader}>
+                  <Text style={[styles.costHeadNumber, { color: theme.colors.textSubtle }]}>
+                    #{String(idx + 1).padStart(2, '0')}
+                  </Text>
+                  <Pressable
+                    onPress={() => setCostHeads((rows) => rows.filter((r) => r.id !== row.id))}
+                    hitSlop={8}
+                    style={styles.deleteHeadBtn}
+                    accessibilityLabel={`Remove ${row.name || 'cost head'}`}
+                  >
+                    <Icon name="Trash2" size={15} color={theme.colors.dangerText} />
+                  </Pressable>
+                </View>
+
+                <TextField
+                  label="Cost head name"
+                  value={row.name}
+                  onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, name: t } : r)))}
+                  placeholder="e.g. Training venue, kits, travel"
+                />
+
+                <View style={styles.costHeadInputsRow}>
+                  <TextField
+                    label="Qty"
+                    value={row.qty}
+                    onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, qty: t } : r)))}
+                    keyboardType="numeric"
+                    placeholder="1"
+                    containerStyle={styles.costHeadQtyInput}
+                  />
+                  <TextField
+                    label="Rate (₹)"
+                    value={row.rate}
+                    onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, rate: t } : r)))}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    containerStyle={styles.costHeadRateInput}
+                  />
+                </View>
+
+                <View style={[styles.costHeadTotalRow, { borderTopColor: theme.colors.border }]}>
+                  <Text style={[styles.costHeadTotalLabel, { color: theme.colors.textSubtle }]}>Line Total</Text>
+                  <Text numberOfLines={1} style={[styles.costHeadTotalValue, { color: theme.colors.financeAccent }]}>
+                    {formatRupees((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0))}
+                  </Text>
+                </View>
               </View>
+            ) : (
+              <View key={row.id} style={styles.costHeadRowWide}>
+                <TextField
+                  value={row.name}
+                  onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, name: t } : r)))}
+                  placeholder="Cost head name"
+                  containerStyle={{ flex: 2 }}
+                />
+                <TextField
+                  value={row.qty}
+                  onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, qty: t } : r)))}
+                  keyboardType="numeric"
+                  placeholder="Qty"
+                  containerStyle={{ flex: 0.7 }}
+                />
+                <TextField
+                  value={row.rate}
+                  onChangeText={(t) => setCostHeads((rows) => rows.map((r) => (r.id === row.id ? { ...r, rate: t } : r)))}
+                  keyboardType="numeric"
+                  placeholder="Rate ₹"
+                  containerStyle={{ flex: 1 }}
+                />
+                <View style={styles.costHeadAmountWide}>
+                  <Text style={[styles.costHeadTotal, { color: theme.colors.text }]}>
+                    {formatRupees((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0))}
+                  </Text>
+                  <Pressable
+                    onPress={() => setCostHeads((rows) => rows.filter((r) => r.id !== row.id))}
+                    hitSlop={8}
+                    style={styles.deleteHeadBtn}
+                    accessibilityLabel={`Remove ${row.name || 'cost head'}`}
+                  >
+                    <Icon name="Trash2" size={15} color={theme.colors.dangerText} />
+                  </Pressable>
+                </View>
+              </View>
+            ),
+          )}
+
+          <View style={[styles.budgetTotalBanner, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
+            <View>
+              <Text style={[styles.budgetTotalLabel, { color: theme.colors.textSubtle }]}>TOTAL PLANNED BUDGET</Text>
+              <Text style={[styles.budgetTotalValue, { color: theme.colors.financeAccent }]}>
+                {formatRupees(totalPlanned)}
+              </Text>
             </View>
-          ))}
-          <Button
-            label="Add cost head"
-            icon="Plus"
-            variant="outline"
-            size="sm"
-            onPress={() => setCostHeads((rows) => [...rows, { id: Date.now(), name: '', qty: '1', rate: '' }])}
-            style={{ alignSelf: 'flex-start' }}
-          />
+            <Button
+              label="Add cost head"
+              icon="Plus"
+              variant="outline"
+              size="sm"
+              onPress={() => setCostHeads((rows) => [...rows, { id: Date.now(), name: '', qty: '1', rate: '' }])}
+            />
+          </View>
         </View>
 
         <TextField label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="Donor conditions, reporting cadence, remarks…" />
@@ -422,11 +512,90 @@ const styles = StyleSheet.create({
   headAmt: { fontSize: 11, fontVariant: ['tabular-nums'] },
   formRow: { flexDirection: 'row', gap: 12 },
   formRowItem: { flex: 1 },
-  costHeadBlock: { gap: 10 },
-  costHeadTitle: { fontSize: 13.5, fontWeight: '600' },
-  costHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  costHeadName: { flex: 1.6 },
-  costHeadQty: { flex: 0.7 },
-  costHeadAmount: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
+  costHeadBlock: { gap: 12 },
+  costHeadHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  costHeadTitle: { fontSize: 13.5, fontWeight: '700' },
+  costHeadCount: { fontSize: 11.5 },
+  costHeadCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  costHeadCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  costHeadNumber: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  deleteHeadBtn: {
+    padding: 6,
+  },
+  costHeadInputsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  costHeadQtyInput: {
+    flex: 1,
+  },
+  costHeadRateInput: {
+    flex: 1.5,
+  },
+  costHeadTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  costHeadTotalLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  costHeadTotalValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  costHeadRowWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  costHeadAmountWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 130,
+    justifyContent: 'flex-end',
+  },
   costHeadTotal: { fontSize: 12.5, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  budgetTotalBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 4,
+  },
+  budgetTotalLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  budgetTotalValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    fontVariant: ['tabular-nums'],
+    marginTop: 2,
+  },
 });

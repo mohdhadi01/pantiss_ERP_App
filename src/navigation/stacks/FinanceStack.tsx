@@ -22,7 +22,6 @@ import { AlertsScreen } from '../../screens/finance/AlertsScreen';
 
 const Stack = createNativeStackNavigator<FinanceStackParamList>();
 
-/** The 16 finance workspace screens (web /finance/*). */
 export const FinanceStack: React.FC = () => {
   const { theme } = useTheme();
 

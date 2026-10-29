@@ -8,7 +8,6 @@ import { useFinanceAlerts } from '../../features/finance/data/alertsStore';
 import { ProjectsView } from '../../features/finance/components/ProjectsView';
 import type { FinanceStackParamList, FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /finance/projects — optionally deep-linked to a thematic area. */
 export const ProjectsScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const route = useRoute<RouteProp<FinanceStackParamList, 'Projects'>>();

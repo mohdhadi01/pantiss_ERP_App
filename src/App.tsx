@@ -19,14 +19,34 @@ import { useTheme } from './hooks/useTheme';
 import { WelcomeSplash } from './components/animations/WelcomeSplash';
 import { RootNavigator } from './navigation/RootNavigator';
 
-// In-memory session tracker: Welcome splash is shown ONLY ONCE when app is opened
+const WELCOME_SEEN_KEY = '@pantiss_erp:has_seen_welcome';
 let hasShownAppSplash = false;
+
+function checkHasShownSplash(): boolean {
+  if (hasShownAppSplash) return true;
+  if (typeof window !== 'undefined') {
+    try {
+      if (window.sessionStorage?.getItem(WELCOME_SEEN_KEY) === 'true') return true;
+      if (window.localStorage?.getItem(WELCOME_SEEN_KEY) === 'true') return true;
+    } catch {}
+  }
+  return false;
+}
+
+function markSplashShown(): void {
+  hasShownAppSplash = true;
+  if (typeof window !== 'undefined') {
+    try {
+      window.sessionStorage?.setItem(WELCOME_SEEN_KEY, 'true');
+      window.localStorage?.setItem(WELCOME_SEEN_KEY, 'true');
+    } catch {}
+  }
+}
 
 function AppContent() {
   const { isDark } = useTheme();
-  const [showSplash, setShowSplash] = useState(!hasShownAppSplash);
+  const [showSplash, setShowSplash] = useState(!checkHasShownSplash());
 
-  // Inter matches the web app's font stack; keep the splash up until ready.
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -35,7 +55,7 @@ function AppContent() {
   });
 
   const handleSplashComplete = () => {
-    hasShownAppSplash = true;
+    markSplashShown();
     setShowSplash(false);
   };
 
@@ -46,8 +66,6 @@ function AppContent() {
       <StatusBar style={splashVisible ? 'light' : isDark ? 'light' : 'dark'} />
       <RootNavigator />
 
-      {/* One-time welcome splash overlay — sits above the navigator while
-          fonts load and until the entry animation completes. */}
       {splashVisible ? (
         <View style={[StyleSheet.absoluteFill, styles.splashOverlay]}>
           <WelcomeSplash onComplete={handleSplashComplete} loading={!fontsLoaded} />
@@ -57,10 +75,6 @@ function AppContent() {
   );
 }
 
-/**
- * App root — providers + font gate + splash overlay + navigation.
- * (Replaces the former expo-router `src/app/_layout.tsx`.)
- */
 export default function App() {
   return (
     <ErrorBoundary>

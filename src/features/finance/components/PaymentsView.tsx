@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
@@ -15,31 +15,15 @@ import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Timeline } from '../../../components/ui/Timeline';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
+import { useSalaryRecords } from '../useSalaryRecords';
+import {
+  PaymentListRecord,
+  buildPaymentHierarchy,
+  buildUnifiedPaymentRecords,
+  paymentHistory,
+} from '../paymentHierarchy';
 
-interface PaymentItem {
-  id: string;
-  type: 'Salary' | 'Vendor Invoice' | 'Expense Claim';
-  beneficiary: string;
-  bankName: string;
-  accountNumber: string;
-  amount: number;
-  approvedDate: string;
-  status: 'Disbursed' | 'Ready for Release' | 'In progress';
-  utr?: string;
-  paymentSlip?: string;
-  areaId: string;
-  project: string;
-}
-
-const initialPayments: PaymentItem[] = [
-  { id: 'PAY-001', type: 'Vendor Invoice', beneficiary: 'Zenith Digital & Hardware Labs Pvt Ltd', bankName: 'Axis Bank', accountNumber: '•••• •••• 9201', amount: 148500, approvedDate: '2026-10-06', status: 'Ready for Release', areaId: 'skill-development', project: 'PMKVY 4.0 Odisha Skills' },
-  { id: 'PAY-002', type: 'Salary', beneficiary: 'Subhashree Ray (State Project Manager)', bankName: 'HDFC Bank', accountNumber: '•••• •••• 1829', amount: 77500, approvedDate: '2026-10-05', status: 'Ready for Release', areaId: 'skill-development', project: 'PMKVY 4.0 Odisha Skills' },
-  { id: 'PAY-003', type: 'Expense Claim', beneficiary: 'Sunita Majhi (Field Coordinator)', bankName: 'ICICI Bank', accountNumber: '•••• •••• 1928', amount: 14200, approvedDate: '2026-10-06', status: 'Ready for Release', areaId: 'livelihood', project: 'Samriddhi Livelihoods Programme' },
-  { id: 'PAY-004', type: 'Vendor Invoice', beneficiary: 'Maa Tarini Rural Logistics Fleet', bankName: 'State Bank of India', accountNumber: '•••• •••• 8190', amount: 64200, approvedDate: '2026-10-02', status: 'Disbursed', utr: 'UTR-20261003-99124', paymentSlip: 'payment-slip-PAY-004.pdf', areaId: 'livelihood', project: 'Samriddhi Livelihoods Programme' },
-  { id: 'PAY-005', type: 'Expense Claim', beneficiary: 'Ranjan Kumar Jena (Trainer)', bankName: 'Axis Bank', accountNumber: '•••• •••• 4417', amount: 8600, approvedDate: '2026-10-08', status: 'In progress', utr: 'UTR-20261009-33217', areaId: 'skill-development', project: 'PMKVY 4.0 Odisha Skills' },
-];
-
-const HISTORY_COLUMNS: Array<DataColumn<PaymentItem>> = [
+const HISTORY_COLUMNS: DataColumn<PaymentListRecord>[] = [
   { key: 'paidOn', label: 'Paid on', flex: 1.1 },
   { key: 'payment', label: 'Payment', flex: 2 },
   { key: 'amount', label: 'Amount', flex: 1.1, align: 'right' },
@@ -50,54 +34,66 @@ const HISTORY_COLUMNS: Array<DataColumn<PaymentItem>> = [
 export const PaymentsView: React.FC = () => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
-  const [payments, setPayments] = useState(initialPayments);
+  const { records: salaryRecords } = useSalaryRecords();
+
+  const initialRecords = useMemo(() => buildUnifiedPaymentRecords(salaryRecords), [salaryRecords]);
+  const [payments, setPayments] = useState<PaymentListRecord[]>(initialRecords);
+
+  useEffect(() => {
+    setPayments((prev) => {
+      const live = buildUnifiedPaymentRecords(salaryRecords);
+      const overrideMap = new Map(prev.map((p) => [p.id, p]));
+      return live.map((rec) => overrideMap.get(rec.id) ?? rec);
+    });
+  }, [salaryRecords]);
+
   const [tab, setTab] = useState('topay');
-  const [areaId, setAreaId] = useState<string | null>(null);
-  const [project, setProject] = useState<string | null>(null);
-  const [payItem, setPayItem] = useState<PaymentItem | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+
+  const [payItem, setPayItem] = useState<PaymentListRecord | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payRef, setPayRef] = useState('');
-  const [detail, setDetail] = useState<PaymentItem | null>(null);
+
+  const [detail, setDetail] = useState<PaymentListRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
   const [toPaySearch, setToPaySearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
 
-  const toPay = useMemo(() => payments.filter((p) => p.status === 'Ready for Release'), [payments]);
-  const history = useMemo(() => payments.filter((p) => p.status !== 'Ready for Release'), [payments]);
+  const toPay = useMemo(() => payments.filter((p) => p.status === 'Approved'), [payments]);
+  const history = useMemo(() => paymentHistory(payments), [payments]);
 
-  const areas = useMemo(
-    () =>
-      financeAreas
-        .map((area) => ({
-          area,
-          count: toPay.filter((p) => p.areaId === area.id).length,
-          projects: Array.from(new Set(toPay.filter((p) => p.areaId === area.id).map((p) => p.project))),
-        }))
-        .filter((row) => row.count > 0 || toPay.length === 0),
-    [toPay],
+  const hierarchy = useMemo(() => buildPaymentHierarchy(payments, financeAreas), [payments]);
+
+  const currentArea = useMemo(
+    () => hierarchy.find((a) => a.name === selectedArea),
+    [hierarchy, selectedArea],
   );
 
-  const scopedToPay = useMemo(
-    () =>
-      toPay.filter(
-        (p) =>
-          (!project || p.project === project) &&
-          (!areaId || p.areaId === areaId) &&
-          (!toPaySearch.trim() || `${p.beneficiary} ${p.type} ${p.id}`.toLowerCase().includes(toPaySearch.trim().toLowerCase())),
-      ),
-    [toPay, project, areaId, toPaySearch],
+  const currentProject = useMemo(
+    () => currentArea?.projects.find((p) => p.name === selectedProject),
+    [currentArea, selectedProject],
   );
 
-  const scopedHistory = useMemo(
-    () =>
-      history.filter(
-        (p) =>
-          !historySearch.trim() ||
-          `${p.beneficiary} ${p.project} ${p.utr ?? ''} ${p.id}`.toLowerCase().includes(historySearch.trim().toLowerCase()),
-      ),
-    [history, historySearch],
-  );
+  const scopedToPay = useMemo(() => {
+    let pool = currentProject?.records ?? currentArea?.projects.flatMap((p) => p.records) ?? payments;
+    return pool.filter(
+      (p) =>
+        p.status === 'Approved' &&
+        (!toPaySearch.trim() ||
+          `${p.payee} ${p.title} ${p.project} ${p.source} ${p.id}`.toLowerCase().includes(toPaySearch.trim().toLowerCase())),
+    );
+  }, [currentProject, currentArea, payments, toPaySearch]);
+
+  const scopedHistory = useMemo(() => {
+    return history.filter(
+      (p) =>
+        !historySearch.trim() ||
+        `${p.payee} ${p.project} ${p.title} ${p.reference ?? ''} ${p.id}`.toLowerCase().includes(historySearch.trim().toLowerCase()),
+    );
+  }, [history, historySearch]);
 
   const scopedTotal = scopedToPay.reduce((sum, p) => sum + p.amount, 0);
 
@@ -105,7 +101,16 @@ export const PaymentsView: React.FC = () => {
     if (!payItem || !payRef.trim()) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setPayments((prev) =>
-      prev.map((p) => (p.id === payItem.id ? { ...p, status: 'In progress' as const, utr: payRef.trim(), approvedDate: payDate } : p)),
+      prev.map((p) =>
+        p.id === payItem.id
+          ? {
+              ...p,
+              status: 'In progress' as const,
+              reference: payRef.trim(),
+              paidOn: payDate,
+            }
+          : p,
+      ),
     );
     setPayOpen(false);
     setPayItem(null);
@@ -115,19 +120,25 @@ export const PaymentsView: React.FC = () => {
   const attachSlip = (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: 'Disbursed' as const, paymentSlip: `payment-slip-${id}.pdf` } : p)),
+      prev.map((p) =>
+        p.id === id ? { ...p, status: 'Payment slip uploaded' as const, paymentSlip: `payment-slip-${id}.pdf` } : p,
+      ),
     );
   };
 
-  const renderHistoryCell = (item: PaymentItem, col: DataColumn<PaymentItem>) => {
+  const renderHistoryCell = (item: PaymentListRecord, col: DataColumn<PaymentListRecord>) => {
     switch (col.key) {
       case 'paidOn':
-        return <Text style={[styles.cellMain, { color: theme.colors.text }]}>{formatDate(item.approvedDate)}</Text>;
+        return <Text style={[styles.cellMain, { color: theme.colors.text }]}>{formatDate(item.paidOn || '2026-10-01')}</Text>;
       case 'payment':
         return (
-          <View>
-            <Text style={[styles.cellMain, { color: theme.colors.text }]}>{item.beneficiary}</Text>
-            <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{item.type} · {item.id}</Text>
+          <View style={styles.paymentInfoCol}>
+            <Text numberOfLines={1} style={[styles.cellMain, { color: theme.colors.text }]}>
+              {item.payee}
+            </Text>
+            <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+              {item.title} · {item.project}
+            </Text>
           </View>
         );
       case 'amount':
@@ -135,8 +146,8 @@ export const PaymentsView: React.FC = () => {
       case 'reference':
         return (
           <View style={styles.referenceCell}>
-            <Text style={[styles.cellMain, { color: theme.colors.successText }]}>{item.utr ?? 'Reference not recorded'}</Text>
-            {item.paymentSlip ? (
+            <Text style={[styles.cellMain, { color: theme.colors.successText }]}>{item.reference ?? 'Reference not recorded'}</Text>
+            {item.status === 'Payment slip uploaded' ? (
               <StatusChip status="Payment slip uploaded" tone="success" dot={false} />
             ) : item.status === 'In progress' ? (
               <Pressable
@@ -174,11 +185,6 @@ export const PaymentsView: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View>
-        <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Payments</Text>
-        <Text style={[styles.pageSub, { color: theme.colors.textMuted }]}>Pay approved requests or look up a previous payment.</Text>
-      </View>
-
       <Tabs
         items={[
           { key: 'topay', label: 'To pay', icon: 'CreditCard', count: toPay.length },
@@ -191,68 +197,95 @@ export const PaymentsView: React.FC = () => {
 
       {tab === 'topay' ? (
         <View style={styles.section}>
-          {!project && !areaId ? (
+          {!selectedProject && !selectedArea ? (
             <>
               <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Choose a thematic area</Text>
               <View style={[styles.grid, isMd && styles.gridWide]}>
-                {areas.map(({ area, count }) => (
-                  <Pressable
-                    style={styles.scopeCardWrap}
-                    key={area.id}
-                    onPress={() => {
-                      Haptics.selectionAsync().catch(() => {});
-                      setAreaId(area.id);
-                    }}
-                  >
-                    <Card padding={16} style={styles.scopeCard}>
-                      <View style={styles.scopeTop}>
-                        <View style={[styles.scopeTile, { backgroundColor: `${area.color}1A` }]}>
-                          <Text style={[styles.scopeTileText, { color: area.color }]}>{area.name.charAt(0)}</Text>
+                {hierarchy.map((areaNode) => {
+                  const areaDef = financeAreas.find((a) => a.name === areaNode.name);
+                  const color = areaDef?.color ?? '#dc2626';
+                  const pendingCount = areaNode.projects
+                    .flatMap((p) => p.records)
+                    .filter((r) => r.status === 'Approved').length;
+
+                  return (
+                    <Pressable
+                      style={styles.scopeCardWrap}
+                      key={areaNode.name}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setSelectedArea(areaNode.name);
+                      }}
+                    >
+                      <Card padding={16} style={styles.scopeCard}>
+                        <View style={styles.scopeTop}>
+                          <View style={[styles.scopeTile, { backgroundColor: `${color}1A` }]}>
+                            <Text style={[styles.scopeTileText, { color }]}>{areaNode.name.charAt(0)}</Text>
+                          </View>
+                          <Text numberOfLines={1} style={[styles.scopeName, { color: theme.colors.text }]}>
+                            {areaNode.name}
+                          </Text>
                         </View>
-                        <Text numberOfLines={1} style={[styles.scopeName, { color: theme.colors.text }]}>{area.name}</Text>
-                      </View>
-                      <Text style={[styles.scopeMeta, { color: theme.colors.textSubtle }]}>{count} to pay</Text>
-                    </Card>
-                  </Pressable>
-                ))}
+                        <Text
+                          style={[
+                            styles.scopeMeta,
+                            { color: pendingCount > 0 ? theme.colors.financeAccent : theme.colors.textSubtle },
+                          ]}
+                        >
+                          {pendingCount > 0 ? `${pendingCount} to pay` : 'All payments recorded'}
+                        </Text>
+                      </Card>
+                    </Pressable>
+                  );
+                })}
               </View>
             </>
           ) : null}
 
-          {areaId && !project ? (
+          {selectedArea && !selectedProject ? (
             <>
-              <Pressable onPress={() => setAreaId(null)} style={styles.backBtn}>
+              <Pressable onPress={() => setSelectedArea(null)} style={styles.backBtn}>
                 <Icon name="ChevronLeft" size={15} color={theme.colors.textMuted} />
                 <Text style={[styles.backBtnText, { color: theme.colors.textMuted }]}>All thematic areas</Text>
               </Pressable>
               <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Choose a project</Text>
               <View style={[styles.grid, isMd && styles.gridWide]}>
-                {(areas.find((row) => row.area.id === areaId)?.projects ?? []).map((name) => (
-                  <Pressable
-                    style={styles.scopeCardWrap}
-                    key={name}
-                    onPress={() => {
-                      Haptics.selectionAsync().catch(() => {});
-                      setProject(name);
-                    }}
-                  >
-                    <Card padding={16} style={styles.scopeCard}>
-                      <Text numberOfLines={1} style={[styles.scopeName, { color: theme.colors.text }]}>{name}</Text>
-                      <Text style={[styles.scopeMeta, { color: theme.colors.textSubtle }]}>
-                        {toPay.filter((p) => p.project === name).length} to pay
-                      </Text>
-                    </Card>
-                  </Pressable>
-                ))}
+                {(currentArea?.projects ?? []).map((pNode) => {
+                  const prPending = pNode.records.filter((r) => r.status === 'Approved').length;
+                  return (
+                    <Pressable
+                      style={styles.scopeCardWrap}
+                      key={pNode.name}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setSelectedProject(pNode.name);
+                      }}
+                    >
+                      <Card padding={16} style={styles.scopeCard}>
+                        <Text numberOfLines={1} style={[styles.scopeName, { color: theme.colors.text }]}>
+                          {pNode.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.scopeMeta,
+                            { color: prPending > 0 ? theme.colors.financeAccent : theme.colors.textSubtle },
+                          ]}
+                        >
+                          {prPending > 0 ? `${prPending} to pay` : 'All payments recorded'}
+                        </Text>
+                      </Card>
+                    </Pressable>
+                  );
+                })}
               </View>
             </>
           ) : null}
 
-          {project ? (
+          {selectedProject ? (
             <>
-              <Pressable onPress={() => setProject(null)} style={styles.backBtn}>
+              <Pressable onPress={() => setSelectedProject(null)} style={styles.backBtn}>
                 <Icon name="ChevronLeft" size={15} color={theme.colors.textMuted} />
-                <Text style={[styles.backBtnText, { color: theme.colors.textMuted }]}>Back to {areaId ? financeAreas.find((a) => a.id === areaId)?.name : 'projects'}</Text>
+                <Text style={[styles.backBtnText, { color: theme.colors.textMuted }]}>Back to {selectedArea ?? 'projects'}</Text>
               </Pressable>
               <View style={styles.queueHeader}>
                 <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>
@@ -266,29 +299,52 @@ export const PaymentsView: React.FC = () => {
                   onPress={() => {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
                     setPayments((prev) =>
-                      prev.map((p) => (p.status === 'Ready for Release' ? { ...p, status: 'In progress' as const, utr: `BATCH-UTR-${Date.now().toString().slice(-6)}` } : p)),
+                      prev.map((p) =>
+                        p.project === selectedProject && p.status === 'Approved'
+                          ? { ...p, status: 'In progress' as const, reference: `BATCH-UTR-${Date.now().toString().slice(-6)}` }
+                          : p,
+                      ),
                     );
                   }}
                 />
               </View>
-              <TextField value={toPaySearch} onChangeText={setToPaySearch} placeholder="Search payee" />
+              <TextField value={toPaySearch} onChangeText={setToPaySearch} placeholder="Search payee or title" />
               {scopedToPay.length === 0 ? (
-                <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>Nothing left to pay for this project.</Text>
+                <View style={styles.emptyWrap}>
+                  <Text style={[styles.emptyText, { color: theme.colors.textMuted }]}>
+                    All payments recorded for this project.
+                  </Text>
+                  <Button
+                    label="View payment history"
+                    variant="outline"
+                    size="sm"
+                    icon="History"
+                    onPress={() => {
+                      setHistorySearch(selectedProject);
+                      setTab('history');
+                    }}
+                  />
+                </View>
               ) : (
                 <View style={styles.list}>
                   {scopedToPay.map((item) => (
                     <Card key={item.id} padding={16} style={styles.payCard}>
                       <View style={styles.payTop}>
                         <View style={styles.payBody}>
-                          <Text style={[styles.payee, { color: theme.colors.text }]}>{item.beneficiary}</Text>
+                          <Text style={[styles.payee, { color: theme.colors.text }]}>{item.payee}</Text>
                           <Text style={[styles.payMeta, { color: theme.colors.textSubtle }]}>
-                            {item.type} · {item.bankName} {item.accountNumber} · Approved {formatDate(item.approvedDate)}
+                            {item.title} · {item.center}
+                          </Text>
+                          <Text style={[styles.paySubMeta, { color: theme.colors.textSubtle }]}>
+                            {item.bankName} {item.accountNumber}
                           </Text>
                         </View>
-                        <Text style={[styles.amountText, { color: theme.colors.financeAccent }]}>{formatRupees(item.amount)}</Text>
+                        <Text style={[styles.amountText, { color: theme.colors.financeAccent }]}>
+                          {formatRupees(item.amount)}
+                        </Text>
                       </View>
                       <View style={styles.payFooter}>
-                        <StatusChip status={item.type} tone="brand" dot={false} />
+                        <StatusChip status={item.source} tone="brand" dot={false} />
                         <Button
                           label="Record payment"
                           icon="CheckCircle"
@@ -320,15 +376,22 @@ export const PaymentsView: React.FC = () => {
               <Card padding={14} style={styles.historyCard}>
                 <View style={styles.payTop}>
                   <View style={styles.payBody}>
-                    <Text style={[styles.cellMain, { color: theme.colors.text }]}>{item.beneficiary}</Text>
-                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{item.type} · Paid {formatDate(item.approvedDate)}</Text>
+                    <Text numberOfLines={1} style={[styles.cellMain, { color: theme.colors.text }]}>
+                      {item.payee}
+                    </Text>
+                    <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      {item.title} · {item.project}
+                    </Text>
+                    <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                      Paid {formatDate(item.paidOn || '2026-10-01')}
+                    </Text>
                   </View>
                   <Text style={[styles.amountText, { color: theme.colors.text }]}>{formatRupees(item.amount)}</Text>
                 </View>
                 <View style={styles.historyFooter}>
                   <View style={styles.referenceCell}>
-                    <Text style={[styles.cellMain, { color: theme.colors.successText }]}>{item.utr}</Text>
-                    {item.paymentSlip ? (
+                    <Text style={[styles.cellMain, { color: theme.colors.successText }]}>{item.reference}</Text>
+                    {item.status === 'Payment slip uploaded' ? (
                       <StatusChip status="Payment slip uploaded" tone="success" dot={false} />
                     ) : item.status === 'In progress' ? (
                       <Pressable
@@ -354,9 +417,6 @@ export const PaymentsView: React.FC = () => {
                 </View>
               </Card>
             )}
-            emptyIcon="History"
-            emptyTitle="No payments yet"
-            emptyDescription="Recorded payments will appear here with their bank references."
           />
         </SectionCard>
       )}
@@ -364,23 +424,24 @@ export const PaymentsView: React.FC = () => {
       <ModalSheet
         visible={payOpen && Boolean(payItem)}
         onClose={() => setPayOpen(false)}
-        label="Disbursement desk"
-        title="Record Payment"
-        size="sm"
+        label="Record Payment"
+        title={payItem?.title ?? 'Payment'}
+        description={payItem ? `${payItem.payee} · ${payItem.project}` : ''}
+        size="md"
         footer={
           <>
             <Button label="Cancel" variant="outline" onPress={() => setPayOpen(false)} />
-            <Button label="Save payment record" variant="emerald" onPress={handleSavePayment} />
+            <Button label="Save payment record" variant="primary" icon="Check" onPress={handleSavePayment} />
           </>
         }
       >
         {payItem ? (
           <>
-            <View style={[styles.amountPanel, { backgroundColor: theme.colors.financeAccentSoft }]}>
-              <Text style={[styles.amountPanelPayee, { color: theme.colors.text }]}>{payItem.beneficiary}</Text>
+            <View style={[styles.amountPanel, { backgroundColor: theme.colors.surfaceSoft }]}>
+              <Text style={[styles.amountPanelPayee, { color: theme.colors.text }]}>{payItem.payee}</Text>
               <Text style={[styles.amountPanelValue, { color: theme.colors.financeAccent }]}>{formatRupees(payItem.amount)}</Text>
               <Text style={[styles.amountPanelMeta, { color: theme.colors.textMuted }]}>
-                {payItem.type} · {payItem.bankName} {payItem.accountNumber}
+                {payItem.source} · {payItem.bankName} {payItem.accountNumber}
               </Text>
             </View>
             <Text style={[styles.note, { color: theme.colors.warningText }]}>
@@ -395,29 +456,54 @@ export const PaymentsView: React.FC = () => {
       <ModalSheet
         visible={detailOpen && Boolean(detail)}
         onClose={() => setDetailOpen(false)}
-        label="Payment history"
-        title={detail ? `${detail.id} · ${detail.beneficiary}` : ''}
+        label="Payment Audit"
+        title={detail ? `${detail.title}` : ''}
+        description={detail ? `${detail.payee} · ${detail.project}` : ''}
         size="md"
         footer={<Button label="Close" variant="outline" onPress={() => setDetailOpen(false)} />}
       >
         {detail ? (
           <>
             <View style={[styles.detailPanel, { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.border }]}>
-              <DetailRow label="Payee" value={detail.beneficiary} />
-              <DetailRow label="Type" value={detail.type} />
-              <DetailRow label="Bank" value={`${detail.bankName} · ${detail.accountNumber}`} />
+              <DetailRow label="Payee" value={detail.payee} />
+              <DetailRow label="Source" value={detail.source} />
+              <DetailRow label="Project" value={detail.project} />
+              <DetailRow label="Center" value={detail.center} />
+              <DetailRow label="Bank" value={`${detail.bankName ?? 'Bank'} · ${detail.accountNumber ?? 'Account'}`} />
               <DetailRow label="Amount" value={formatRupees(detail.amount)} />
-              <DetailRow label="Payment date" value={formatDate(detail.approvedDate)} />
-              <DetailRow label="Bank reference" value={detail.utr ?? 'Not recorded'} />
+              <DetailRow label="Payment date" value={formatDate(detail.paidOn || '2026-10-01')} />
+              <DetailRow label="Bank reference" value={detail.reference ?? 'Not recorded'} />
               <DetailRow label="Payment slip" value={detail.paymentSlip ?? 'Not attached'} />
             </View>
-            <Text style={[styles.detailTitle, { color: theme.colors.text }]}>Activity</Text>
+            <Text style={[styles.detailTitle, { color: theme.colors.text }]}>Audit Trail</Text>
             <Timeline
               accent={theme.colors.financeAccent}
-              items={[
-                { key: '1', title: 'Payment approved', actor: 'Finance Manager', detail: `${detail.type} cleared for release`, time: formatDate(detail.approvedDate) },
-                { key: '2', title: 'Bank payment recorded', actor: 'Disbursement Desk', detail: `UTR ${detail.utr ?? '—'}`, color: theme.colors.emerald },
-              ]}
+              items={
+                detail.audit && detail.audit.length > 0
+                  ? detail.audit.map((entry, idx) => ({
+                      key: String(idx),
+                      title: entry.action,
+                      actor: entry.actor,
+                      detail: entry.detail,
+                      time: entry.date,
+                    }))
+                  : [
+                      {
+                        key: '1',
+                        title: 'Payment cleared',
+                        actor: 'Finance Desk',
+                        detail: `${detail.source} request cleared for release`,
+                        time: formatDate(detail.paidOn || '2026-10-01'),
+                      },
+                      {
+                        key: '2',
+                        title: 'Bank payment recorded',
+                        actor: 'Disbursement Desk',
+                        detail: `UTR ${detail.reference ?? '—'}`,
+                        color: theme.colors.emerald,
+                      },
+                    ]
+              }
             />
           </>
         ) : null}
@@ -438,13 +524,11 @@ const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value })
 
 const styles = StyleSheet.create({
   container: { gap: 16 },
-  pageTitle: { fontSize: 26, fontWeight: '700', letterSpacing: -0.8 },
-  pageSub: { fontSize: 12.5, marginTop: 3 },
   section: { gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  gridWide: { flexWrap: 'nowrap' },
+  gridWide: { flexWrap: 'wrap' },
   scopeCard: { gap: 8 },
-  scopeCardWrap: { flexGrow: 1, flexBasis: 220 },
+  scopeCardWrap: { flexGrow: 1, flexBasis: 160 },
   scopeTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   scopeTile: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   scopeTileText: { fontSize: 15, fontWeight: '700' },
@@ -459,9 +543,11 @@ const styles = StyleSheet.create({
   payBody: { flex: 1, minWidth: 0 },
   payee: { fontSize: 14, fontWeight: '700' },
   payMeta: { fontSize: 11, marginTop: 3 },
+  paySubMeta: { fontSize: 10.5, marginTop: 2 },
   payFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   amountText: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   historyCard: { gap: 10 },
+  paymentInfoCol: { flex: 1, minWidth: 0 },
   historyFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   referenceCell: { gap: 6, alignItems: 'flex-start' },
   slipBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
@@ -480,5 +566,6 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 11.5 },
   detailValue: { fontSize: 12, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   detailTitle: { fontSize: 13.5, fontWeight: '700', marginTop: 4 },
-  emptyText: { fontSize: 13, paddingVertical: 18, textAlign: 'center' },
+  emptyWrap: { alignItems: 'center', gap: 12, paddingVertical: 24 },
+  emptyText: { fontSize: 13, textAlign: 'center' },
 });

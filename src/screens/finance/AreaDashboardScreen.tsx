@@ -8,11 +8,6 @@ import { AreaFinanceDashboard } from '../../features/finance/components/AreaFina
 import { financeAreas } from '../../features/finance/data';
 import type { FinanceStackParamList, FinanceStackNav, RootDrawerNav } from '../../navigation/types';
 
-/**
- * Web /finance/{areaId} — thematic finance dashboard reached from the
- * portfolio scorecards. The shell keeps the Dashboard nav item active,
- * matching the web's sidebar state.
- */
 export const AreaDashboardScreen: React.FC = () => {
   const navigation = useNavigation<FinanceStackNav>();
   const route = useRoute<RouteProp<FinanceStackParamList, 'AreaDashboard'>>();

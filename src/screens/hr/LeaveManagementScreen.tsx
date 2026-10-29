@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { LeaveView } from '../../features/hr/components/LeaveView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/leave-management. */
 export const LeaveManagementScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

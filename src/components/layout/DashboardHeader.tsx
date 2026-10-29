@@ -15,10 +15,8 @@ export type HeaderAvatarVariant = 'initials' | 'finance';
 export interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
-  /** Module eyebrow — web header `text-[9px] uppercase tracking-[0.18em]`. */
   eyebrow?: string;
   eyebrowColor?: string;
-  /** `finance` = emerald gradient tile with ₹ icon (web Finance header); `initials` = brandSoft tile. */
   avatarVariant?: HeaderAvatarVariant;
   onOpenDrawer?: () => void;
   showBack?: boolean;
@@ -34,10 +32,6 @@ export interface DashboardHeaderProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Workspace header — web `h-20` blurred topbar: eyebrow + H1 left,
- * search + theme toggle + bell + avatar tile right.
- */
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   title,
   subtitle,
@@ -126,8 +120,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             ) : null}
           </View>
         ) : (
-          // Phones: compact native-style bar — the workspace heading below
-          // already shows eyebrow, title and description in full.
           <Text style={[styles.titleMobile, { color: theme.colors.text }]} numberOfLines={2}>
             {title}
           </Text>

@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image, ScrollView } from 'react-native';
-import { Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ScrollView , Modal } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { AuthUser } from '../../types/auth';
 import { ModuleItem } from '../../types/modules';
@@ -15,10 +14,6 @@ export interface LoginModalProps {
   onSuccess: (user: AuthUser) => void;
 }
 
-/**
- * Bottom-sheet sign-in opened from module cards — the mobile take on the
- * web LoginDialog, delegating all form logic to the shared LoginForm.
- */
 export const LoginModal: React.FC<LoginModalProps> = ({ visible, module, onClose, onSuccess }) => {
   const { theme } = useTheme();
 
@@ -75,7 +70,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, module, onClose
               onSuccess={onSuccess}
             />
 
-            {/* Web LoginDialog right promo panel, condensed for the sheet */}
             <View style={[styles.promo, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={module.accentColors}

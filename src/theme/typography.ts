@@ -1,10 +1,5 @@
 import { TextStyle } from 'react-native';
 
-/**
- * The web app uses the stack "Inter, SF Pro Display, SF Pro Text, -apple-system, …".
- * We load Inter via @expo-google-fonts/inter in the root layout so all platforms
- * render identical typography. If a weight fails to load, RN falls back to system.
- */
 export const typography = {
   fontFamily: {
     regular: 'Inter_400Regular',
@@ -36,7 +31,6 @@ export const typography = {
     tight: -0.4,
     normal: 0,
     wide: 0.5,
-    // web eyebrow tracking: 0.18em ≈ 1.62px at 9px, 1.8px at 10px
     wider: 1.6,
     widest: 2.0,
   },
@@ -87,14 +81,12 @@ export const fontStyles = {
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 16,
   },
-  /** web micro-caps: text-[9px]/[10px] font-semibold uppercase tracking-[0.18em] */
   eyebrow: {
     fontSize: 10,
     fontWeight: '600' as TextStyle['fontWeight'],
     letterSpacing: 1.8,
     textTransform: 'uppercase' as TextStyle['textTransform'],
   },
-  /** KPI values: web uses tabular-nums + tracking -0.04em */
   metric: {
     fontSize: 24,
     fontWeight: '600' as TextStyle['fontWeight'],

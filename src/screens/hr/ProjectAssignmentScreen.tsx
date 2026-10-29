@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { AssignmentView } from '../../features/hr/components/AssignmentView';
 import type { HrStackParamList, HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/project-assignment — optionally deep-linked to an employee. */
 export const ProjectAssignmentScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const route = useRoute<RouteProp<HrStackParamList, 'ProjectAssignment'>>();

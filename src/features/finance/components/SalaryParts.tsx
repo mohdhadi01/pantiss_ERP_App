@@ -31,7 +31,7 @@ const AuthRow: React.FC<{ label: string; value: string; last?: boolean }> = ({ l
   );
 };
 
-const BreakdownGroup: React.FC<{ title: string; rows: Array<[string, number, boolean?]>; total: number; totalLabel: string }> = ({ title, rows, total, totalLabel }) => {
+const BreakdownGroup: React.FC<{ title: string; rows: [string, number, boolean?][]; total: number; totalLabel: string }> = ({ title, rows, total, totalLabel }) => {
   const { theme } = useTheme();
   return (
     <View style={[styles.groupPanel, { backgroundColor: theme.colors.surfaceSoft, borderColor: theme.colors.border }]}>
@@ -53,7 +53,6 @@ const BreakdownGroup: React.FC<{ title: string; rows: Array<[string, number, boo
   );
 };
 
-/** Employee Salary Record — net highlight, earnings/deductions, authorization + history. */
 export const SalaryRecordSheet: React.FC<{
   record: SalaryRecord | null;
   visible: boolean;
@@ -137,7 +136,6 @@ export const SalaryRecordSheet: React.FC<{
   );
 };
 
-/** Month-wise payment tracking card (web SalaryView.tsx:614-645). */
 export const MonthTrackingCard: React.FC<{
   monthLabel: string;
   paidAmount: string;
@@ -176,7 +174,6 @@ export const MonthTrackingCard: React.FC<{
   );
 };
 
-/** Stacked salary card (<1024px). */
 export const SalaryMobileCard: React.FC<{
   record: SalaryRecord;
   actions?: React.ReactNode;

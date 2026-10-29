@@ -22,10 +22,6 @@ export interface SelectFieldProps {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-/**
- * Tappable select that opens a `ModalSheet` option list — the mobile
- * equivalent of the web's native `<select>` styling.
- */
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
   value,

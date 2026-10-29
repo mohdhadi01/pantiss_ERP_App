@@ -107,7 +107,7 @@ export const SalaryApprovalsView: React.FC = () => {
     ]).catch(() => {});
   };
 
-  const columns: Array<DataColumn<SalaryRecord>> = [
+  const columns: DataColumn<SalaryRecord>[] = [
     { key: 'employee', label: 'Employee', flex: 1.4 },
     { key: 'net', label: 'Net salary', width: 110, align: 'right' },
     { key: 'admin', label: 'Admin approval', flex: 1.2 },
@@ -118,7 +118,6 @@ export const SalaryApprovalsView: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Workflow strip */}
       <Card padding={16} style={styles.workflow}>
         <View style={[styles.workflowIcon, { backgroundColor: theme.colors.brandSoft }]}>
           <Icon name="ShieldCheck" size={18} color={theme.colors.brandPrimary} strokeWidth={1.9} />
@@ -256,27 +255,41 @@ export const SalaryApprovalsView: React.FC = () => {
           }}
           renderMobileCard={(rec) => (
             <View style={[styles.mobileCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border }]}>
-              <View style={styles.personRow}>
+              <View style={styles.cardTopRow}>
                 <Avatar name={rec.name} size={36} />
-                <View style={styles.personMain}>
-                  <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{rec.name}</Text>
-                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{rec.designation} · {rec.id}</Text>
-                  <Text style={[styles.money, { color: theme.colors.text }]}>{formatRupees(rec.netPay)} net</Text>
+                <View style={styles.cardTopMain}>
+                  <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{rec.name}</Text>
+                  <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>
+                    {rec.designation} · {rec.id}
+                  </Text>
                 </View>
-                <View style={styles.stack4}>
-                  <StatusChip status={`Admin ${rec.adminApproval}`} />
-                  <StatusChip status={`HR ${rec.hrApproval}`} />
+                <View style={styles.netAmountCol}>
+                  <Text style={[styles.money, { color: theme.colors.text }]}>{formatRupees(rec.netPay)}</Text>
+                  <Text style={[styles.netLabel, { color: theme.colors.textSubtle }]}>net salary</Text>
                 </View>
               </View>
-              <Button
-                label={reviewable(rec) ? 'Review salary' : 'View details'}
-                variant="outline"
-                size="sm"
-                onPress={() => {
-                  setNote('');
-                  setReviewId(salaryKey(rec));
-                }}
-              />
+
+              <View style={[styles.cardBottomRow, { borderTopColor: theme.colors.border }]}>
+                <View style={styles.chipRow}>
+                  <StatusChip
+                    status={`Admin ${rec.adminApproval}`}
+                    tone={rec.adminApproval === 'Approved' ? 'success' : rec.adminApproval === 'Rejected' ? 'danger' : 'warning'}
+                  />
+                  <StatusChip
+                    status={`HR ${rec.hrApproval}`}
+                    tone={rec.hrApproval === 'Approved' ? 'success' : rec.hrApproval === 'Rejected' ? 'danger' : 'warning'}
+                  />
+                </View>
+                <Button
+                  label={reviewable(rec) ? 'Review' : 'View details'}
+                  variant="outline"
+                  size="sm"
+                  onPress={() => {
+                    setNote('');
+                    setReviewId(salaryKey(rec));
+                  }}
+                />
+              </View>
             </View>
           )}
         />
@@ -445,6 +458,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 14,
   },
   filterCell: {
     flexGrow: 1,
@@ -480,6 +494,41 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 13,
     gap: 10,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardTopMain: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  netAmountCol: {
+    alignItems: 'flex-end',
+    gap: 1,
+  },
+  netLabel: {
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
   decisionRow: {
     flexDirection: 'row',

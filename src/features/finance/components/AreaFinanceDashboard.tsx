@@ -16,11 +16,6 @@ import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { Icon, IconSource } from '../../../components/ui/Icon';
 import { MonthlyOverview, ProjectLedgerSheet } from './AreaFinanceParts';
 
-/**
- * Web AreaFinanceDashboard (FinanceDashboard.tsx:743-776) — the thematic
- * drill-down reached from the portfolio scorecards via /(finance)/area/{id}.
- */
-
 interface AreaKpi {
   label: string;
   value: string;
@@ -29,7 +24,7 @@ interface AreaKpi {
   accent: string;
 }
 
-const PROJECT_COLUMNS: Array<DataColumn<FinanceProject>> = [
+const PROJECT_COLUMNS: DataColumn<FinanceProject>[] = [
   { key: 'project', label: 'Project', flex: 2 },
   { key: 'approved', label: 'Approved', flex: 1.1 },
   { key: 'released', label: 'Released', flex: 1.1, wideOnly: true },

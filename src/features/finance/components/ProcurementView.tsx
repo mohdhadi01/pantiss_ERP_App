@@ -279,9 +279,39 @@ export const ProcurementView: React.FC = () => {
       {tab === 'requests' ? (
         <View style={styles.section}>
           <View style={styles.breadcrumb}>
-            {crumb('Thematic Areas', step === 0, () => { setStep(0); setProjectId(null); setAreaId(null); })}
-            {areaId ? crumb(financeAreas.find((a) => a.id === areaId)?.name ?? '', step === 1, () => { setStep(1); setProjectId(null); }) : null}
-            {projectId ? crumb(projectId, step === 2) : null}
+            <Pressable
+              onPress={() => { setStep(0); setProjectId(null); setAreaId(null); }}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.crumbItem, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={[styles.crumbText, step === 0 && styles.crumbActive, { color: step === 0 ? theme.colors.text : theme.colors.textMuted }]}>
+                Thematic Areas
+              </Text>
+            </Pressable>
+            {areaId ? (
+              <>
+                <Icon name="ChevronRight" size={13} color={theme.colors.textSubtle} />
+                <Pressable
+                  onPress={() => { setStep(1); setProjectId(null); }}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.crumbItem, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={[styles.crumbText, step === 1 && styles.crumbActive, { color: step === 1 ? theme.colors.text : theme.colors.textMuted }]}>
+                    {financeAreas.find((a) => a.id === areaId)?.name ?? ''}
+                  </Text>
+                </Pressable>
+              </>
+            ) : null}
+            {projectId ? (
+              <>
+                <Icon name="ChevronRight" size={13} color={theme.colors.textSubtle} />
+                <View style={styles.crumbItem}>
+                  <Text numberOfLines={1} style={[styles.crumbText, styles.crumbActive, { color: theme.colors.text }]}>
+                    {projectId}
+                  </Text>
+                </View>
+              </>
+            ) : null}
           </View>
 
           {step === 0 && (
@@ -307,9 +337,21 @@ export const ProcurementView: React.FC = () => {
 
           {step === 1 && (
             <View style={styles.list}>
-              <Text style={[styles.stepHint, { color: theme.colors.textSubtle }]}>
-                {projectRows.length} project{projectRows.length !== 1 ? 's' : ''} — select one to view requests
-              </Text>
+              <View style={styles.stepHeaderRow}>
+                <Text style={[styles.stepHint, { color: theme.colors.textSubtle }]}>
+                  {projectRows.length} project{projectRows.length !== 1 ? 's' : ''} — select one to view requests
+                </Text>
+                <Button
+                  label="Back to Thematic Areas"
+                  icon="ChevronLeft"
+                  variant="outline"
+                  size="sm"
+                  onPress={() => {
+                    setAreaId(null);
+                    setStep(0);
+                  }}
+                />
+              </View>
               <View style={[styles.grid, isMd && styles.gridWide]}>
                 {projectRows.map((row) => (
                   <ProcProjectCard
@@ -330,7 +372,26 @@ export const ProcurementView: React.FC = () => {
             </View>
           )}
 
-          {step === 2 ? <View style={styles.list}>{activeReqs.map((req) => renderRow(req, true))}</View> : null}
+          {step === 2 ? (
+            <View style={styles.list}>
+              <View style={styles.stepHeaderRow}>
+                <Text style={[styles.stepHint, { color: theme.colors.textSubtle }]}>
+                  {activeReqs.length} request{activeReqs.length !== 1 ? 's' : ''} for {projectId}
+                </Text>
+                <Button
+                  label="Back to Projects"
+                  icon="ChevronLeft"
+                  variant="outline"
+                  size="sm"
+                  onPress={() => {
+                    setProjectId(null);
+                    setStep(1);
+                  }}
+                />
+              </View>
+              {activeReqs.map((req) => renderRow(req, true))}
+            </View>
+          ) : null}
         </View>
       ) : (
         <View style={styles.section}>
@@ -496,7 +557,6 @@ const SpecTile: React.FC<{ label: string; value: string }> = ({ label, value }) 
   );
 };
 
-/** Static quotation document preview (web ProcurementQuotePreview, simplified paper). */
 const QuoteDocument: React.FC<{ req: Requisition; quote: Requisition['quotes'][number] }> = ({ req, quote }) => {
   const { theme } = useTheme();
   const subtotal = quote.amount / 1.18;
@@ -583,13 +643,16 @@ const styles = StyleSheet.create({
   glassChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   glassChip: { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, flexGrow: 1 },
   glassChipText: { color: '#ffffff', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  section: { gap: 12 },
-  breadcrumb: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  section: { gap: 14 },
+  breadcrumb: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  crumbItem: { paddingVertical: 4, paddingHorizontal: 4 },
   crumb: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, maxWidth: 220 },
-  crumbText: { fontSize: 11.5, fontWeight: '600' },
-  stepHint: { fontSize: 11.5, fontWeight: '600' },
+  crumbText: { fontSize: 12, fontWeight: '500' },
+  crumbActive: { fontWeight: '700' },
+  stepHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  stepHint: { fontSize: 12, fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  gridWide: { flexWrap: 'nowrap' },
+  gridWide: { flexWrap: 'wrap' },
   list: { gap: 12 },
   requestCard: { gap: 0, overflow: 'hidden', borderRadius: 16 },
   requestTop: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },

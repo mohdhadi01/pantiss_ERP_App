@@ -12,7 +12,6 @@ import { CategoryCard } from '../../components/cards/CategoryCard';
 import { TopNavigation } from '../../components/layout/TopNavigation';
 import type { PublicStackNav } from '../../navigation/types';
 
-/** Web landing page (`/`): workspace deck of the three category cards. */
 export const LandingScreen: React.FC = () => {
   const { theme } = useTheme();
   const { setSelectedCategory } = useCategory();
@@ -26,12 +25,9 @@ export const LandingScreen: React.FC = () => {
 
   return (
     <ScreenWrapper scrollable contentContainerStyle={styles.scrollContent}>
-      {/* Top Navigation Bar matching Pantiss_ERP TopNavigation */}
       <TopNavigation canGoBack={false} />
 
-      {/* Main Stage */}
       <View style={styles.mainContainer}>
-        {/* Stage Heading Row */}
         <View style={styles.stageHeader}>
           <View style={styles.titleColumn}>
             <Text style={[styles.eyebrow, { color: theme.colors.textSubtle }]}>
@@ -46,7 +42,6 @@ export const LandingScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Workspace Deck */}
         <View style={styles.workspaceDeck}>
           {categories.map((category, index) => (
             <CategoryCard

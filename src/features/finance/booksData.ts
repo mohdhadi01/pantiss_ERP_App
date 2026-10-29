@@ -20,10 +20,8 @@ export interface BookEntry {
   payee: string;
   reference: string;
   narration: string;
-  amount: number; // in INR
-  /** Bounded payment date (web record modal field, FY 2026–27). */
+  amount: number;
   paymentDate?: string;
-  /** "Invoice / payment reference" from the record modal (falls back to reference). */
   invoiceReference?: string;
   exportedAt?: string;
   source?: 'tally' | 'manual';
@@ -54,10 +52,8 @@ export const defaultTallySettings: TallySettings = {
   ),
 };
 
-/** Portfolio-level cost centre used when no single project is selected. */
 export const DEFAULT_COST_CENTRE_KEY = 'default';
 
-/** FY bounds for the record modal's "Payment date" field. */
 export const FY_PAYMENT_DATE_HINT = 'FY 2026–27 · 01 Apr 2026 – 31 Mar 2027';
 export const FY_START = '2026-04-01';
 export const FY_END = '2027-03-31';

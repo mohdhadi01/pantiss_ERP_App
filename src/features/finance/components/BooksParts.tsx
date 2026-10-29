@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../../../hooks/useTheme';
-import { TallySettings } from '../booksData';
-import { DEFAULT_COST_CENTRE_KEY } from '../booksData';
+import { TallySettings , DEFAULT_COST_CENTRE_KEY } from '../booksData';
 import { budgetCategories, BudgetCategory } from '../budgetCategories';
 import { formatRupees } from '../../../utils/formatCurrency';
 import { SectionCard } from '../../../components/ui/Card';
@@ -10,12 +9,6 @@ import { StatusChip } from '../../../components/ui/StatusChip';
 import { TextField } from '../../../components/ui/TextField';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
-
-/**
- * Books Tally surfaces (web BooksView.tsx:105-107 + TallyImportPanel.tsx):
- * the integration card, the ledger-mapping setup sheet and the static import
- * panel (agreed scope — form/preview UI only, no XML parsing).
- */
 
 export const TallyIntegrationCard: React.FC<{
   settings: TallySettings;
@@ -144,7 +137,6 @@ export const TallySetupSheet: React.FC<{
   );
 };
 
-/** Static Tally import panel (agreed scope: drop-zone + preview mock, no XML parsing). */
 export const TallyImportSheet: React.FC<{
   onClose: () => void;
   settings: TallySettings;

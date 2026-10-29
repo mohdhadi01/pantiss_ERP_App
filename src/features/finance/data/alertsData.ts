@@ -1,4 +1,3 @@
-/** Finance alerts — web `/finance/alerts` (12 seeded notifications with category tags). */
 
 export type FinanceAlertCategory =
   | 'Action Required'
@@ -15,7 +14,6 @@ export interface FinanceAlert {
   body: string;
   category: FinanceAlertCategory;
   time: string;
-  /** Calendar date rendered next to the dismiss control (web AlertsView). */
   date: string;
   unread: boolean;
 }
@@ -30,7 +28,6 @@ export const financeAlertCategories: FinanceAlertCategory[] = [
   'Completed',
 ];
 
-/** Web AlertsView.tsx:32-45 — exact seed set. */
 export const financeAlertSeeds: FinanceAlert[] = [
   {
     id: 'alert-001',

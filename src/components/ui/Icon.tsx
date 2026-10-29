@@ -98,10 +98,6 @@ import {
   XCircle,
 } from 'lucide-react-native';
 
-/**
- * Static icon registry — no runtime namespace lookup. Type gives autocomplete
- * in editors while still allowing dynamic strings from data modules.
- */
 const registry = {
   AlertCircle,
   AlertTriangle,
@@ -202,7 +198,6 @@ const registry = {
 } as const;
 
 export type IconName = keyof typeof registry;
-/** Accepts known names with autocomplete, plus arbitrary strings from data modules. */
 export type IconSource = IconName | (string & {});
 
 export interface IconProps {

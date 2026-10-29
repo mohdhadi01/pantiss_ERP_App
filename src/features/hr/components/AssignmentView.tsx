@@ -20,7 +20,6 @@ import { Employee } from '../types';
 
 export interface AssignmentViewProps {
   store: HRStore;
-  /** Deep-linked employee (`/hr/project-assignment?employee={id}`). */
   employee?: string;
 }
 
@@ -81,7 +80,7 @@ export const AssignmentView: React.FC<AssignmentViewProps> = ({ store, employee 
   const target = targetId ? data.employees.find((e) => e.id === targetId) : undefined;
   const centers = projectId ? projectCenters(projectId) : [];
 
-  const columns: Array<DataColumn<Employee>> = [
+  const columns: DataColumn<Employee>[] = [
     { key: 'employee', label: 'Employee', flex: 1.4 },
     { key: 'area', label: 'Thematic area', flex: 1.1 },
     { key: 'project', label: 'Primary project', flex: 1.3 },

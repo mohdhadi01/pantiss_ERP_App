@@ -10,7 +10,7 @@ export interface Employee {
   joiningDate: string;
   status: 'Active' | 'Onboarding';
   loginId?: string;
-  annualSalary?: number; // Gross annual CTC in ₹
+  annualSalary?: number;
 }
 
 export interface Designation {

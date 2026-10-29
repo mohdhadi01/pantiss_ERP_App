@@ -3,20 +3,14 @@ import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 export interface ScreenHeadingProps {
-  /** Web eyebrow: `text-[9px] uppercase tracking-[0.18em]` in module accent. */
   eyebrow?: string;
   eyebrowColor?: string;
   title: string;
   description?: string;
-  /** Right slot — pill badge, buttons (web "Demo workspace" pill etc.). */
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Page heading block — the web's workspace heading
- * (eyebrow + h1 + description + right pill).
- */
 export const ScreenHeading: React.FC<ScreenHeadingProps> = ({
   eyebrow,
   eyebrowColor,

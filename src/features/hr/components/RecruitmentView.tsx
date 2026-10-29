@@ -56,7 +56,6 @@ export interface RecruitmentViewProps {
 type TabKey = 'postings' | 'interviews' | 'offers' | 'ats';
 const HR_ACTOR = 'Ritika Sen (HR Manager)';
 const OFFER_STAGES: CandidateStage[] = ['Selected', 'Offer Released', 'Offer Accepted', 'Onboarded'];
-/** Stages visible in "Interview Schedule" — excludes Applied (web RecruitmentViews.tsx:109-114). */
 const INTERVIEW_STAGES: CandidateStage[] = ['Screening', 'Interview Scheduled', 'Technical Round', 'HR Round'];
 
 export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
@@ -247,69 +246,131 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
     const counts = pipelineCounts(jobApplicants);
     const urgency = urgencyLabel(daysLeft(selectedJob.closingDate));
     return (
-      <Card padding={20} style={isMd ? styles.rightCol : styles.fullWidth}>
-        <View style={styles.tagRow}>
-          <Badge label={selectedJob.status} tone={selectedJob.status === 'Active' ? 'success' : 'neutral'} size="sm" />
-          <Badge
-            label={`Closes ${formatDate(selectedJob.closingDate)} · ${urgency.label}`}
-            tone={urgency.tone === 'ok' ? 'neutral' : urgency.tone === 'warn' ? 'warning' : 'danger'}
-            size="sm"
-          />
-        </View>
-        <Text style={[theme.fontStyles.h2, { color: theme.colors.text }]}>{selectedJob.title}</Text>
-        <Text style={[styles.detailMeta, { color: theme.colors.textMuted }]}>
-          {selectedJob.department} · {selectedJob.location} · {selectedJob.experience} ·{' '}
-          {vacanciesLabel(selectedJob.openings)}
-        </Text>
-        <Button label="Edit Posting" variant="outline" size="sm" icon="Settings2" onPress={() => setPostingModal({ open: true, editing: selectedJob })} />
-        <Text style={[styles.detailBody, { color: theme.colors.textMuted }]}>{selectedJob.description}</Text>
-        <View style={styles.stack}>
-          {selectedJob.requirements.map((req) => (
-            <View key={req} style={styles.reqRow}>
-              <Icon name="Check" size={13} color={theme.colors.brandPrimary} />
-              <Text style={[styles.reqText, { color: theme.colors.textMuted }]}>{req}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.applicantsHeader}>
-          <Text style={[theme.fontStyles.h3, { color: theme.colors.text }]}>Applicants ({jobApplicants.length})</Text>
-          <Button label="Add Applicant" variant="primary" size="sm" icon="UserPlus" onPress={() => setApplicantModalOpen(true)} />
-        </View>
-        <Text style={[styles.pipelineLine, { color: theme.colors.textSubtle }]}>
-          {counts.applied} applied › {counts.active} active › {counts.onboarded} onboarded
-        </Text>
-        <SearchFilterBar
-          searchQuery={applicantSearch}
-          onSearchChange={setApplicantSearch}
-          placeholder="Search applicants by name, email, company…"
-          filters={[
-            { id: 'all', label: 'All', count: jobApplicants.length },
-            { id: 'applied', label: 'Applied', count: jobApplicants.filter((c) => c.stage === 'Applied').length },
-            {
-              id: 'shortlisted',
-              label: 'Shortlisted',
-              count: jobApplicants.filter((c) => c.stage !== 'Applied' && c.stage !== 'Rejected').length,
-            },
-          ]}
-          activeFilter={applicantFilter}
-          onFilterChange={setApplicantFilter}
-        />
-        {filteredApplicants.length ? (
-          <View style={styles.stack}>
-            {filteredApplicants.map((candidate) => (
-              <ApplicantRow
-                key={candidate.id}
-                candidate={candidate}
-                onProfile={() => setProfileCandidate(candidate)}
-                onShortlist={() =>
-                  handleStageChange(candidate.id, 'Screening', 'Shortlisted by HR.', `${candidate.name} shortlisted for interview scheduling.`)
-                }
+      <Card padding={22} style={[isMd ? styles.rightCol : styles.fullWidth, styles.postingCard]}>
+        <View style={[styles.jobPanelHeader, { borderBottomColor: theme.colors.border }]}>
+          <View style={styles.jobPanelHeaderContent}>
+            <View style={styles.tagRow}>
+              <Badge label={areaName(selectedJob.areaId)} tone="brand" size="sm" />
+              <Badge label={selectedJob.status} tone={selectedJob.status === 'Active' ? 'success' : 'neutral'} size="sm" />
+              <Badge
+                label={`Closes ${formatDate(selectedJob.closingDate)} · ${urgency.label}`}
+                tone={urgency.tone === 'ok' ? 'neutral' : urgency.tone === 'warn' ? 'warning' : 'danger'}
+                size="sm"
               />
-            ))}
+            </View>
+            <Text style={[styles.jobPanelTitle, { color: theme.colors.text }]}>{selectedJob.title}</Text>
+            <View style={styles.metaRowInline}>
+              {selectedJob.department ? (
+                <View style={styles.metaItem}>
+                  <Icon name="Briefcase" size={12} color={theme.colors.textSubtle} />
+                  <Text style={[styles.metaItemText, { color: theme.colors.textMuted }]}>
+                    {selectedJob.department}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.metaItem}>
+                <Icon name="Building2" size={12} color={theme.colors.textSubtle} />
+                <Text style={[styles.metaItemText, { color: theme.colors.textMuted }]}>
+                  {selectedJob.location}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Icon name="Clock" size={12} color={theme.colors.textSubtle} />
+                <Text style={[styles.metaItemText, { color: theme.colors.textMuted }]}>{selectedJob.experience}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Icon name="Users" size={12} color={theme.colors.textSubtle} />
+                <Text style={[styles.metaItemText, { color: theme.colors.textMuted }]}>{vacanciesLabel(selectedJob.openings)}</Text>
+              </View>
+            </View>
           </View>
-        ) : (
-          <EmptyState icon="Users" title="No applicants match" description="Adjust the search or add a new applicant." />
+          <View style={styles.editBtnContainer}>
+            <Button
+              label="Edit Posting"
+              variant="outline"
+              size="sm"
+              icon="Settings2"
+              onPress={() => setPostingModal({ open: true, editing: selectedJob })}
+            />
+          </View>
+        </View>
+
+        {(selectedJob.description || selectedJob.requirements.length > 0) && (
+          <View style={[styles.jobPanelDescSection, { borderBottomColor: theme.colors.border }]}>
+            {selectedJob.description ? (
+              <Text style={[styles.detailBody, { color: theme.colors.textMuted }]}>{selectedJob.description}</Text>
+            ) : null}
+            {selectedJob.requirements.length > 0 && (
+              <View style={styles.requirementsList}>
+                {selectedJob.requirements.map((req) => (
+                  <View key={req} style={styles.reqRow}>
+                    <Icon name="Check" size={13} color={theme.colors.brandPrimary} />
+                    <Text style={[styles.reqText, { color: theme.colors.textMuted }]}>{req}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         )}
+
+        <View style={styles.applicantsSection}>
+          <View style={styles.applicantsHeader}>
+            <View style={styles.applicantsHeaderTitleWrap}>
+              <View style={styles.applicantsTitleRow}>
+                <Text style={[styles.applicantsTitleText, { color: theme.colors.text }]}>Applicants</Text>
+                <View style={[styles.countPillMini, { backgroundColor: theme.colors.brandSoft }]}>
+                  <Text style={[styles.countPillMiniText, { color: theme.colors.brandPrimary }]}>
+                    {jobApplicants.length}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.pipelineLine, { color: theme.colors.textSubtle }]}>
+                {counts.applied} applied › {counts.active} active › {counts.onboarded} onboarded
+              </Text>
+            </View>
+            <Button
+              label="Add Applicant"
+              variant="primary"
+              size="sm"
+              icon="UserPlus"
+              onPress={() => setApplicantModalOpen(true)}
+            />
+          </View>
+
+          <SearchFilterBar
+            searchQuery={applicantSearch}
+            onSearchChange={setApplicantSearch}
+            placeholder="Search applicants by name, email, company…"
+            filters={[
+              { id: 'all', label: 'All', count: jobApplicants.length },
+              { id: 'applied', label: 'Applied', count: jobApplicants.filter((c) => c.stage === 'Applied').length },
+              {
+                id: 'shortlisted',
+                label: 'Shortlisted',
+                count: jobApplicants.filter((c) => c.stage !== 'Applied' && c.stage !== 'Rejected').length,
+              },
+            ]}
+            activeFilter={applicantFilter}
+            onFilterChange={setApplicantFilter}
+          />
+
+          {filteredApplicants.length ? (
+            <View style={styles.applicantsStack}>
+              {filteredApplicants.map((candidate) => (
+                <ApplicantRow
+                  key={candidate.id}
+                  candidate={candidate}
+                  onProfile={() => setProfileCandidate(candidate)}
+                  onShortlist={() =>
+                    handleStageChange(candidate.id, 'Screening', 'Shortlisted by HR.', `${candidate.name} shortlisted for interview scheduling.`)
+                  }
+                />
+              ))}
+            </View>
+          ) : (
+            <EmptyState icon="Users" title="No applicants match" description="Adjust the search or add a new applicant." />
+          )}
+        </View>
       </Card>
     );
   };
@@ -395,7 +456,7 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
     </View>
   );
 
-  const atsColumns: Array<DataColumn<Candidate>> = [
+  const atsColumns: DataColumn<Candidate>[] = [
     { key: 'candidate', label: 'Candidate', flex: 1.4 },
     { key: 'role', label: 'Applied Role', flex: 1.3 },
     { key: 'exp', label: 'Experience & CTC', flex: 1.1 },
@@ -407,7 +468,6 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header block */}
       <View style={[styles.headerCard, { backgroundColor: theme.colors.moduleBg, borderColor: theme.colors.border, ...(theme.shadows.card as object) }]}>
         {isMd ? (
           <View style={[styles.iconTile, { backgroundColor: theme.colors.brandSoft }]}>
@@ -655,7 +715,6 @@ export const RecruitmentView: React.FC<RecruitmentViewProps> = ({ store }) => {
         </SectionCard>
       ) : null}
 
-      {/* Modals */}
       {postingModal.open ? (
         <PostingModal
           key={postingModal.editing?.id ?? 'new-posting'}
@@ -816,9 +875,114 @@ const styles = StyleSheet.create({
   rightCol: {
     flexGrow: 1.35,
     flexBasis: 320,
+    gap: 16,
   },
   fullWidth: {
     width: '100%',
+    gap: 16,
+  },
+  postingCard: {
+    gap: 18,
+  },
+  jobPanelHeader: {
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  jobPanelHeaderContent: {
+    gap: 8,
+  },
+  jobPanelTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    lineHeight: 24,
+  },
+  metaRowInline: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 12,
+    rowGap: 8,
+    width: '100%',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: '100%',
+    flexShrink: 1,
+  },
+  metaItemText: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    flexShrink: 1,
+  },
+  editBtnContainer: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  jobPanelDescSection: {
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  detailBody: {
+    fontSize: 12.5,
+    lineHeight: 19,
+  },
+  requirementsList: {
+    gap: 8,
+    marginTop: 2,
+  },
+  reqRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  reqText: {
+    flex: 1,
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  applicantsSection: {
+    gap: 14,
+  },
+  applicantsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  applicantsHeaderTitleWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  applicantsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  applicantsTitleText: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  countPillMini: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  countPillMiniText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pipelineLine: {
+    fontSize: 11,
+    letterSpacing: 0.1,
+  },
+  applicantsStack: {
+    gap: 10,
   },
   stack: {
     gap: 10,
@@ -832,30 +996,6 @@ const styles = StyleSheet.create({
   detailMeta: {
     fontSize: 11.5,
     lineHeight: 16,
-  },
-  detailBody: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  reqRow: {
-    flexDirection: 'row',
-    gap: 7,
-    alignItems: 'flex-start',
-  },
-  reqText: {
-    flex: 1,
-    fontSize: 11.5,
-    lineHeight: 16,
-  },
-  applicantsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 6,
-  },
-  pipelineLine: {
-    fontSize: 10.5,
   },
   interviewCard: {
     borderWidth: 1,

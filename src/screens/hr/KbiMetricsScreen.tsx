@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { PerformanceView } from '../../features/hr/components/PerformanceView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/kbi-metrics. */
 export const KbiMetricsScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

@@ -10,23 +10,14 @@ import { TextField } from '../ui/TextField';
 import { Button } from '../ui/Button';
 
 export interface LoginFormProps {
-  /** Module being accessed — validates the account's moduleId (web LoginDialog rule).
-   *  Omit for the generic page login, which accepts any authorized account. */
   moduleId?: string;
   moduleTitle: string;
-  /** Accent for the submit button (emerald for Finance, brand blue otherwise). */
   accent?: 'primary' | 'emerald';
   onSuccess: (user: AuthUser) => void;
-  /** Web shows the "Autofill {role} demo credentials" chip when the module has an account. */
   showAutofill?: boolean;
-  /** Bottom demo-account chips (Finance / HR roles). */
   showDemoSwitcher?: boolean;
 }
 
-/**
- * Shared sign-in form used by both login surfaces — the single
- * implementation of the web LoginDialog's form logic.
- */
 export const LoginForm: React.FC<LoginFormProps> = ({
   moduleId,
   moduleTitle,

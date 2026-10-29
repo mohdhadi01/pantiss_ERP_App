@@ -8,7 +8,6 @@ import { useHR } from '../../features/hr/HRContext';
 import { HRDashboard } from '../../features/hr/components/HRDashboard';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/dashboard. */
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
   const store = useHR();

@@ -7,7 +7,6 @@ import { hrSectionTitles, hrSectionDescriptions } from '../../features/hr/consta
 import { SalaryApprovalsView } from '../../features/hr/components/SalaryApprovalsView';
 import type { HrStackNav, RootDrawerNav } from '../../navigation/types';
 
-/** Web /hr/salary. */
 export const SalaryScreen: React.FC = () => {
   const navigation = useNavigation<HrStackNav>();
 

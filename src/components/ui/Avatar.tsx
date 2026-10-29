@@ -23,7 +23,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   const { theme } = useTheme();
   const displayInitials = initials || getInitials(name);
 
-  // Generate consistent color from name
   const getHashColor = (str: string) => {
     const palette = [
       '#2563eb',

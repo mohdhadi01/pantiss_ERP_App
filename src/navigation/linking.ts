@@ -2,11 +2,6 @@ import type { LinkingOptions } from '@react-navigation/native';
 
 import type { RootDrawerParamList } from './types';
 
-/**
- * Web-parity URL map — the explicit replacement for expo-router's
- * file-based deep links. Paths mirror the web app routes:
- * `/`, `/modules/:categoryId`, `/login`, `/finance/*`, `/hr/*`.
- */
 export const linking: LinkingOptions<RootDrawerParamList> = {
   prefixes: [],
   enabled: true,

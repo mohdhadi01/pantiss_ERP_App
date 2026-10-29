@@ -13,17 +13,10 @@ import { AppDrawerContent } from '../components/layout/AppDrawerContent';
 
 const RootDrawer = createDrawerNavigator<RootDrawerParamList>();
 
-/**
- * Root navigation — one Drawer navigator holding the three stacks
- * (Public / Finance / HR). The drawer replaces both expo-router's group
- * switching and the former `react-native-drawer-layout` inside ModuleShell:
- * permanent sidebar ≥1024px, slide-in drawer below (mobile-first parity).
- */
 export const RootNavigator: React.FC = () => {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 1024;
-  // 260px ↔ 80px collapsible permanent sidebar (web collapse toggle).
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
@@ -38,8 +31,6 @@ export const RootNavigator: React.FC = () => {
       <RootDrawer.Navigator
         initialRouteName="PublicStack"
         drawerContent={(props) => {
-          // Derive the active module from the drawer's focused route so the
-          // menu highlights the right section with the right accent.
           const activeName = props.state.routes[props.state.index].name;
           const section: DrawerSection =
             activeName === 'FinanceStack' ? 'finance' : activeName === 'HrStack' ? 'hr' : 'none';

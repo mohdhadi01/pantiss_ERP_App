@@ -9,29 +9,21 @@ import { Icon, IconSource } from '../../../components/ui/Icon';
 export interface HeroAction {
   label: string;
   icon?: IconSource;
-  /** `white` = solid white button (web `bg-white text-emerald-900`); `glass` = translucent. */
   variant: 'white' | 'glass';
   onPress?: () => void;
 }
 
 export interface HeroBannerProps {
   gradient: GradientPreset;
-  /** Pill badge — icon + label (web "Finance portfolio control"). */
   badge: { icon: IconSource; label: string };
   title: string;
   description?: string;
-  /** Right glass card — the web utilization panel. */
   right?: React.ReactNode;
   actions?: HeroAction[];
-  /** Decorative ring + glow (web size-72 rings / emerald-300/10 blur). */
   decorative?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Finance hero — web `bg-gradient-to-br from-slate-950 via-emerald-950 to-emerald-700
- * rounded-[30px] p-6 shadow-[0_28px_80px_rgba(5,150,105,.18)]`.
- */
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   gradient,
   badge,
@@ -113,7 +105,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   );
 };
 
-/** Web glass panel (`bg-black/15 backdrop-blur border-white/15`). */
 export const HeroGlassCard: React.FC<{
   label: string;
   children: React.ReactNode;
@@ -172,7 +163,6 @@ const styles = StyleSheet.create({
     gap: 20,
     alignItems: 'center',
   },
-  /** Phones: stack text above the glass card — full width each (mobile-first). */
   contentStacked: {
     flexDirection: 'column',
     alignItems: 'stretch',

@@ -19,8 +19,6 @@ import { Button } from '../../../components/ui/Button';
 import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Timeline, TimelineItem } from '../../../components/ui/Timeline';
 
-/** Web MonthlyFinanceRow + ProjectExpenditureLedger, mobile-stacked. */
-
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const monthLabelOf = (key: string) =>
   new Date(`${key}-01T12:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
@@ -202,7 +200,6 @@ const SheetLink: React.FC<{ label: string; theme: ReturnType<typeof useTheme>['t
   </Pressable>
 );
 
-/** Web ProjectExpenditureLedger (xl overlay) — stats, filters, entries + audit timeline. */
 export const ProjectLedgerSheet: React.FC<{ project: FinanceProject | null; onClose: () => void }> = ({
   project,
   onClose,

@@ -8,7 +8,6 @@ import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Icon } from '../../../components/ui/Icon';
 import type { Vendor } from './VendorManagementView';
 
-/** Vendor master card — web grid tile with inner detail panel. */
 export const VendorCard: React.FC<{ vendor: Vendor; onPress: () => void }> = ({ vendor, onPress }) => {
   const { theme } = useTheme();
   const last4 = vendor.bankAccount.slice(-4);
@@ -75,7 +74,6 @@ const ContactRow: React.FC<{ icon: string; text: string }> = ({ icon, text }) =>
   );
 };
 
-/** Vendor details overlay (web "View Details" drawer). */
 export const VendorDetailsSheet: React.FC<{ vendor: Vendor | null; visible: boolean; onClose: () => void }> = ({
   vendor,
   visible,

@@ -9,7 +9,6 @@ export interface SkeletonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Pulsing placeholder block shown while stores hydrate (web skeleton shimmer equivalent). */
 export const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = 14, radius = 8, style }) => {
   const { theme } = useTheme();
   const pulse = useMemo(() => new Animated.Value(0.45), []);
@@ -41,7 +40,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = 14,
   );
 };
 
-/** Full KPI-card skeleton used while dashboard data loads. */
 export const SkeletonCard: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style }) => {
   const { theme } = useTheme();
   return (

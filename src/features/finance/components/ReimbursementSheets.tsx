@@ -27,7 +27,6 @@ const CHECK_LINES = [
 const billTone = (status: BillStatus) =>
   status === 'Approved' ? 'success' : status === 'Verified' ? 'info' : status === 'Query raised' ? 'warning' : 'neutral';
 
-/** TA/DA review modal — web TaDaReviewModal depth (FinanceOperationsViews.tsx:479-493). */
 export const TaDaReviewSheet: React.FC<{
   expense: CentreExpense | null;
   visible: boolean;
@@ -37,7 +36,6 @@ export const TaDaReviewSheet: React.FC<{
   const source = expense ? billsForCenterMonth(expense.centerId, expense.month) : [];
   const [bills, setBills] = useState<EmployeeBill[]>(source);
   const [selectedId, setSelectedId] = useState(source[0]?.id ?? '');
-  // Re-seed local state when a different expense is reviewed.
   const [seed, setSeed] = useState(expense?.id ?? '');
   if (expense && expense.id !== seed) {
     setSeed(expense.id);
@@ -174,7 +172,6 @@ const MiniSpec: React.FC<{ label: string; value: string }> = ({ label, value }) 
   );
 };
 
-/** Non-TA/DA bill review sheet — web CenterExpenseReviewOverlay (453-477). */
 export const ExpenseBillReviewSheet: React.FC<{
   expense: CentreExpense | null;
   visible: boolean;

@@ -35,11 +35,6 @@ import type {
   RootDrawerNav,
 } from '../../navigation/types';
 
-/**
- * Slanted Partition Background matching web `.module-hero::after` and `.grid-pattern`
- * Exact web CSS: linear-gradient(105deg, transparent 0 72%, rgba(255,255,255,.025) 72% 72.3%, transparent 72.3%)
- * with ambient glow: bg-gradient-to-br opacity-[0.07] blur-3xl.
- */
 interface CategorySlantBackgroundProps {
   categoryId: CategorySlug;
   accentColors: [string, string];
@@ -53,8 +48,6 @@ const CategorySlantBackground: React.FC<CategorySlantBackgroundProps> = ({
   isDesktop = false,
   isDark = true,
 }) => {
-  // On desktop: partition starts at ~73% top, 65% bottom (105deg slant)
-  // On mobile: partition starts at ~72% top, 59% bottom (105deg slant)
   const topX = isDesktop ? 73 : 72;
   const bottomX = isDesktop ? 65 : 59;
   const glowId = `ambient-glow-${categoryId}`;
@@ -63,7 +56,6 @@ const CategorySlantBackground: React.FC<CategorySlantBackgroundProps> = ({
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
         <Defs>
-          {/* Ambient soft glow matching web: bg-gradient-to-br ${category.accent} opacity-[0.07] blur-3xl */}
           <RadialGradient
             id={glowId}
             cx="88%"
@@ -79,10 +71,8 @@ const CategorySlantBackground: React.FC<CategorySlantBackgroundProps> = ({
           </RadialGradient>
         </Defs>
 
-        {/* Ambient soft glow fill */}
         <Polygon points="0,0 100,0 100,100 0,100" fill={`url(#${glowId})`} />
 
-        {/* Slanted partition line matching web: .module-hero::after (105deg) */}
         <Line
           x1={topX}
           y1={0}
@@ -93,7 +83,6 @@ const CategorySlantBackground: React.FC<CategorySlantBackgroundProps> = ({
           vectorEffect="non-scaling-stroke"
         />
 
-        {/* Delicate Blueprint Grid Pattern matching web: .grid-pattern */}
         <Line
           x1={isDesktop ? 86 : 84}
           y1={0}
@@ -188,7 +177,6 @@ export const ModulesScreen: React.FC = () => {
       return;
     }
 
-    // Default: open login modal for other modules to authenticate
     setSelectedModule(mod);
     setLoginModalVisible(true);
   };
@@ -245,14 +233,12 @@ export const ModulesScreen: React.FC = () => {
         }),
       };
 
-  /* Mobile-Specific Hero Card matching web module-hero */
   const renderMobileHeroCard = () => (
     <Animated.View
       sharedTransitionTag={`category-shell-${category.id}`}
       sharedTransitionStyle={cardHeroSharedTransition}
       style={[styles.mobileBannerCard, cardBorderAndShadow]}
     >
-      {/* Exact Web Card Background Gradient: --card-bg */}
       <LinearGradient
         colors={cardBgColors}
         start={{ x: 0.1, y: 0 }}
@@ -260,7 +246,6 @@ export const ModulesScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Slanted partition line, ambient glow and blueprint grid */}
       <CategorySlantBackground
         categoryId={category.id}
         accentColors={category.accentColors}
@@ -268,7 +253,6 @@ export const ModulesScreen: React.FC = () => {
         isDark={isDark}
       />
 
-      {/* Watermark Number: exact web opacity */}
       <Text
         style={[
           styles.mobileWatermarkNumber,
@@ -279,13 +263,11 @@ export const ModulesScreen: React.FC = () => {
         {String((categoryIndex >= 0 ? categoryIndex : 0) + 1).padStart(2, '0')}
       </Text>
 
-      {/* Top Row: Icon Box on Left, Available Badge on Right */}
       <View style={styles.mobileBannerTopRow}>
         <Animated.View
           sharedTransitionTag={`category-icon-${category.id}`}
           sharedTransitionStyle={cardHeroSharedTransition}
         >
-          {/* Icon Box with colorful glow shadow matching web shadow-[0_12px_32px_var(--card-glow)] */}
           <LinearGradient
             colors={category.accentColors}
             start={{ x: 0, y: 0 }}
@@ -306,7 +288,6 @@ export const ModulesScreen: React.FC = () => {
           </LinearGradient>
         </Animated.View>
 
-        {/* Available Badge matching web: border-[var(--border)] bg-[var(--surface-soft)] text-[var(--text-subtle)] */}
         <View
           style={[
             styles.mobileAvailableBadge,
@@ -327,7 +308,6 @@ export const ModulesScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Content Block: Full-width Title (NO wrapping!), Eyebrow & Description */}
       <View style={styles.mobileBannerContent}>
         <Text
           style={[
@@ -363,14 +343,12 @@ export const ModulesScreen: React.FC = () => {
     </Animated.View>
   );
 
-  /* Desktop-Specific Hero Card matching web module-hero */
   const renderDesktopHeroCard = () => (
     <Animated.View
       sharedTransitionTag={`category-shell-${category.id}`}
       sharedTransitionStyle={cardHeroSharedTransition}
       style={[styles.bannerCard, cardBorderAndShadowDesktop]}
     >
-      {/* Exact Web Card Background Gradient: --card-bg */}
       <LinearGradient
         colors={cardBgColors}
         start={{ x: 0.1, y: 0 }}
@@ -378,7 +356,6 @@ export const ModulesScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Slanted partition line, ambient glow and blueprint grid */}
       <CategorySlantBackground
         categoryId={category.id}
         accentColors={category.accentColors}
@@ -401,7 +378,6 @@ export const ModulesScreen: React.FC = () => {
           sharedTransitionTag={`category-icon-${category.id}`}
           sharedTransitionStyle={cardHeroSharedTransition}
         >
-          {/* Icon Box with colorful glow shadow matching web shadow-[0_12px_32px_var(--card-glow)] */}
           <LinearGradient
             colors={category.accentColors}
             start={{ x: 0, y: 0 }}
@@ -487,13 +463,10 @@ export const ModulesScreen: React.FC = () => {
 
   return (
     <ScreenWrapper scrollable contentContainerStyle={styles.scrollContent}>
-      {/* Top Header matching Pantiss_ERP TopNavigation */}
       <TopNavigation canGoBack subtitle="/ Workspace" />
 
-      {/* Main Content Area */}
       <View style={styles.content}>
         {isDesktop ? (
-          /* Desktop / Tablet Layout: Left 210px Rail + Right Content */
           <View style={styles.twoColumnRow}>
             <View style={styles.leftRailColumn}>
               <WorkspaceRail
@@ -528,28 +501,22 @@ export const ModulesScreen: React.FC = () => {
             </Animated.View>
           </View>
         ) : (
-          /* Mobile-Optimized Layout: Sleek Horizontal Workspaces at top, then Mobile Card */
           <View style={styles.mobileLayout}>
-            {/* Upper options: same theme, horizontal scroll, compact height */}
             <WorkspaceRail
               active={category.id}
               onSelect={handleSelectCategory}
               layout="horizontal"
             />
 
-            {/* Smooth in-place transition: NO screen blink, NO reload */}
             <Animated.View
               key={category.id}
               entering={FadeIn.duration(220)}
               style={styles.mobileContentTransition}
             >
-              {/* Breadcrumb */}
               <Breadcrumb current={category.title} parentLabel="Workspace" />
 
-              {/* Mobile-Friendly Hero Card with Slanted Line & Distinct Color Theme */}
               {renderMobileHeroCard()}
 
-              {/* Section Heading */}
               <View style={styles.sectionHeadingRow}>
                 <View>
                   <Text style={[styles.sectionHeadingTitle, { color: theme.colors.text }]}>
@@ -564,14 +531,12 @@ export const ModulesScreen: React.FC = () => {
                 </Text>
               </View>
 
-              {/* Modules Grid */}
               {renderModulesGrid()}
             </Animated.View>
           </View>
         )}
       </View>
 
-      {/* Login Modal */}
       <LoginModal
         visible={loginModalVisible}
         module={selectedModule}
@@ -611,7 +576,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  /* Mobile Layout Styles */
   mobileLayout: {
     gap: 14,
   },
@@ -690,7 +654,6 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
   },
 
-  /* Desktop Layout Styles */
   twoColumnRow: {
     flexDirection: 'row',
     gap: 36,

@@ -15,11 +15,6 @@ export interface ModuleGateState {
   user: AuthUser | null;
 }
 
-/**
- * Auth check per module — mirrors the web route-guard rule: the session must
- * be restored, the user's moduleId must match the module, and (for HR) the
- * role must match. Returns `{ authorized, isLoading, user }`.
- */
 export function useModuleGate(
   requiredModuleId: string,
   requiredRole?: string,
@@ -36,18 +31,11 @@ export function useModuleGate(
 }
 
 export interface ModuleGateProps {
-  /** 'finance' | 'human-resources' — web route-guard rule per module. */
   moduleId: string;
-  /** Web HRPage additionally requires role === 'hr-manager'. */
   role?: string;
   children: React.ReactNode;
 }
 
-/**
- * Gate wrapper for module screens. While the session restores it shows the
- * loading overlay; unauthorized visitors get the module login rendered inline
- * (web redirects to the module login); authorized users see the workspace.
- */
 export const ModuleGate: React.FC<ModuleGateProps> = ({ moduleId, role, children }) => {
   const { authorized, isLoading } = useModuleGate(moduleId, role);
   const { theme } = useTheme();

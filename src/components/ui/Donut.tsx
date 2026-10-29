@@ -12,15 +12,10 @@ export interface DonutProps {
   segments: DonutSegment[];
   size?: number;
   thickness?: number;
-  /** Rendered in the hole (e.g. "88% overall"). */
   centerContent?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * SVG conic-gradient donut — the web's compliance donut
- * (`conic-gradient(#10b981 0 88%, #f59e0b 88% 94%, #ef4444 94% 100%)`).
- */
 export const Donut: React.FC<DonutProps> = ({
   segments,
   size = 148,
@@ -32,8 +27,7 @@ export const Donut: React.FC<DonutProps> = ({
   const circumference = 2 * Math.PI * radius;
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1;
 
-  // Precompute each arc's dash/offset — no mutation during render.
-  const arcs: Array<{ color: string; dash: number; offset: number }> = [];
+  const arcs: { color: string; dash: number; offset: number }[] = [];
   let running = 0;
   for (const segment of segments) {
     const dash = (segment.value / total) * circumference;

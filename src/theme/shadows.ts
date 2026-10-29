@@ -1,10 +1,5 @@
 import { Platform, ViewStyle } from 'react-native';
 
-/**
- * Web `--shadow-card` (light): `0 18px 60px rgba(32, 45, 70, 0.08)`
- * Web `--shadow-card` (dark):  `0 22px 80px rgba(0, 0, 0, 0.25)`
- * Shadows are theme-dependent, so they are created via `createShadows(isDark)`.
- */
 export interface ThemeShadows {
   none: ViewStyle;
   sm: ViewStyle;
@@ -34,7 +29,6 @@ const box = (shadowColor: string, h: number, blur: number, opacity: number, elev
   },
 });
 
-/** Converts `#rrggbb` + opacity into an `rgba()` string for the web boxShadow fallback. */
 function hexWithAlpha(hex: string, opacity: number): string {
   if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
   const r = parseInt(hex.slice(1, 3), 16);
@@ -84,13 +78,11 @@ export function createShadows(isDark: boolean): ThemeShadows {
         ? box(cardColor, 22, 80, 0.25, 8)
         : box(cardColor, 18, 60, 0.08, 6),
     ),
-    // web --shadow-nav: 0 10px 35px rgba(31,41,55,.06) / dark 0 12px 40px rgba(0,0,0,.2)
     nav: Platform.select<ViewStyle>(
       isDark
         ? box('#000000', 12, 40, 0.2, 5)
         : box('#1f2937', 10, 35, 0.06, 4),
     ),
-    // finance hero shadow: 0 28px 80px rgba(5,150,105,.18)
     heroEmerald: Platform.select<ViewStyle>({
       ios: {
         shadowColor: '#059669',
@@ -104,5 +96,4 @@ export function createShadows(isDark: boolean): ThemeShadows {
   };
 }
 
-/** Non-theme-aware convenience for places without theme access (splash screens etc.). */
 export const shadows = createShadows(true);

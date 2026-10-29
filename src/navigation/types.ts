@@ -5,7 +5,6 @@ import type {
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-/** Which module's menu the navigator drawer should render. */
 export type DrawerSection = 'finance' | 'hr' | 'none';
 
 export type PublicStackParamList = {
@@ -53,10 +52,8 @@ export type RootDrawerParamList = {
   HrStack: NavigatorScreenParams<HrStackParamList>;
 };
 
-/** Props handed to the navigator drawer's custom content component. */
 export type AppDrawerContentProps = DrawerContentComponentProps;
 
-// Typed navigation hooks for screens/views (useNavigation<...>).
 export type PublicStackNav = NativeStackNavigationProp<PublicStackParamList>;
 export type FinanceStackNav = NativeStackNavigationProp<FinanceStackParamList>;
 export type HrStackNav = NativeStackNavigationProp<HrStackParamList>;

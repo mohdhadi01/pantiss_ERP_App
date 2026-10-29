@@ -40,11 +40,9 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
     }
   };
 
-  /* Mobile Horizontal Layout */
   if (layout === 'horizontal') {
     return (
       <View style={styles.mobileContainer}>
-        {/* Top Header Row: WORKSPACES on left, Mini Capacity on right */}
         <View style={styles.mobileHeaderRow}>
           <Text style={[styles.mobileHeaderTitle, { color: theme.colors.textSubtle }]}>
             WORKSPACES
@@ -64,7 +62,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
           </View>
         </View>
 
-        {/* Horizontal Capsule Options List */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -92,12 +89,10 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
                 ]}
                 accessibilityLabel={`Select ${category.title} workspace`}
               >
-                {/* Active Glowing Red Left Edge Indicator */}
                 {isActive && (
                   <View style={styles.mobileActiveIndicator} />
                 )}
 
-                {/* Square Icon Container */}
                 <View
                   style={[
                     styles.mobileIconBox,
@@ -119,7 +114,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
                   />
                 </View>
 
-                {/* Text Column */}
                 <View style={styles.mobileTextColumn}>
                   <Text
                     style={[
@@ -154,15 +148,12 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
     );
   }
 
-  /* Desktop Vertical Sidebar Layout */
   return (
     <View style={styles.railContainer}>
-      {/* Header: WORKSPACES */}
       <Text style={[styles.railHeader, { color: theme.colors.textSubtle }]}>
         WORKSPACES
       </Text>
 
-      {/* 3 Workspace Capsule Items */}
       <View style={styles.itemsList}>
         {categories.map((category, index) => {
           const isActive = category.id === active;
@@ -187,12 +178,10 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
               ]}
               accessibilityLabel={`Select ${category.title} workspace`}
             >
-              {/* Active Glowing Red Indicator Bar on Left Edge */}
               {isActive && (
                 <View style={styles.activeIndicator} />
               )}
 
-              {/* Square Icon Container */}
               <View
                 style={[
                   styles.iconBox,
@@ -214,7 +203,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
                 />
               </View>
 
-              {/* Text Column */}
               <View style={styles.textColumn}>
                 <Text
                   style={[
@@ -242,7 +230,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
                 </Text>
               </View>
 
-              {/* Chevron Right */}
               {isActive && (
                 <View style={styles.chevronWrap}>
                   <Icon
@@ -258,10 +245,8 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
         })}
       </View>
 
-      {/* Horizontal Divider Line */}
       <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
-      {/* Workspace Capacity Section */}
       <View style={styles.capacitySection}>
         <View style={styles.capacityRow}>
           <Text style={[styles.capacityLabel, { color: theme.colors.textSubtle }]}>
@@ -272,7 +257,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
           </Text>
         </View>
 
-        {/* Capacity Progress Track & Gradient Fill */}
         <View style={styles.capacityTrack}>
           <LinearGradient
             colors={['#dc2626', '#fb7185']}
@@ -287,7 +271,6 @@ export const WorkspaceRail: React.FC<WorkspaceRailProps> = ({
 };
 
 const styles = StyleSheet.create({
-  /* Mobile Horizontal Styles */
   mobileContainer: {
     width: '100%',
     paddingBottom: 2,
@@ -374,7 +357,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  /* Desktop Vertical Styles */
   railContainer: {
     width: '100%',
     paddingVertical: 4,

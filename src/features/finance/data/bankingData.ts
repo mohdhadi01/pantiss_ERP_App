@@ -1,9 +1,3 @@
-/**
- * Web BankingView.tsx:53-197 seeds, aligned to web values. Balances are raw
- * rupees (lakhs × 100000): SBI ₹18.42 Cr + HDFC ₹12.18 Cr + ICICI ₹6.15 Cr +
- * Axis ₹1.70 Cr = ₹38.45 Cr total. Transactions are the web's seven statement
- * lines with per-bank party/UTR.
- */
 
 export interface BankAccount {
   id: string;
@@ -11,11 +5,10 @@ export interface BankAccount {
   maskedNo: string;
   ifsc: string;
   type: string;
-  balance: number; // in ₹ (raw rupees)
+  balance: number;
   color: string;
 }
 
-/** Web bank logo identity colors (SBI sky / HDFC blue / ICICI orange / Axis purple). */
 export const BANK_COLORS = {
   sbi: '#0284c7',
   hdfc: '#2563eb',
@@ -33,13 +26,11 @@ export const BANK_ACCOUNTS: BankAccount[] = [
 export interface BankTx {
   id: string;
   date: string;
-  /** Beneficiary / party line (web "Beneficiary / Party" column). */
   party: string;
   description: string;
-  /** Bank name — matches BankAccount.bankName for filtering. */
   account: string;
   category: string;
-  amount: number; // in ₹ (raw rupees)
+  amount: number;
   type: 'credit' | 'debit';
   ref: string;
   status: 'Reconciled' | 'Pending Clearance';

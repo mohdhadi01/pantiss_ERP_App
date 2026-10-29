@@ -206,6 +206,5 @@ export const portfolioTotals = financeAreas.reduce(
   }
 );
 
-// Single source of truth for money formatting — see src/utils/formatCurrency.ts
 export { formatCurrency } from '../../utils/formatCurrency';
 

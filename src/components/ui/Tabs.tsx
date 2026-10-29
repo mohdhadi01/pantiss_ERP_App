@@ -14,9 +14,7 @@ export interface TabsProps {
   items: TabItem[];
   activeKey: string;
   onChange: (key: string) => void;
-  /** Accent color for the active pill (module accent — emerald for Finance, brand blue for HR). */
   accent?: string;
-  /** `soft` = web segmented accent-soft; `elevated` = web hr-tabs white card style. */
   variant?: 'soft' | 'elevated';
   style?: StyleProp<ViewStyle>;
 }
@@ -88,7 +86,6 @@ export const Tabs: React.FC<TabsProps> = ({ items, activeKey, onChange, accent, 
   );
 };
 
-/** Derives a 10% soft background from any hex accent (web `{color}-500/10`). */
 function toSoftBg(hex: string): string {
   if (hex.startsWith('#') && hex.length === 7) return `${hex}1A`;
   if (hex.startsWith('#') && hex.length === 9) return hex;

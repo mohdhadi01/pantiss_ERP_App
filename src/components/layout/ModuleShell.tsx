@@ -14,27 +14,19 @@ import { ScreenWrapper } from './ScreenWrapper';
 import { Icon } from '../ui/Icon';
 
 export interface ModuleShellProps {
-  /** Page title in the header (web H1). */
   title: string;
   subtitle?: string;
-  /** Sidebar division subtitle (web "Human Resources" / "Finance Division"). */
   sidebarSubtitle?: string;
-  /** Header eyebrow (web "Finance Division · FY 2026–27"). */
   eyebrow?: string;
   eyebrowColor?: string;
-  /** @deprecated use `eyebrow` — mapped for compatibility until wrappers migrate. */
   badgeText?: string;
-  /** @deprecated use `eyebrowColor`. */
   badgeColor?: string;
   avatarVariant?: 'initials' | 'finance';
   workspaceEyebrow?: string;
   headingTitle?: string;
   footnote?: string;
-  /** Identity string for the workspace — drives the per-module theming below. */
   currentRoute: string;
-  /** Opens the navigator drawer (slide mode only — no-op on permanent sidebars). */
   onOpenDrawer?: () => void;
-  /** Active nav accent (web per-module theming). */
   accentColor?: string;
   showAlerts?: boolean;
   unreadAlertsCount?: number;
@@ -49,12 +41,6 @@ export interface ModuleShellProps {
   children: React.ReactNode;
 }
 
-/**
- * Workspace shell — web DashboardLayout / FinancePage sidebar pattern:
- * 80px header, max-w-1600 content, workspace heading + Demo workspace pill
- * + footnote. The sidebar itself is the root Drawer navigator's (permanent
- * ≥1024px, slide-over below); this shell only triggers it via `onOpenDrawer`.
- */
 export const ModuleShell: React.FC<ModuleShellProps> = ({
   title,
   subtitle,
@@ -92,7 +78,6 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
   };
 
   const isHR = currentRoute.includes('(hr)');
-  // Web per-module theming: Finance = emerald, HR = brand blue
   const moduleAccent = accentColor ?? (isHR ? theme.colors.brandPrimary : theme.colors.financeAccent);
   const defaultEyebrow = isHR ? 'Human Resources' : 'Finance Division · FY 2026–27';
   const defaultHeadingColor = isHR ? theme.colors.brandPrimary : theme.colors.financeAccent;
@@ -161,7 +146,6 @@ export const ModuleShell: React.FC<ModuleShellProps> = ({
         ) : null}
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Workspace heading — web cxo-dashboard-heading */}
           <View style={styles.dashboardHeading}>
             <View style={styles.headingLeft}>
               <Text style={[theme.fontStyles.eyebrow, styles.headingEyebrow, { color: eyebrowColor ?? defaultHeadingColor }]}>

@@ -4,32 +4,20 @@ import { useTheme } from '../../hooks/useTheme';
 import { Icon, IconSource } from './Icon';
 
 export interface MetricCardProps {
-  /** Small caption. Rendered under the value when `icon` is set (web finance KPI),
-   *  above the value otherwise (web HR `cxo-metric`). */
   label: string;
-  /** Big number / short text. */
   value: string | number;
-  /** Bottom note line (web `mt-3 text-[10px]`). */
   subtitle?: string;
-  /** 40px tinted icon tile (web `size-10 rounded-xl bg-{accent}-500/10`). */
   icon?: IconSource;
   iconColor?: string;
-  /** Hex accent that also derives the icon-tile tint at 10%. */
   accentColor?: string;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
-  /** Web finance cards show a top-right ArrowUpRight. */
   arrow?: boolean;
   onPress?: () => void;
-  /** Value color override (e.g. emerald expenditure values on the web). */
   valueColor?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Web-parity KPI card. Value uses tabular-nums + tight tracking like the web's
- * `text-2xl font-semibold tracking-[-0.04em]`.
- */
 export const MetricCard: React.FC<MetricCardProps> = ({
   label,
   value,

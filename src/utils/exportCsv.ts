@@ -3,7 +3,6 @@ import { storage } from './storage';
 
 export interface ExportCsvResult {
   ok: boolean;
-  /** User-facing notice line (web sets a status notice after the download). */
   message: string;
 }
 
@@ -12,20 +11,14 @@ function csvCell(value: string | number): string {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-/** RFC-4180-style CSV string: header row + one line per record. */
-export function buildCsv(headers: string[], rows: Array<Array<string | number>>): string {
+export function buildCsv(headers: string[], rows: (string | number)[][]): string {
   return [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
 }
 
-/**
- * Web parity for the register "Export CSV" buttons (Books, ledger, salary…).
- * Uses the React Native share sheet when available (no extra deps); falls
- * back to AsyncStorage when sharing is unavailable or cancelled by the OS.
- */
 export async function exportCsv(
   filename: string,
   headers: string[],
-  rows: Array<Array<string | number>>,
+  rows: (string | number)[][],
 ): Promise<ExportCsvResult> {
   const csv = buildCsv(headers, rows);
   try {

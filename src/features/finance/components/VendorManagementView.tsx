@@ -31,7 +31,7 @@ export interface Vendor {
   location: string;
   status: 'Empaneled' | 'Under Verification' | 'Review Required';
   complianceScore: number;
-  ytdSpend: number; // in Lakhs
+  ytdSpend: number;
   activeContracts: number;
   paymentTerms: string;
 }

@@ -4,10 +4,6 @@ import { storage } from '../../../utils/storage';
 
 const ALERTS_STORAGE_KEY = 'finance_alerts_v2';
 
-/**
- * Persisted finance alerts store. The unread count feeds the header bell
- * across every Finance screen (web: amber dot → /finance/alerts).
- */
 export function useFinanceAlerts() {
   const [alerts, setAlerts] = useState<FinanceAlert[]>(financeAlertSeeds);
   const [loading, setLoading] = useState(true);

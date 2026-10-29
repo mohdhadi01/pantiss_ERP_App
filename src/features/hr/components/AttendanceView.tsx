@@ -139,7 +139,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
     }
   };
 
-  const columns: Array<DataColumn<RegisterRow>> = [
+  const columns: DataColumn<RegisterRow>[] = [
     { key: 'employee', label: 'Employee', flex: 1.3 },
     { key: 'in', label: 'Punch-in', width: 118 },
     { key: 'out', label: 'Punch-out', width: 118 },
@@ -284,8 +284,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ store }) => {
               <View style={styles.personRow}>
                 <Avatar name={employee.name} size={36} />
                 <View style={styles.personMain}>
-                  <Text style={[styles.cellTitle, { color: theme.colors.text }]}>{employee.name}</Text>
-                  <Text style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{employee.id}</Text>
+                  <Text numberOfLines={1} style={[styles.cellTitle, { color: theme.colors.text }]}>{employee.name}</Text>
+                  <Text numberOfLines={1} style={[styles.cellSub, { color: theme.colors.textSubtle }]}>{employee.id}</Text>
                 </View>
                 <StatusChip status={attendanceIssue(record)} />
               </View>
@@ -388,6 +388,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-end',
     gap: 12,
+    marginBottom: 16,
   },
   dateCell: {
     flexGrow: 1,

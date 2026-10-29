@@ -6,7 +6,7 @@ export interface ModuleItem {
   title: string;
   description: string;
   iconName: string;
-  accentColors: [string, string]; // e.g. ['#10b981', '#06b6d4']
+  accentColors: [string, string];
   glowColor: string;
   status?: 'Live' | 'Soon';
   route?: string;

@@ -16,7 +16,7 @@ import { ModalSheet } from '../../../components/ui/ModalSheet';
 import { Icon } from '../../../components/ui/Icon';
 import { BANK_ACCOUNTS, BANK_TRANSACTIONS, BankAccount, BankTx } from '../data/bankingData';
 
-const LEDGER_COLUMNS: Array<DataColumn<BankTx>> = [
+const LEDGER_COLUMNS: DataColumn<BankTx>[] = [
   { key: 'date', label: 'Date & ID', flex: 1.1 },
   { key: 'beneficiary', label: 'Beneficiary / Party', flex: 2 },
   { key: 'account', label: 'Account & Category', flex: 1.6, wideOnly: true },
@@ -27,7 +27,6 @@ const LEDGER_COLUMNS: Array<DataColumn<BankTx>> = [
 
 export const BankingView: React.FC = () => {
   const { theme } = useTheme();
-  // Live state — the transfer sheet mutates balances and prepends a Treasury Transfer txn.
   const [accounts, setAccounts] = useState<BankAccount[]>(BANK_ACCOUNTS);
   const [transactions, setTransactions] = useState<BankTx[]>(BANK_TRANSACTIONS);
   const [selectedAccountId, setSelectedAccountId] = useState(BANK_ACCOUNTS[0].id);
@@ -51,10 +50,8 @@ export const BankingView: React.FC = () => {
 
   const totals = useMemo(() => {
     const balance = accounts.reduce((sum, a) => sum + a.balance, 0);
-    // Web: disbursement float = SBI + HDFC operational accounts.
     const sbi = accounts.find((a) => a.id === 'sbi-op')?.balance ?? 0;
     const hdfc = accounts.find((a) => a.id === 'hdfc-disb')?.balance ?? 0;
-    // Web-parity KPI: uncleared value = in-transit (Pending Clearance) transactions.
     const uncleared = transactions
       .filter((tx) => tx.status === 'Pending Clearance')
       .reduce((sum, tx) => sum + tx.amount, 0);
@@ -66,7 +63,6 @@ export const BankingView: React.FC = () => {
     };
   }, [accounts, transactions]);
 
-  /** Web handleExecuteTransfer — moves real balances and appends the audit txn. */
   const handleExecuteTransfer = (fromId: string, toId: string, amountLakhs: number, purpose: string) => {
     const amount = amountLakhs * 100000;
     const source = accounts.find((a) => a.id === fromId);

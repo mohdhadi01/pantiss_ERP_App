@@ -17,7 +17,6 @@ import { AppraisalsScreen } from '../../screens/hr/AppraisalsScreen';
 
 const Stack = createNativeStackNavigator<HrStackParamList>();
 
-/** The 10 HR workspace screens (web /hr/*), sharing the HR store provider. */
 export const HrStack: React.FC = () => {
   const { theme } = useTheme();
 

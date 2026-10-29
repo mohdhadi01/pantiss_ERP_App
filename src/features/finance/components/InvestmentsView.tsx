@@ -11,7 +11,6 @@ import { Card, SectionCard } from '../../../components/ui/Card';
 import { StatusChip } from '../../../components/ui/StatusChip';
 import { Icon } from '../../../components/ui/Icon';
 
-/** Web InvestmentsView.tsx:57-159 — treasury holdings (values in lakhs). */
 interface FixedDeposit {
   id: string;
   bankName: string;

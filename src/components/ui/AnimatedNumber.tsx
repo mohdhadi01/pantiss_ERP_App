@@ -2,11 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Text, TextStyle, StyleProp } from 'react-native';
 
 export interface AnimatedNumberProps {
-  /** Target numeric value. */
   value: number;
-  /** Decimal places to render. */
   decimals?: number;
-  /** Milliseconds (web uses 1200–1400ms easeOutCubic). */
   duration?: number;
   prefix?: string;
   suffix?: string;
@@ -15,10 +12,6 @@ export interface AnimatedNumberProps {
 
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
-/**
- * Count-up number — port of the web `AnimatedNumber`/`useCountUp`
- * (IntersectionObserver-free; starts on mount).
- */
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
   decimals = 0,

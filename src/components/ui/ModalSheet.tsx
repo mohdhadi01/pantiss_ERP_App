@@ -16,7 +16,6 @@ import { Icon } from './Icon';
 
 export type SheetSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
-/** Web Overlay sizes: sm 480 / md 620 / lg 780 / xl 1040 (centered panel on desktop only). */
 const SHEET_WIDTHS: Record<Exclude<SheetSize, 'full'>, number> = {
   sm: 480,
   md: 620,
@@ -27,22 +26,15 @@ const SHEET_WIDTHS: Record<Exclude<SheetSize, 'full'>, number> = {
 export interface ModalSheetProps {
   visible: boolean;
   onClose: () => void;
-  /** Web Overlay eyebrow label — rendered in the module accent. */
   label?: string;
   labelColor?: string;
   title: string;
   description?: string;
   size?: SheetSize;
-  /** Sticky footer — action buttons row. */
   footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
-/**
- * Bottom sheet on phones (edge-to-edge bottom bar, rounded top corners,
- * slides up), centered panel ≥1024px. RN Modal keeps it above drawers
- * and gesture handlers on both platforms.
- */
 export const ModalSheet: React.FC<ModalSheetProps> = ({
   visible,
   onClose,
@@ -67,6 +59,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
 
   const wide = isLg && size !== 'full';
   const maxWidth = size === 'full' ? undefined : SHEET_WIDTHS[size];
+  const sheetBg = theme.isDark ? '#0e121b' : '#ffffff';
 
   return (
     <Modal
@@ -89,7 +82,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
               style={[
                 styles.sheet,
                 {
-                  backgroundColor: theme.colors.moduleBg,
+                  backgroundColor: sheetBg,
                   borderRadius: theme.radii.card,
                   width: '92%',
                   maxWidth,
@@ -110,7 +103,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
               style={[
                 styles.sheet,
                 {
-                  backgroundColor: theme.colors.moduleBg,
+                  backgroundColor: sheetBg,
                   borderTopLeftRadius: 24,
                   borderTopRightRadius: 24,
                   width: '100%',
@@ -188,7 +181,7 @@ const SheetChrome: React.FC<{
 
     <ScrollView
       style={styles.body}
-      contentContainerStyle={[styles.bodyContent, { paddingBottom: footer ? 8 : 28 }]}
+      contentContainerStyle={[styles.bodyContent, { paddingBottom: footer ? 28 : 28 }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       bounces={false}

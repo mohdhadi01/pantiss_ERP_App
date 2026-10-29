@@ -15,23 +15,16 @@ import { Icon } from './Icon';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'secureTextEntry'> {
   label?: string;
-  /** Hint under the field. */
   hint?: string;
   error?: string;
   secure?: boolean;
-  /** Right-side static adornment (unit suffix like "%" or "₹"). */
   suffix?: string;
-  /** Right-side pressable element (replaces secure toggle when provided). */
   rightElement?: React.ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
   multiline?: boolean;
 }
 
-/**
- * Web-parity form input: 48px tall, radius 8, 1.5px border, tinted fill,
- * focus ring in `--brand-ring` (approximated with a soft glow).
- */
 export const TextField: React.FC<TextFieldProps> = ({
   label,
   hint,

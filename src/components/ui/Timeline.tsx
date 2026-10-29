@@ -5,7 +5,6 @@ import { useTheme } from '../../hooks/useTheme';
 export interface TimelineItem {
   key: string;
   title: string;
-  /** Actor / owner line (web timeline "actor" row). */
   actor?: string;
   detail?: string;
   time?: string;
@@ -18,10 +17,6 @@ export interface TimelineProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Vertical timeline — the web's border-l rail + dot pattern
- * (interview rounds, audit trails, payment history, approvals).
- */
 export const Timeline: React.FC<TimelineProps> = ({ items, accent, style }) => {
   const { theme } = useTheme();
   const railColor = accent ?? theme.colors.brandPrimary;
