@@ -26,7 +26,7 @@ export type FinanceStackParamList = {
   FinanceSalary: undefined;
   Reimbursement: undefined;
   Payments: undefined;
-  Taxation: undefined;
+  Taxation: { tab?: 'gst' | 'itc' | 'tds' } | undefined;
   AuditTrails: undefined;
   Projects: { area?: string } | undefined;
   Invoices: undefined;

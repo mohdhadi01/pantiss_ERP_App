@@ -31,10 +31,10 @@ const COMPLIANCE_ROWS = [
   { label: 'Audit action-taken reports', value: 88, done: true },
 ];
 
-const TAX_SHORTCUTS = [
-  { label: 'GST filing', desc: 'Update returns & upload acknowledgements' },
-  { label: 'Input tax credit tracking', desc: 'Review claimed and proposed credits' },
-  { label: 'TDS filing (total)', desc: 'Monitor totals & record completed filings' },
+const TAX_SHORTCUTS: { key: 'gst' | 'itc' | 'tds'; label: string; desc: string }[] = [
+  { key: 'gst', label: 'GST filing', desc: 'Update returns & upload acknowledgements' },
+  { key: 'itc', label: 'Input tax credit tracking', desc: 'Review claimed and proposed credits' },
+  { key: 'tds', label: 'TDS filing (total)', desc: 'Monitor totals & record completed filings' },
 ];
 
 export const FinanceDashboard: React.FC = () => {
@@ -64,7 +64,7 @@ export const FinanceDashboard: React.FC = () => {
         {TAX_SHORTCUTS.map((item) => (
           <Pressable
             key={item.label}
-            onPress={() => handleNav(() => navigation.navigate('Taxation'))}
+            onPress={() => handleNav(() => navigation.navigate('Taxation', { tab: item.key }))}
             style={({ pressed }) => [
               styles.taxCard,
               {

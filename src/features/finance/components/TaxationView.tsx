@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../hooks/useTheme';
@@ -62,12 +62,22 @@ const ITC_COLUMNS: DataColumn<GstRecord>[] = [
   { key: 'recon', label: 'GSTR-2B reconciliation', flex: 1.4 },
 ];
 
-export const TaxationView: React.FC = () => {
+export interface TaxationViewProps {
+  initialTab?: 'gst' | 'itc' | 'tds';
+}
+
+export const TaxationView: React.FC<TaxationViewProps> = ({ initialTab = 'gst' }) => {
   const { theme } = useTheme();
   const { isMd } = useBreakpoint();
   const [gstRecords, setGstRecords] = useState(INITIAL_GST);
   const [tdsForms, setTdsForms] = useState<Record<'24Q' | '26Q', { reference: string; filedDate: string } | undefined>>({ '24Q': undefined, '26Q': undefined });
-  const [tab, setTab] = useState('gst');
+  const [tab, setTab] = useState<'gst' | 'itc' | 'tds'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setTab(initialTab);
+    }
+  }, [initialTab]);
   const [target, setTarget] = useState<UpdateTarget | null>(null);
   const [filedDate, setFiledDate] = useState('');
   const [arnRef, setArnRef] = useState('');
@@ -170,9 +180,33 @@ export const TaxationView: React.FC = () => {
       </Card>
 
       <View style={styles.summaryRow}>
-        <SummaryTile icon="Scale" iconColor={theme.colors.brandPrimary} label="GST filing" value={`${filedRecords.length} / ${gstRecords.length} filed`} detail={`${gstRecords.length - filedRecords.length} returns awaiting filing · All listed periods`} />
-        <SummaryTile icon="Receipt" iconColor={theme.colors.emerald} label="Input tax credit tracking" value={formatCurrency(claimedCredit, true)} detail={`${formatCurrency(pendingCredit, true)} proposed · Monthly GSTR-3B records`} />
-        <SummaryTile icon="CreditCard" iconColor={theme.colors.violet} label="TDS filing (total)" value={formatRupees(totalTds)} detail={`${formatRupees(paidTds)} paid · ${formatRupees(totalTds - paidTds)} scheduled`} />
+        <SummaryTile
+          icon="Scale"
+          iconColor={theme.colors.brandPrimary}
+          label="GST filing"
+          value={`${filedRecords.length} / ${gstRecords.length} filed`}
+          detail={`${gstRecords.length - filedRecords.length} returns awaiting filing · All listed periods`}
+          onPress={() => setTab('gst')}
+          active={tab === 'gst'}
+        />
+        <SummaryTile
+          icon="Receipt"
+          iconColor={theme.colors.emerald}
+          label="Input tax credit tracking"
+          value={formatCurrency(claimedCredit, true)}
+          detail={`${formatCurrency(pendingCredit, true)} proposed · Monthly GSTR-3B records`}
+          onPress={() => setTab('itc')}
+          active={tab === 'itc'}
+        />
+        <SummaryTile
+          icon="CreditCard"
+          iconColor={theme.colors.violet}
+          label="TDS filing (total)"
+          value={formatRupees(totalTds)}
+          detail={`${formatRupees(paidTds)} paid · ${formatRupees(totalTds - paidTds)} scheduled`}
+          onPress={() => setTab('tds')}
+          active={tab === 'tds'}
+        />
       </View>
 
       <Tabs
@@ -182,7 +216,7 @@ export const TaxationView: React.FC = () => {
           { key: 'tds', label: 'TDS filing (total)' },
         ]}
         activeKey={tab}
-        onChange={setTab}
+        onChange={(k) => setTab(k as 'gst' | 'itc' | 'tds')}
         accent={theme.colors.brandPrimary}
       />
 
@@ -363,19 +397,44 @@ export const TaxationView: React.FC = () => {
   );
 };
 
-const SummaryTile: React.FC<{ icon: string; iconColor: string; label: string; value: string; detail: string }> = ({ icon, iconColor, label, value, detail }) => {
+const SummaryTile: React.FC<{
+  icon: string;
+  iconColor: string;
+  label: string;
+  value: string;
+  detail: string;
+  onPress?: () => void;
+  active?: boolean;
+}> = ({ icon, iconColor, label, value, detail, onPress, active }) => {
   const { theme } = useTheme();
   return (
-    <Card padding={16} style={styles.summaryTile}>
-      <View style={styles.summaryHead}>
-        <View style={[styles.summaryIcon, { backgroundColor: `${iconColor}1A` }]}>
-          <Icon name={icon} size={17} color={iconColor} strokeWidth={1.8} />
+    <Pressable
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => {});
+        onPress?.();
+      }}
+      style={({ pressed }) => [
+        styles.summaryTileWrap,
+        { opacity: pressed ? 0.85 : 1 },
+      ]}
+    >
+      <Card
+        padding={16}
+        style={[
+          styles.summaryTile,
+          active && { borderColor: iconColor, borderWidth: 1.5 },
+        ]}
+      >
+        <View style={styles.summaryHead}>
+          <View style={[styles.summaryIcon, { backgroundColor: `${iconColor}1A` }]}>
+            <Icon name={icon} size={17} color={iconColor} strokeWidth={1.8} />
+          </View>
+          <Text style={[styles.summaryLabel, { color: active ? theme.colors.text : theme.colors.textMuted }]}>{label}</Text>
         </View>
-        <Text style={[styles.summaryLabel, { color: theme.colors.textMuted }]}>{label}</Text>
-      </View>
-      <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{value}</Text>
-      <Text style={[styles.summaryDetail, { color: theme.colors.textSubtle }]}>{detail}</Text>
-    </Card>
+        <Text style={[styles.summaryValue, { color: theme.colors.text }]}>{value}</Text>
+        <Text style={[styles.summaryDetail, { color: theme.colors.textSubtle }]}>{detail}</Text>
+      </Card>
+    </Pressable>
   );
 };
 
@@ -395,7 +454,8 @@ const styles = StyleSheet.create({
   pageNote: { fontSize: 12.5, lineHeight: 18, marginTop: 6 },
   pageSubNote: { fontSize: 11, marginTop: 8 },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  summaryTile: { flexGrow: 1, flexBasis: 220, gap: 8 },
+  summaryTileWrap: { flexGrow: 1, flexBasis: 220 },
+  summaryTile: { width: '100%', gap: 8 },
   summaryHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   summaryIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   summaryLabel: { fontSize: 12, fontWeight: '500', flex: 1, minWidth: 0 },
