@@ -12,3 +12,4 @@ export const WelcomeScreen: React.FC = () => {
 
   return <WelcomeSplash onComplete={handleEnter} />;
 };
+

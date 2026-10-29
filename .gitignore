@@ -42,3 +42,11 @@ example
 /ios
 /android
 *.apk
+
+# Architecture and documentation files
+PROJECT_ARCH.md
+ARCHITECTURE.md
+PARITY_AUDIT.md
+PLAN.md
+*.md
+!README.md

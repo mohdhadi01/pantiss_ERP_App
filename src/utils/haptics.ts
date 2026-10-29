@@ -17,3 +17,4 @@ export const haptics = {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
   },
 };
+
